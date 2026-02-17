@@ -24,13 +24,22 @@ export function getPlaceholderImageDetails(id: string) {
     const image = PlaceHolderImages.find((img) => img.id === id);
     if (image) {
         const url = new URL(image.imageUrl);
-        const pathParts = url.pathname.split('/');
-        const width = parseInt(pathParts[pathParts.length - 2], 10);
-        const height = parseInt(pathParts[pathParts.length - 1], 10);
+        if (url.hostname === 'picsum.photos') {
+            const pathParts = url.pathname.split('/');
+            const width = parseInt(pathParts[pathParts.length - 2], 10);
+            const height = parseInt(pathParts[pathParts.length - 1], 10);
+            return {
+                src: image.imageUrl,
+                width: isNaN(width) ? 400 : width,
+                height: isNaN(height) ? 400 : height,
+                hint: image.imageHint
+            };
+        }
+        // Fallback for non-picsum URLs (like unsplash)
         return {
             src: image.imageUrl,
-            width: width,
-            height: height,
+            width: 400,
+            height: 400,
             hint: image.imageHint
         };
     }
