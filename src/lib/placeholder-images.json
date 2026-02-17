@@ -1,3 +1,70 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "1",
+      "description": "Minimalist Icons v2",
+      "imageUrl": "https://images.unsplash.com/photo-1765218184974-702b708b559c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxtaW5pbWFsaXN0JTIwaWNvbnN8ZW58MHx8fHwxNzcxMzQwMjYyfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "minimalist icons"
+    },
+    {
+      "id": "2",
+      "description": "Notion Life OS",
+      "imageUrl": "https://images.unsplash.com/photo-1738525142893-356ed17a9968?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxub3Rpb24lMjB0ZW1wbGF0ZXxlbnwwfHx8fDE3NzEzNDAyNjJ8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "notion template"
+    },
+    {
+      "id": "3",
+      "description": "Moody Lightroom",
+      "imageUrl": "https://images.unsplash.com/photo-1633455711658-13f1201ed45d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw1fHxtb29keSUyMHBob3RvZ3JhcGh5fGVufDB8fHx8MTc3MTM0MDI2Mnww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "moody photography"
+    },
+    {
+      "id": "4",
+      "description": "Figma Design Sys",
+      "imageUrl": "https://images.unsplash.com/photo-1561070791-36c11767b26a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxkZXNpZ24lMjBzeXN0ZW18ZW58MHx8fHwxNzcxMzQwMjYyfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "design system"
+    },
+    {
+      "id": "5",
+      "description": "React Starter Pro",
+      "imageUrl": "https://images.unsplash.com/photo-1670057046254-3b5095eb4b66?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxyZWFjdCUyMGNvZGV8ZW58MHx8fHwxNzcxMjQ5ODAyfDA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "react code"
+    },
+    {
+      "id": "6",
+      "description": "Mastery CSS Book",
+      "imageUrl": "https://picsum.photos/seed/6/400/400",
+      "imageHint": "css book"
+    },
+    {
+      "id": "7",
+      "description": "3D Blender Assets",
+      "imageUrl": "https://images.unsplash.com/photo-1730267252256-67bee55353e8?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHwzZCUyMGFzc2V0c3xlbnwwfHx8fDE3NzEzNDAyNjJ8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "3d assets"
+    },
+    {
+      "id": "8",
+      "description": "Procreate Brushes",
+      "imageUrl": "https://images.unsplash.com/photo-1710964820966-9fac877572fe?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxwcm9jcmVhdGUlMjBicnVzaGVzfGVufDB8fHx8MTc3MTM0MDI2Mnww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "procreate brushes"
+    },
+    {
+      "id": "9",
+      "description": "Ultimate Font Bundle",
+      "imageUrl": "https://images.unsplash.com/photo-1695116793973-7bf2f0f3ce1e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw0fHxmb250JTIwdHlwb2dyYXBoeXxlbnwwfHx8fDE3NzEzNDAyNjN8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "font typography"
+    },
+    {
+      "id": "10",
+      "description": "SaaS Dashboard UI",
+      "imageUrl": "https://images.unsplash.com/photo-1592318054338-9074a4968e2e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwzfHxkYXNoYm9hcmQlMjB1aXxlbnwwfHx8fDE3NzEyNzU0Mjd8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "dashboard ui"
+    },
+    {
+      "id": "logo-placeholder",
+      "description": "A placeholder for the logo in product cards.",
+      "imageUrl": "https://picsum.photos/seed/logo/100/100",
+      "imageHint": ""
+    }
+  ]
 }

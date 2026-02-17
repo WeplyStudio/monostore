@@ -1,3 +1,23 @@
+"use client";
+
+import { useApp } from '@/context/app-context';
+import HomeView from '@/components/views/home-view';
+import CheckoutView from '@/components/views/checkout-view';
+import SuccessView from '@/components/views/success-view';
+import ProductDetailModal from '@/components/product-detail-modal';
+import CartSheet from '@/components/cart-sheet';
+
 export default function Home() {
-  return <></>;
+  const { view } = useApp();
+
+  return (
+    <>
+      {view === 'home' && <HomeView />}
+      {view === 'checkout' && <CheckoutView />}
+      {view === 'success' && <SuccessView />}
+
+      <ProductDetailModal />
+      <CartSheet />
+    </>
+  );
 }
