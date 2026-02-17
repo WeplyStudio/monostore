@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useApp } from '@/context/app-context';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Star, TrendingUp, ShoppingBag, Share2, Plus, Minus, X } from 'lucide-react';
@@ -68,8 +68,8 @@ export default function ProductDetailModal() {
                  <span className="text-sm text-muted-foreground">{selectedProduct.sold}+ Terjual</span>
               </div>
               
-              <h2 className="text-3xl font-bold text-foreground mb-4 leading-tight">{selectedProduct.name}</h2>
-              <p className="text-muted-foreground text-sm leading-relaxed mb-6">{selectedProduct.description}</p>
+              <DialogTitle className="text-3xl font-bold text-foreground mb-4 leading-tight">{selectedProduct.name}</DialogTitle>
+              <DialogDescription className="text-muted-foreground text-sm leading-relaxed mb-6">{selectedProduct.description}</DialogDescription>
               
               <Separator className="my-6" />
 
