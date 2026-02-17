@@ -10,16 +10,18 @@ import { formatRupiah, getPlaceholderImageDetails } from '@/lib/utils';
 import { Separator } from '@/components/ui/separator';
 import { PRODUCTS } from '@/lib/data';
 import type { Product } from '@/lib/types';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 
-export default function ProductDetailPage({ params }: { params: { id: string } }) {
+export default function ProductDetailPage() {
   const { addToCart, addViewedProduct } = useApp();
   const router = useRouter();
+  const params = useParams<{ id: string }>();
   const [qty, setQty] = useState(1);
   const [product, setProduct] = useState<Product | null>(null);
-  const { id } = params;
+  const id = params.id;
 
   useEffect(() => {
+    if (!id) return;
     const productId = parseInt(id, 10);
     const foundProduct = PRODUCTS.find((p) => p.id === productId);
     if (foundProduct) {
