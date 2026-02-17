@@ -17,9 +17,10 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
   const router = useRouter();
   const [qty, setQty] = useState(1);
   const [product, setProduct] = useState<Product | null>(null);
+  const { id } = params;
 
   useEffect(() => {
-    const productId = parseInt(params.id, 10);
+    const productId = parseInt(id, 10);
     const foundProduct = PRODUCTS.find((p) => p.id === productId);
     if (foundProduct) {
       setProduct(foundProduct);
@@ -28,7 +29,7 @@ export default function ProductDetailPage({ params }: { params: { id: string } }
       // Handle product not found, maybe redirect or show a 404 component
       router.push('/');
     }
-  }, [params.id, addViewedProduct, router]);
+  }, [id, addViewedProduct, router]);
 
   if (!product) {
     return <div className="text-center py-20">Loading product...</div>;
