@@ -56,7 +56,7 @@ const personalizedRecommendationPrompt = ai.definePrompt({
   output: { schema: PromptOutputSchema },
   prompt: `You are an expert product recommendation system for an e-commerce store called MonoStore, which sells digital assets. Your goal is to suggest relevant and interesting products to a user based on their viewing history and current product of interest.
 
-User's previously viewed product IDs: {{#if viewedProductIds}}{{{JSON.stringify viewedProductIds}}}{{else}}None{{/if}}
+User's previously viewed product IDs: {{#if viewedProductIds}}{{{viewedProductIdsJson}}}{{else}}None{{/if}}
 User's currently viewed product ID: {{#if currentProductId}}{{{currentProductId}}}{{else}}None{{/if}}
 
 Here is a list of all available products in the store. Each product object includes its 'id', 'name', 'category', and 'description'.
@@ -86,6 +86,7 @@ const personalizedRecommendationsFlow = ai.defineFlow(
       viewedProductIds,
       currentProductId,
       allProducts,
+      viewedProductIdsJson: JSON.stringify(viewedProductIds),
     });
 
     if (!promptOutput || !promptOutput.recommendedProductIds) {
