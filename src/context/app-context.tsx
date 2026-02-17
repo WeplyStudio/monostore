@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useCallback } from 'react';
 import type { Product, CartItem } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast"
 
@@ -14,12 +14,11 @@ type AppContextType = {
   totalItems: number;
   isCartOpen: boolean;
   setIsCartOpen: (isOpen: boolean) => void;
-  selectedProduct: Product | null;
-  setSelectedProduct: (product: Product | null) => void;
   formData: any;
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   resetCart: () => void;
   viewedProducts: Product[];
+  addViewedProduct: (product: Product) => void;
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -28,7 +27,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [view, setView] = useState('home');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
-  const [selectedProduct, setSelectedProductState] = useState<Product | null>(null);
   const [viewedProducts, setViewedProducts] = useState<Product[]>([]);
   const { toast } = useToast();
 
@@ -48,8 +46,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     });
   };
   
-  const setSelectedProduct = useCallback((product: Product | null) => {
-    setSelectedProductState(product);
+  const addViewedProduct = useCallback((product: Product) => {
     if (product && !viewedProducts.find(p => p.id === product.id)) {
         setViewedProducts(prev => [...prev, product]);
     }
@@ -95,12 +92,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     totalItems,
     isCartOpen,
     setIsCartOpen,
-    selectedProduct,
-    setSelectedProduct,
     formData,
     handleInputChange,
     resetCart,
-    viewedProducts
+    viewedProducts,
+    addViewedProduct,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

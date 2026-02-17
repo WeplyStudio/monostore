@@ -1,9 +1,9 @@
 "use client";
 
 import Image from 'next/image';
+import Link from 'next/link';
 import type { Product } from '@/lib/types';
 import { formatRupiah, getPlaceholderImageDetails } from '@/lib/utils';
-import { useApp } from '@/context/app-context';
 import { Star, TrendingUp, ArrowRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
@@ -12,15 +12,10 @@ interface ProductCardProps {
 }
 
 export default function ProductCard({ product }: ProductCardProps) {
-  const { setSelectedProduct } = useApp();
   const imageDetails = getPlaceholderImageDetails(product.image);
-  const logoPlaceholder = getPlaceholderImageDetails('logo-placeholder');
 
   return (
-    <div
-      onClick={() => setSelectedProduct(product)}
-      className="group relative bg-card p-3 rounded-2xl border border-border/20 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer"
-    >
+    <Link href={`/product/${product.id}`} className="group relative block bg-card p-3 rounded-2xl border border-border/20 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
       {product.isBestSeller && (
         <div className="absolute -top-2 -right-2 z-10 bg-primary text-primary-foreground text-[10px] font-bold px-2 py-1 rounded-full shadow-lg border-2 border-background flex items-center gap-1">
           <TrendingUp size={10} /> TERLARIS
@@ -28,13 +23,13 @@ export default function ProductCard({ product }: ProductCardProps) {
       )}
 
       <div className="aspect-square bg-secondary rounded-xl overflow-hidden mb-3 relative">
-        <Image 
-            src={imageDetails.src} 
-            alt={product.name} 
-            data-ai-hint={imageDetails.hint}
-            width={imageDetails.width}
-            height={imageDetails.height}
-            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
+        <Image
+          src={imageDetails.src}
+          alt={product.name}
+          data-ai-hint={imageDetails.hint}
+          width={imageDetails.width}
+          height={imageDetails.height}
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent group-hover:from-black/40 transition-colors"></div>
       </div>
@@ -52,6 +47,6 @@ export default function ProductCard({ product }: ProductCardProps) {
           </div>
         </div>
       </div>
-    </div>
+    </Link>
   );
 }
