@@ -1,11 +1,13 @@
-
 'use client';
 
 import React, { useState } from 'react';
-import { useFirestore, useCollection } from '@/firebase';
+import { useFirestore, useCollection, useUser, useAuth } from '@/firebase';
 import { collection, deleteDoc, doc, query, orderBy } from 'firebase/firestore';
+import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import {
   Table,
   TableBody,
@@ -21,7 +23,9 @@ import {
   Search, 
   LayoutDashboard, 
   ExternalLink,
-  Loader2
+  Loader2,
+  LogOut,
+  Lock
 } from 'lucide-react';
 import { ProductDialog } from '@/components/admin/product-dialog';
 import { formatRupiah } from '@/lib/utils';
@@ -29,17 +33,118 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 
-export default function AdminDashboard() {
+const ADMIN_EMAIL = 'matchboxdevelopment@gmail.com';
+
+export default function AdminPage() {
+  const { user, loading: authLoading } = useUser();
+  const auth = useAuth();
   const db = useFirestore();
   const { toast } = useToast();
+  
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+
   const [searchTerm, setSearchTerm] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
 
   const productsRef = db ? collection(db, 'products') : null;
   const productsQuery = productsRef ? query(productsRef, orderBy('name', 'asc')) : null;
-  const { data: products, loading } = useCollection(productsQuery);
+  const { data: products, loading: productsLoading } = useCollection(productsQuery);
 
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoggingIn(true);
+    try {
+      await signInWithEmailAndPassword(auth, loginEmail, loginPassword);
+      toast({ title: 'Welcome back!', description: 'Logged in successfully.' });
+    } catch (error: any) {
+      toast({ 
+        variant: 'destructive', 
+        title: 'Login Failed', 
+        description: 'Invalid credentials or connection error.' 
+      });
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
+  const handleLogout = async () => {
+    await signOut(auth);
+    toast({ title: 'Logged out', description: 'See you next time!' });
+  };
+
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="animate-spin text-primary" size={40} />
+      </div>
+    );
+  }
+
+  // Login Form if not authenticated or not the admin
+  if (!user || user.email !== ADMIN_EMAIL) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md shadow-xl border-none rounded-3xl overflow-hidden">
+          <CardHeader className="bg-primary text-primary-foreground p-8 text-center">
+            <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-4 backdrop-blur-sm">
+              <Lock size={32} />
+            </div>
+            <CardTitle className="text-2xl font-bold">Admin Portal</CardTitle>
+            <CardDescription className="text-primary-foreground/70">
+              Please sign in to manage your products.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-8">
+            <form onSubmit={handleLogin} className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="email">Admin Email</Label>
+                <Input 
+                  id="email" 
+                  type="email" 
+                  placeholder="admin@example.com" 
+                  value={loginEmail}
+                  onChange={(e) => setLoginEmail(e.target.value)}
+                  required
+                  className="rounded-xl h-12"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="password">Password</Label>
+                <Input 
+                  id="password" 
+                  type="password" 
+                  placeholder="••••••••"
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
+                  required
+                  className="rounded-xl h-12"
+                />
+              </div>
+              {user && user.email !== ADMIN_EMAIL && (
+                <p className="text-xs text-destructive font-bold text-center">
+                  Account {user.email} is not authorized.
+                </p>
+              )}
+              <Button type="submit" className="w-full h-12 rounded-xl text-base font-bold" disabled={isLoggingIn}>
+                {isLoggingIn ? <Loader2 className="animate-spin mr-2" /> : null}
+                Sign In
+              </Button>
+              {user && user.email !== ADMIN_EMAIL && (
+                <Button variant="ghost" onClick={handleLogout} className="w-full">
+                  Logout & Switch Account
+                </Button>
+              )}
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Main Dashboard if authenticated as admin
   const filteredProducts = products?.filter(p => 
     p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     p.category.toLowerCase().includes(searchTerm.toLowerCase())
@@ -60,16 +165,6 @@ export default function AdminDashboard() {
     }
   };
 
-  const openEditDialog = (product: any) => {
-    setEditingProduct(product);
-    setIsDialogOpen(true);
-  };
-
-  const openCreateDialog = () => {
-    setEditingProduct(null);
-    setIsDialogOpen(true);
-  };
-
   return (
     <div className="min-h-screen bg-slate-50/50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-10">
@@ -80,13 +175,19 @@ export default function AdminDashboard() {
             </div>
             <div>
               <h1 className="text-2xl font-bold tracking-tight">Admin Dashboard</h1>
-              <p className="text-sm text-muted-foreground">Manage your digital assets and inventory.</p>
+              <p className="text-sm text-muted-foreground">Logged in as {user.email}</p>
             </div>
           </div>
-          <Button onClick={openCreateDialog} className="rounded-xl h-11 px-6 shadow-lg shadow-primary/20">
-            <Plus size={18} className="mr-2" />
-            Add New Product
-          </Button>
+          <div className="flex gap-2">
+            <Button onClick={() => setIsDialogOpen(true)} className="rounded-xl h-11 px-6 shadow-lg shadow-primary/20">
+              <Plus size={18} className="mr-2" />
+              Add New Product
+            </Button>
+            <Button variant="outline" onClick={handleLogout} className="rounded-xl h-11 border-none shadow-sm hover:bg-destructive/10 hover:text-destructive">
+              <LogOut size={18} className="mr-2" />
+              Logout
+            </Button>
+          </div>
         </div>
 
         <div className="grid gap-6">
@@ -113,7 +214,7 @@ export default function AdminDashboard() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {loading ? (
+                {productsLoading ? (
                   <TableRow>
                     <TableCell colSpan={6} className="h-40 text-center">
                       <div className="flex flex-col items-center gap-2 text-muted-foreground">
@@ -165,7 +266,7 @@ export default function AdminDashboard() {
                           <Button 
                             variant="ghost" 
                             size="icon"
-                            onClick={() => openEditDialog(product)}
+                            onClick={() => { setEditingProduct(product); setIsDialogOpen(true); }}
                             className="text-blue-600 hover:text-blue-700 hover:bg-blue-50"
                             title="Edit"
                           >
@@ -193,9 +294,10 @@ export default function AdminDashboard() {
 
       <ProductDialog 
         isOpen={isDialogOpen}
-        onClose={() => setIsDialogOpen(false)}
+        onClose={() => { setIsDialogOpen(false); setEditingProduct(null); }}
         product={editingProduct}
       />
     </div>
   );
 }
+
