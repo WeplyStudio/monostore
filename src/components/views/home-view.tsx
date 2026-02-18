@@ -274,7 +274,7 @@ export default function HomeView() {
               <Button 
                 variant="secondary" 
                 className="h-14 px-8 rounded-2xl font-bold text-primary hover:bg-white"
-                onClick={() => window.open('https://wa.me/628123456789', '_blank')}
+                onClick={() => window.open('https://wa.me/6288808943176', '_blank')}
               >
                 <MessageSquare size={20} className="mr-2" />
                 WhatsApp Admin
