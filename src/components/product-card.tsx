@@ -1,3 +1,4 @@
+
 "use client";
 
 import Image from 'next/image';
@@ -12,7 +13,9 @@ interface ProductCardProps {
 }
 
 export default function ProductCard({ product }: ProductCardProps) {
-  const imageDetails = getPlaceholderImageDetails(product.image);
+  // Check if image is a URL or a placeholder ID
+  const isUrl = typeof product.image === 'string' && product.image.startsWith('http');
+  const imageSrc = isUrl ? product.image : getPlaceholderImageDetails(product.image).src;
 
   return (
     <Link href={`/product/${product.id}`} className="group relative block bg-card p-3 rounded-2xl border border-border/20 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
@@ -24,11 +27,9 @@ export default function ProductCard({ product }: ProductCardProps) {
 
       <div className="aspect-square bg-secondary rounded-xl overflow-hidden mb-3 relative">
         <Image
-          src={imageDetails.src}
+          src={imageSrc}
           alt={product.name}
-          data-ai-hint={imageDetails.hint}
-          width={imageDetails.width}
-          height={imageDetails.height}
+          fill
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent group-hover:from-black/40 transition-colors"></div>

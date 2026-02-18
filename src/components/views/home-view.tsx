@@ -1,18 +1,20 @@
+
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Search, Zap, TrendingUp, X, ArrowRight } from 'lucide-react';
+import { Search, Zap, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import ProductCard from '@/components/product-card';
-import { PRODUCTS, INITIAL_RECOMMENDATIONS, CATEGORIES } from '@/lib/data';
+import { INITIAL_RECOMMENDATIONS, CATEGORIES } from '@/lib/data';
 import { useApp } from '@/context/app-context';
-import type { Product, Recommendation } from '@/lib/types';
+import { useFirestore, useCollection } from '@/firebase';
+import { collection, query, orderBy } from 'firebase/firestore';
+import type { Product } from '@/lib/types';
 import { getPersonalizedRecommendations } from '@/ai/flows/personalized-recommendations-flow';
-import { formatRupiah } from '@/lib/utils';
+import { formatRupiah, getPlaceholderImageDetails } from '@/lib/utils';
 import Image from 'next/image';
-import { getPlaceholderImageDetails } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function HomeView() {
@@ -22,42 +24,49 @@ export default function HomeView() {
   const [isRecsLoading, setIsRecsLoading] = useState(true);
 
   const { addToCart, viewedProducts } = useApp();
+  const db = useFirestore();
+
+  // Fetch dynamic products from Firestore
+  const productsRef = db ? collection(db, 'products') : null;
+  const productsQuery = productsRef ? query(productsRef, orderBy('createdAt', 'desc')) : null;
+  const { data: dbProducts, loading: isProductsLoading } = useCollection(productsQuery);
+
+  // Use DB products if available, otherwise fallback to initial data (for migration phase)
+  const products = (dbProducts as Product[]) || [];
 
   useEffect(() => {
+    if (products.length === 0) return;
+
     const fetchRecommendations = async () => {
       setIsRecsLoading(true);
       try {
         const viewedProductIds = viewedProducts.map(p => p.id);
         const result = await getPersonalizedRecommendations({
           viewedProductIds,
-          allProducts: PRODUCTS,
+          allProducts: products,
         });
 
         if (result.recommendations && result.recommendations.length > 0) {
             setRecommendations(result.recommendations);
         } else {
-            // Fallback to initial recommendations if AI returns none
-            const fallbackRecs = PRODUCTS.filter(p => INITIAL_RECOMMENDATIONS.some(rec => rec.id === p.id));
-            setRecommendations(fallbackRecs);
+            // Fallback: Just take some products
+            setRecommendations(products.slice(0, 4));
         }
       } catch (error) {
-        console.error("Failed to fetch recommendations:", error);
-        // Fallback on error
-        const fallbackRecs = PRODUCTS.filter(p => INITIAL_RECOMMENDATIONS.some(rec => rec.id === p.id));
-        setRecommendations(fallbackRecs);
+        setRecommendations(products.slice(0, 4));
       } finally {
         setIsRecsLoading(false);
       }
     };
     
     fetchRecommendations();
-  }, [viewedProducts]);
+  }, [viewedProducts, products]);
 
-  const filteredProducts = useMemo(() => PRODUCTS.filter((product) => {
+  const filteredProducts = useMemo(() => products.filter((product) => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = selectedCategory === 'Semua' || product.category === selectedCategory;
     return matchesSearch && matchesCategory;
-  }), [searchTerm, selectedCategory]);
+  }), [searchTerm, selectedCategory, products]);
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 pb-20">
@@ -102,7 +111,11 @@ export default function HomeView() {
            )}
         </div>
 
-        {filteredProducts.length > 0 ? (
+        {isProductsLoading ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 md:gap-6">
+            {[1, 2, 3, 4, 5, 6, 7, 8].map(i => <Skeleton key={i} className="aspect-[3/4] rounded-2xl" />)}
+          </div>
+        ) : filteredProducts.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 md:gap-6">
             {filteredProducts.map((product) => (
               <ProductCard key={product.id} product={product} />
@@ -119,37 +132,41 @@ export default function HomeView() {
         )}
       </div>
 
-      <div className="bg-secondary/50 rounded-3xl p-6 md:p-10 border">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
-           <div>
-             <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Editor's Pick</div>
-             <h2 className="text-2xl font-bold text-foreground">Rekomendasi Untukmu</h2>
-             <p className="text-muted-foreground text-sm mt-1">Koleksi pilihan yang mungkin kamu butuhkan.</p>
-           </div>
-           <Button variant="secondary" className="text-xs py-2 px-4 h-fit bg-background rounded-lg">Lihat Koleksi Lengkap</Button>
-        </div>
+      {products.length > 0 && (
+        <div className="bg-secondary/50 rounded-3xl p-6 md:p-10 border">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
+             <div>
+               <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Editor's Pick</div>
+               <h2 className="text-2xl font-bold text-foreground">Rekomendasi Untukmu</h2>
+               <p className="text-muted-foreground text-sm mt-1">Koleksi pilihan yang mungkin kamu butuhkan.</p>
+             </div>
+          </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-           {isRecsLoading ? (
-            <>
-              <RecommendationSkeleton />
-              <RecommendationSkeleton />
-            </>
-           ) : (
-             recommendations.map((item) => <RecommendationCard key={item.id} item={item} addToCart={addToCart} />)
-           )}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+             {isRecsLoading ? (
+              <>
+                <RecommendationSkeleton />
+                <RecommendationSkeleton />
+              </>
+             ) : (
+               recommendations.map((item) => <RecommendationCard key={item.id} item={item} addToCart={addToCart} />)
+             )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
 
 const RecommendationCard = ({ item, addToCart }: { item: Product; addToCart: (product: Product) => void; }) => {
-    const imageDetails = getPlaceholderImageDetails(item.image);
+    // Check if image is a URL or a placeholder ID
+    const isUrl = item.image.startsWith('http');
+    const imageSrc = isUrl ? item.image : getPlaceholderImageDetails(item.image).src;
+
     return (
         <div className="bg-background p-5 rounded-2xl shadow-sm border flex gap-5 hover:border-primary/50 transition-colors">
-            <div className="w-24 h-24 bg-secondary rounded-xl shrink-0 overflow-hidden">
-                <Image src={imageDetails.src} alt={item.name} data-ai-hint={imageDetails.hint} width={imageDetails.width} height={imageDetails.height} className="w-full h-full object-cover" />
+            <div className="w-24 h-24 bg-secondary rounded-xl shrink-0 overflow-hidden relative">
+                <Image src={imageSrc} alt={item.name} fill className="object-cover" />
             </div>
             <div className="flex flex-col justify-between flex-1 py-1">
                 <div>
@@ -157,7 +174,7 @@ const RecommendationCard = ({ item, addToCart }: { item: Product; addToCart: (pr
                         <Badge variant="outline" className="border-blue-200 bg-blue-50 text-blue-700 mb-2">{item.category}</Badge>
                         <span className="text-xs text-muted-foreground">AI Pick</span>
                     </div>
-                    <h3 className="font-bold text-foreground text-lg">{item.name}</h3>
+                    <h3 className="font-bold text-foreground text-lg line-clamp-1">{item.name}</h3>
                     <p className="text-xs text-muted-foreground line-clamp-1 mt-1">{item.description}</p>
                 </div>
                 <div className="flex items-center justify-between mt-3">

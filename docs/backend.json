@@ -1,0 +1,34 @@
+
+{
+  "entities": {
+    "Product": {
+      "title": "Product",
+      "description": "A digital product sold in the store.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier (Firestore Auto-ID)" },
+        "name": { "type": "string", "description": "Name of the product" },
+        "price": { "type": "number", "description": "Price in IDR" },
+        "category": { "type": "string", "description": "Category of the product" },
+        "rating": { "type": "number", "description": "Average rating" },
+        "reviews": { "type": "number", "description": "Number of reviews" },
+        "sold": { "type": "number", "description": "Total units sold" },
+        "isBestSeller": { "type": "boolean", "description": "Whether the product is a bestseller" },
+        "description": { "type": "string", "description": "Detailed description" },
+        "features": { "type": "array", "items": { "type": "string" }, "description": "List of product features" },
+        "image": { "type": "string", "description": "URL of the product image" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "price", "category", "description", "image"]
+    }
+  },
+  "auth": {
+    "providers": ["google.com"]
+  },
+  "firestore": {
+    "/products/{productId}": {
+      "schema": "Product",
+      "description": "Collection of all digital products available in the store."
+    }
+  }
+}

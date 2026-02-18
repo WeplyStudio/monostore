@@ -1,5 +1,6 @@
+
 export type Product = {
-  id: number;
+  id: string; // Changed to string for Firestore ID compatibility
   name: string;
   price: number;
   category: string;
@@ -11,10 +12,12 @@ export type Product = {
   features: string[];
   image: string;
   imageHint?: string;
+  createdAt?: any;
+  updatedAt?: any;
 };
 
 export type Recommendation = {
-    id: number;
+    id: string;
     name: string;
     price: number;
     category: string;
