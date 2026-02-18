@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useEffect, useState, useCallback } from 'react';
@@ -49,7 +48,7 @@ export default function BannerCarousel() {
 
   if (loading) {
     return (
-      <div className="w-full aspect-[21/9] md:aspect-[3/1] rounded-[2.5rem] overflow-hidden mb-10">
+      <div className="w-full aspect-[21/9] md:aspect-[3/1] rounded-2xl overflow-hidden mb-10">
         <Skeleton className="w-full h-full" />
       </div>
     );
@@ -59,7 +58,7 @@ export default function BannerCarousel() {
 
   return (
     <div className="relative group mb-10 animate-fadeIn">
-      <div className="overflow-hidden rounded-[2.5rem] shadow-xl" ref={emblaRef}>
+      <div className="overflow-hidden rounded-2xl shadow-xl" ref={emblaRef}>
         <div className="flex">
           {banners.map((banner: any) => (
             <div key={banner.id} className="flex-[0_0_100%] min-w-0 relative aspect-[21/9] md:aspect-[3/1]">
