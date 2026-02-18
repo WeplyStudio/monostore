@@ -1,9 +1,11 @@
+
 "use client";
 
 import { useApp } from '@/context/app-context';
 import HomeView from '@/components/views/home-view';
 import CheckoutView from '@/components/views/checkout-view';
 import SuccessView from '@/components/views/success-view';
+import PaymentPendingView from '@/components/views/payment-pending-view';
 import CartSheet from '@/components/cart-sheet';
 
 export default function Home() {
@@ -13,6 +15,7 @@ export default function Home() {
     <>
       {view === 'home' && <HomeView />}
       {view === 'checkout' && <CheckoutView />}
+      {view === 'payment-pending' && <PaymentPendingView />}
       {view === 'success' && <SuccessView />}
 
       <CartSheet />

@@ -10,7 +10,7 @@ type AppContextType = {
   setView: (view: string) => void;
   cart: CartItem[];
   addToCart: (product: Product, quantity?: number) => void;
-  removeFromCart: (id: number) => void;
+  removeFromCart: (id: number | string) => void;
   cartTotal: number;
   totalItems: number;
   isCartOpen: boolean;
@@ -23,6 +23,8 @@ type AppContextType = {
   addViewedProduct: (product: Product) => void;
   lastOrder: any;
   setLastOrder: (order: any) => void;
+  paymentData: any;
+  setPaymentData: (data: any) => void;
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -33,6 +35,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [viewedProducts, setViewedProducts] = useState<Product[]>([]);
   const [lastOrder, setLastOrder] = useState<any>(null);
+  const [paymentData, setPaymentData] = useState<any>(null);
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -40,7 +43,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     name: '',
     whatsapp: '',
     githubUser: '',
-    cardName: '',
     cardNumber: '',
     exp: '',
     cvc: ''
@@ -106,7 +108,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     viewedProducts,
     addViewedProduct,
     lastOrder,
-    setLastOrder
+    setLastOrder,
+    paymentData,
+    setPaymentData
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

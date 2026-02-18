@@ -3,71 +3,77 @@
 
 import React, { useState } from 'react';
 import { useApp } from '@/context/app-context';
-import { useFirestore } from '@/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Lock, ShieldCheck, Loader2 } from 'lucide-react';
-import { formatRupiah } from '@/lib/utils';
+import { ArrowLeft, Lock, ShieldCheck, Loader2, QrCode } from 'lucide-react';
+import { formatRupiah, getPlaceholderImageDetails } from '@/lib/utils';
 import Image from 'next/image';
-import { getPlaceholderImageDetails } from '@/lib/utils';
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
+import { useToast } from '@/hooks/use-toast';
+
+const PAKASIR_PROJECT = "depodomain";
+const PAKASIR_API_KEY = "Qz8ylLI2rA37YnuLYCqIEaoMd4ZdM9eT";
 
 export default function CheckoutView() {
-  const { setView, cart, cartTotal, totalItems, formData, handleInputChange, resetCart, setLastOrder } = useApp();
+  const { setView, cart, cartTotal, totalItems, formData, handleInputChange, setPaymentData } = useApp();
   const [loading, setLoading] = useState(false);
-  const db = useFirestore();
+  const { toast } = useToast();
 
   const handleCheckoutSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.email || !formData.name || !formData.cardNumber || !formData.exp || !formData.cvc) {
-        alert("Harap lengkapi semua data yang diperlukan.");
+    if (!formData.email || !formData.name || !formData.whatsapp) {
+        toast({
+          variant: "destructive",
+          title: "Data tidak lengkap",
+          description: "Harap isi Nama, Email, dan WhatsApp Anda."
+        });
         return;
     }
     
     setLoading(true);
     
-    if (!db) {
-        setLoading(false);
-        return;
-    }
+    // Generate Order ID unik
+    const orderId = "INV-" + Date.now().toString().slice(-8);
 
-    const orderData = {
-      customerName: formData.name,
-      customerEmail: formData.email,
-      whatsapp: formData.whatsapp || '',
-      githubUser: formData.githubUser || '',
-      items: cart.map(item => ({
-        productId: item.id,
-        name: item.name,
-        price: item.price,
-        deliveryContent: item.deliveryContent || ''
-      })),
-      totalAmount: cartTotal,
-      status: 'completed',
-      createdAt: serverTimestamp()
-    };
-
-    const ordersRef = collection(db, 'orders');
-    
-    addDoc(ordersRef, orderData)
-      .then((docRef) => {
-        setLastOrder({ ...orderData, id: docRef.id });
-        setLoading(false);
-        resetCart();
-        setView('success');
-      })
-      .catch(async (error) => {
-        const permissionError = new FirestorePermissionError({
-          path: ordersRef.path,
-          operation: 'create',
-          requestResourceData: orderData
-        });
-        errorEmitter.emit('permission-error', permissionError);
-        setLoading(false);
+    try {
+      // Panggil API Pakasir untuk membuat transaksi QRIS
+      const response = await fetch("https://app.pakasir.com/api/transactioncreate/qris", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          project: PAKASIR_PROJECT,
+          order_id: orderId,
+          amount: cartTotal,
+          api_key: PAKASIR_API_KEY
+        })
       });
+
+      const result = await response.json();
+
+      if (result.payment) {
+        setPaymentData({
+          ...result.payment,
+          order_id: orderId,
+          amount: cartTotal,
+          customerName: formData.name,
+          customerEmail: formData.email,
+          whatsapp: formData.whatsapp,
+          items: cart
+        });
+        setView('payment-pending');
+      } else {
+        throw new Error(result.message || "Gagal membuat transaksi");
+      }
+    } catch (error: any) {
+      console.error("Pakasir API Error:", error);
+      toast({
+        variant: "destructive",
+        title: "Gagal memproses pembayaran",
+        description: error.message || "Terjadi kesalahan koneksi ke payment gateway."
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -116,6 +122,7 @@ export default function CheckoutView() {
                             placeholder="0812..." 
                             value={formData.whatsapp} 
                             onChange={handleInputChange} 
+                            required
                             className="h-12 rounded-xl bg-[#F8F9FA] border-none focus-visible:ring-primary/20 transition-all text-sm px-4"
                           />
                         </div>
@@ -137,52 +144,27 @@ export default function CheckoutView() {
                   <div className="space-y-5">
                     <div className="flex items-center gap-3 mb-2">
                       <div className="w-2 h-2 rounded-full bg-primary" />
-                      <h3 className="text-sm font-bold uppercase tracking-wider text-[#212529]">Pembayaran</h3>
+                      <h3 className="text-sm font-bold uppercase tracking-wider text-[#212529]">Metode Pembayaran</h3>
+                    </div>
+
+                    <div className="p-4 rounded-2xl border-2 border-primary bg-primary/5 flex items-center justify-between group cursor-default">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white">
+                                <QrCode size={20} />
+                            </div>
+                            <div>
+                                <div className="font-bold text-sm">QRIS (Otomatis)</div>
+                                <div className="text-[10px] text-muted-foreground font-bold uppercase tracking-wide">Dana, OVO, ShopeePay, m-Banking</div>
+                            </div>
+                        </div>
+                        <div className="w-5 h-5 rounded-full border-4 border-primary bg-white" />
                     </div>
 
                     <div className="bg-green-50/50 border border-green-100 p-4 rounded-xl flex gap-3 items-center mb-6">
                       <div className="p-2 bg-white rounded-lg shadow-sm">
                         <Lock size={16} className="text-green-600"/>
                       </div>
-                      <span className="text-[11px] text-green-700 font-bold uppercase tracking-wide">Pembayaran aman & terenkripsi</span>
-                    </div>
-
-                    <div className="grid gap-4">
-                      <div className="space-y-1.5">
-                        <label className="text-[10px] font-bold uppercase text-gray-400 tracking-widest ml-1">Nomor Kartu</label>
-                        <Input 
-                          name="cardNumber" 
-                          placeholder="0000 0000 0000 0000" 
-                          value={formData.cardNumber} 
-                          onChange={handleInputChange} 
-                          required 
-                          className="h-12 rounded-xl bg-[#F8F9FA] border-none focus-visible:ring-primary/20 transition-all text-sm px-4"
-                        />
-                      </div>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1.5">
-                          <label className="text-[10px] font-bold uppercase text-gray-400 tracking-widest ml-1">Exp Date</label>
-                          <Input 
-                            name="exp" 
-                            placeholder="MM/YY" 
-                            value={formData.exp} 
-                            onChange={handleInputChange} 
-                            required 
-                            className="h-12 rounded-xl bg-[#F8F9FA] border-none focus-visible:ring-primary/20 transition-all text-sm px-4"
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <label className="text-[10px] font-bold uppercase text-gray-400 tracking-widest ml-1">CVC</label>
-                          <Input 
-                            name="cvc" 
-                            placeholder="123" 
-                            value={formData.cvc} 
-                            onChange={handleInputChange} 
-                            required 
-                            className="h-12 rounded-xl bg-[#F8F9FA] border-none focus-visible:ring-primary/20 transition-all text-sm px-4"
-                          />
-                        </div>
-                      </div>
+                      <span className="text-[11px] text-green-700 font-bold uppercase tracking-wide">Transaksi aman via Pakasir</span>
                     </div>
                   </div>
                 </form>
