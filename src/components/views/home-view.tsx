@@ -1,8 +1,7 @@
-
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Search, Zap, X, Sparkles, ShoppingBag, QrCode, Download, HelpCircle, PackageX } from 'lucide-react';
+import { Search, Zap, X, Sparkles, ShoppingBag, QrCode, Download, HelpCircle, AlertCircle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -264,13 +263,20 @@ export default function HomeView() {
 const RecommendationCard = ({ item, addToCart }: { item: Product; addToCart: (product: Product) => void; }) => {
     const isUrl = typeof item.image === 'string' && item.image.startsWith('http');
     const imageSrc = isUrl ? item.image : getPlaceholderImageDetails(item.image).src;
-    const isOutOfStock = (item.stock ?? 0) <= 0;
+    const stock = item.stock ?? 0;
+    const isOutOfStock = stock <= 0;
+    const isLowStock = stock > 0 && stock <= 10;
 
     return (
         <Link href={`/product/${item.id}`} className={`bg-white p-4 rounded-[2rem] shadow-sm border border-slate-100 flex flex-col sm:flex-row gap-4 hover:shadow-xl hover:border-primary/20 transition-all duration-300 group overflow-hidden relative ${isOutOfStock ? 'opacity-75' : ''}`}>
             {isOutOfStock && (
               <div className="absolute top-2 right-2 z-10 bg-destructive text-destructive-foreground text-[8px] font-black px-2 py-0.5 rounded-full uppercase">
                 Habis
+              </div>
+            )}
+            {isLowStock && (
+              <div className="absolute top-2 left-2 z-10 bg-accent text-white text-[8px] font-black px-2 py-0.5 rounded-full uppercase">
+                Sisa {stock}
               </div>
             )}
             <div className="w-full sm:w-32 aspect-square sm:h-32 bg-slate-50 rounded-2xl shrink-0 overflow-hidden relative border border-slate-50">
@@ -284,6 +290,11 @@ const RecommendationCard = ({ item, addToCart }: { item: Product; addToCart: (pr
                     </div>
                     <h3 className="font-bold text-foreground text-base sm:text-lg line-clamp-1 leading-tight">{item.name}</h3>
                     <p className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed h-8 sm:h-auto">{item.description}</p>
+                    {isLowStock && (
+                      <div className="text-[10px] text-destructive font-bold uppercase tracking-tight flex items-center gap-1">
+                        <AlertCircle size={10} /> Stok Tersisa: {stock}
+                      </div>
+                    )}
                 </div>
                 <div className="flex flex-row sm:flex-row items-center justify-between gap-2 mt-4 pt-2 border-t border-slate-50 sm:border-none">
                     <span className={`font-bold text-sm sm:text-base whitespace-nowrap ${isOutOfStock ? 'text-muted-foreground line-through' : 'text-primary'}`}>

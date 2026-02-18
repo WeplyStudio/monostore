@@ -1,11 +1,10 @@
-
 "use client";
 
 import Image from 'next/image';
 import Link from 'next/link';
 import type { Product } from '@/lib/types';
 import { formatRupiah, getPlaceholderImageDetails } from '@/lib/utils';
-import { Star, TrendingUp, ArrowRight, PackageX } from 'lucide-react';
+import { Star, TrendingUp, ArrowRight, PackageX, AlertCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 
 interface ProductCardProps {
@@ -16,7 +15,9 @@ export default function ProductCard({ product }: ProductCardProps) {
   // Check if image is a URL or a placeholder ID
   const isUrl = typeof product.image === 'string' && product.image.startsWith('http');
   const imageSrc = isUrl ? product.image : getPlaceholderImageDetails(product.image).src;
-  const isOutOfStock = (product.stock ?? 0) <= 0;
+  const stock = product.stock ?? 0;
+  const isOutOfStock = stock <= 0;
+  const isLowStock = stock > 0 && stock <= 10;
 
   return (
     <Link 
@@ -32,6 +33,12 @@ export default function ProductCard({ product }: ProductCardProps) {
       {isOutOfStock && (
         <div className="absolute -top-2 -right-2 z-20 bg-destructive text-destructive-foreground text-[9px] font-black px-2 py-1 rounded-full shadow-lg border-2 border-background flex items-center gap-1 uppercase tracking-tighter">
           <PackageX size={10} /> STOK HABIS
+        </div>
+      )}
+
+      {isLowStock && (
+        <div className="absolute -top-2 -left-2 z-10 bg-accent text-white text-[9px] font-black px-2 py-1 rounded-full shadow-lg border-2 border-background flex items-center gap-1 uppercase tracking-tighter">
+          <AlertCircle size={10} /> STOK TERSISA: {stock}
         </div>
       )}
 
