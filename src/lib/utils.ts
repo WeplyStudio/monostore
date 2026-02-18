@@ -14,6 +14,18 @@ export const formatRupiah = (number: number) => {
   }).format(number);
 };
 
+export function formatCompactNumber(number: number) {
+  if (number < 1000) return number.toString();
+  
+  if (number < 1000000) {
+    const value = number / 1000;
+    return (value % 1 === 0 ? value.toFixed(0) : value.toFixed(1)) + 'K';
+  }
+  
+  const value = number / 1000000;
+  return (value % 1 === 0 ? value.toFixed(0) : value.toFixed(1)) + 'M';
+}
+
 
 export function getPlaceholderImage(id: string) {
   const image = PlaceHolderImages.find((img) => img.id === id);

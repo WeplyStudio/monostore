@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -18,7 +17,7 @@ import {
   Star,
   MessageSquare
 } from 'lucide-react';
-import { formatRupiah, getPlaceholderImageDetails } from '@/lib/utils';
+import { formatRupiah, getPlaceholderImageDetails, formatCompactNumber } from '@/lib/utils';
 import type { Product } from '@/lib/types';
 import { useRouter, useParams } from 'next/navigation';
 import { getPersonalizedRecommendations } from '@/ai/flows/personalized-recommendations-flow';
@@ -177,7 +176,7 @@ export default function ProductDetailPage() {
                     <Star size={14} className="fill-yellow-500 text-yellow-500" />
                     {product.rating} <span className="text-yellow-400 font-medium ml-1">({product.reviews} Review)</span>
                   </div>
-                  <div className="text-xs font-bold text-gray-400 uppercase tracking-widest">{product.sold}+ Terjual</div>
+                  <div className="text-xs font-bold text-gray-400 uppercase tracking-widest">{formatCompactNumber(product.sold || 0)}+ Terjual</div>
                 </div>
               </div>
 
