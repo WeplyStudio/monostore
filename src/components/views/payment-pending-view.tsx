@@ -17,6 +17,7 @@ export default function PaymentPendingView() {
   const { paymentData, setView, resetCart, setLastOrder } = useApp();
   const [status, setStatus] = useState<'pending' | 'success' | 'failed'>('pending');
   const [isChecking, setIsChecking] = useState(false);
+  const [timeLeft, setTimeLeft] = useState(900); // 15 minutes in seconds
   const db = useFirestore();
   const { toast } = useToast();
 
@@ -24,13 +25,29 @@ export default function PaymentPendingView() {
   const amount = paymentData?.amount;
   const qrData = paymentData?.payment_number;
 
+  // Countdown timer logic
+  useEffect(() => {
+    if (timeLeft <= 0 || status === 'success') return;
+    
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => prev - 1);
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [timeLeft, status]);
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
   const handleCheckStatus = async (auto = false) => {
     if (!orderId || !db || !amount) return;
     
     if (!auto) setIsChecking(true);
     
     try {
-      // Panggil Server Action alih-alih fetch langsung
       const result = await checkPakasirStatus(orderId, amount);
 
       if (result.transaction && (result.transaction.status === 'success' || result.transaction.status === 'completed')) {
@@ -46,11 +63,10 @@ export default function PaymentPendingView() {
   };
 
   const handlePaymentSuccess = async () => {
-    if (status === 'success') return; // Hindari dobel proses
+    if (status === 'success') return;
     
     setStatus('success');
     
-    // Simpan ke Firestore setelah pembayaran dikonfirmasi
     const orderRecord = {
       customerName: paymentData.customerName,
       customerEmail: paymentData.customerEmail,
@@ -85,7 +101,6 @@ export default function PaymentPendingView() {
       });
   };
 
-  // Polling otomatis setiap 5 detik
   useEffect(() => {
     if (status === 'success' || !orderId) return;
     
@@ -114,7 +129,9 @@ export default function PaymentPendingView() {
             <Button variant="ghost" onClick={() => setView('checkout')} className="p-0 font-bold text-gray-500">
                 <ArrowLeft size={18} className="mr-2" /> Kembali
             </Button>
-            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Sisa Waktu: 15:00</div>
+            <div className={`text-[10px] font-bold uppercase tracking-widest ${timeLeft < 60 ? 'text-destructive animate-pulse' : 'text-gray-400'}`}>
+                Sisa Waktu: {timeLeft > 0 ? formatTime(timeLeft) : 'EXPIRED'}
+            </div>
         </div>
 
         <Card className="rounded-[2.5rem] border-none shadow-2xl overflow-hidden bg-white text-center">
@@ -134,14 +151,13 @@ export default function PaymentPendingView() {
                 <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Order ID: {orderId}</div>
             </div>
 
-            {/* QR Code Container */}
             <div className="relative group">
                 <div className="aspect-square w-full max-w-[240px] mx-auto bg-white p-4 rounded-3xl shadow-inner border-2 border-slate-100 flex items-center justify-center">
                     {qrData ? (
                         <img 
                           src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(qrData)}`} 
                           alt="QRIS Code" 
-                          className="w-full h-full object-contain"
+                          className={`w-full h-full object-contain ${timeLeft <= 0 ? 'opacity-20 grayscale' : ''}`}
                         />
                     ) : (
                         <Loader2 className="animate-spin text-primary" size={32} />
@@ -151,6 +167,11 @@ export default function PaymentPendingView() {
                     <div className="absolute inset-0 bg-white/90 backdrop-blur-sm flex flex-col items-center justify-center animate-fadeIn rounded-3xl">
                         <CheckCircle2 size={64} className="text-green-500 mb-2" />
                         <span className="font-bold text-green-600">Terbayar!</span>
+                    </div>
+                )}
+                {timeLeft <= 0 && status !== 'success' && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center rounded-3xl">
+                        <div className="bg-destructive text-white px-4 py-2 rounded-xl font-bold shadow-lg">Waktu Habis</div>
                     </div>
                 )}
             </div>
@@ -173,7 +194,7 @@ export default function PaymentPendingView() {
 
                 <Button 
                     onClick={() => handleCheckStatus()} 
-                    disabled={isChecking || status === 'success'}
+                    disabled={isChecking || status === 'success' || timeLeft <= 0}
                     variant="outline"
                     className="w-full h-12 rounded-xl font-bold gap-2"
                 >
