@@ -7,8 +7,7 @@ import { collection, deleteDoc, doc, query, orderBy } from 'firebase/firestore';
 import { signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword } from 'firebase/auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from '@/components/ui/badge';
 import {
@@ -26,19 +25,14 @@ import {
   Search, 
   LayoutDashboard, 
   Loader2,
-  LogOut,
   Lock,
   AlertCircle,
-  ShoppingBag,
   Clock,
-  User as UserIcon,
-  Image as ImageIcon
 } from 'lucide-react';
 import { ProductDialog } from '@/components/admin/product-dialog';
 import { BannerDialog } from '@/components/admin/banner-dialog';
 import { formatRupiah } from '@/lib/utils';
 import Image from 'next/image';
-import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { errorEmitter } from '@/firebase/error-emitter';
@@ -124,7 +118,7 @@ export default function AdminPage() {
   if (!user || user.email !== ADMIN_EMAIL) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <Card className="w-full max-w-md shadow-2xl rounded-[2rem] overflow-hidden">
+        <Card className="w-full max-w-md shadow-xl rounded-2xl overflow-hidden">
           <CardHeader className="bg-primary text-primary-foreground p-10 text-center">
             <Lock size={40} className="mx-auto mb-4" />
             <CardTitle className="text-3xl font-bold">Admin MonoStore</CardTitle>
@@ -146,7 +140,7 @@ export default function AdminPage() {
 
   const filteredProducts = products?.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase())) || [];
 
-  const handleDelete = (id: string) => {
+  const handleDeleteProduct = (id: string) => {
     if (!db || !window.confirm('Hapus produk ini?')) return;
     const docRef = doc(db, 'products', id);
     deleteDoc(docRef).catch(err => errorEmitter.emit('permission-error', new FirestorePermissionError({ path: docRef.path, operation: 'delete' })));
@@ -163,21 +157,23 @@ export default function AdminPage() {
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-10">
           <div className="flex items-center gap-4">
-            <LayoutDashboard size={32} className="text-primary" />
+            <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center text-white">
+              <LayoutDashboard size={24} />
+            </div>
             <h1 className="text-3xl font-bold">Panel Admin</h1>
           </div>
           <Button variant="outline" onClick={handleLogout} className="rounded-xl">Logout</Button>
         </div>
 
         <Tabs defaultValue="products" className="space-y-6">
-          <TabsList className="bg-white p-1 rounded-2xl h-14 w-full md:w-auto shadow-sm flex overflow-x-auto no-scrollbar">
-            <TabsTrigger value="products" className="rounded-xl h-12 px-8 font-bold data-[state=active]:bg-primary data-[state=active]:text-white transition-all">
+          <TabsList className="bg-white p-1 rounded-xl h-14 w-full md:w-auto shadow-sm flex overflow-x-auto no-scrollbar">
+            <TabsTrigger value="products" className="rounded-lg h-12 px-8 font-bold data-[state=active]:bg-primary data-[state=active]:text-white transition-all">
               Produk
             </TabsTrigger>
-            <TabsTrigger value="banners" className="rounded-xl h-12 px-8 font-bold data-[state=active]:bg-primary data-[state=active]:text-white transition-all">
+            <TabsTrigger value="banners" className="rounded-lg h-12 px-8 font-bold data-[state=active]:bg-primary data-[state=active]:text-white transition-all">
               Banner
             </TabsTrigger>
-            <TabsTrigger value="orders" className="rounded-xl h-12 px-8 font-bold data-[state=active]:bg-primary data-[state=active]:text-white transition-all">
+            <TabsTrigger value="orders" className="rounded-lg h-12 px-8 font-bold data-[state=active]:bg-primary data-[state=active]:text-white transition-all">
               Pesanan
             </TabsTrigger>
           </TabsList>
@@ -186,14 +182,14 @@ export default function AdminPage() {
             <div className="flex flex-col md:flex-row gap-4">
               <div className="relative flex-1">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                <Input placeholder="Cari produk..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-12 h-14 rounded-2xl bg-white border-none shadow-sm" />
+                <Input placeholder="Cari produk..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} className="pl-12 h-14 rounded-xl bg-white border-none shadow-sm" />
               </div>
-              <Button onClick={() => setIsDialogOpen(true)} className="h-14 px-8 rounded-2xl font-bold">
+              <Button onClick={() => setIsDialogOpen(true)} className="h-14 px-8 rounded-xl font-bold">
                 <Plus size={20} className="mr-2" /> Tambah Produk
               </Button>
             </div>
 
-            <Card className="rounded-[2rem] border-none shadow-sm overflow-hidden">
+            <Card className="rounded-xl border-none shadow-sm overflow-hidden">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -212,13 +208,13 @@ export default function AdminPage() {
                           <div className="flex items-center gap-3 font-bold">{p.name}</div>
                         </TableCell>
                         <TableCell>{formatRupiah(p.price)}</TableCell>
-                        <TableCell><Badge variant="secondary">{p.category}</Badge></TableCell>
+                        <TableCell><Badge variant="secondary" className="rounded-md">{p.category}</Badge></TableCell>
                         <TableCell>
-                          <Badge variant={p.stock <= 10 ? "destructive" : "secondary"}>{p.stock}</Badge>
+                          <Badge variant={p.stock <= 10 ? "destructive" : "secondary"} className="rounded-md">{p.stock}</Badge>
                         </TableCell>
                         <TableCell className="text-right pr-8">
                           <Button variant="ghost" size="icon" onClick={() => { setEditingProduct(p); setIsDialogOpen(true); }}><Pencil size={18} /></Button>
-                          <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete(p.id)}><Trash2 size={18} /></Button>
+                          <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDeleteProduct(p.id)}><Trash2 size={18} /></Button>
                         </TableCell>
                       </TableRow>
                     ))
@@ -231,7 +227,7 @@ export default function AdminPage() {
           <TabsContent value="banners" className="space-y-6">
             <div className="flex justify-between items-center">
               <div className="text-sm text-muted-foreground font-medium">Maksimal 10 banner aktif. Urutkan berdasarkan angka (0 terkecil).</div>
-              <Button onClick={() => setIsBannerDialogOpen(true)} className="h-14 px-8 rounded-2xl font-bold" disabled={banners?.length >= 10}>
+              <Button onClick={() => setIsBannerDialogOpen(true)} className="h-14 px-8 rounded-xl font-bold" disabled={banners?.length >= 10}>
                 <Plus size={20} className="mr-2" /> Tambah Banner
               </Button>
             </div>
@@ -240,11 +236,11 @@ export default function AdminPage() {
               {bannersLoading ? (
                 <div className="col-span-full flex justify-center py-20"><Loader2 className="animate-spin" /></div>
               ) : banners?.map((banner: any) => (
-                <Card key={banner.id} className="rounded-3xl border-none shadow-sm overflow-hidden group">
+                <Card key={banner.id} className="rounded-xl border-none shadow-sm overflow-hidden group bg-white">
                   <div className="relative aspect-[21/9] bg-slate-100">
                     <Image src={banner.image} alt="Banner" fill className="object-cover" />
                     <div className="absolute top-2 left-2">
-                      <Badge className="bg-primary text-white font-bold">#{banner.order}</Badge>
+                      <Badge className="bg-primary text-white font-bold rounded-md">#{banner.order}</Badge>
                     </div>
                   </div>
                   <CardContent className="p-4 flex justify-between items-center">
@@ -253,14 +249,14 @@ export default function AdminPage() {
                       <div className="text-[10px] text-muted-foreground truncate">{banner.link || 'Tanpa Link'}</div>
                     </div>
                     <div className="flex gap-1 shrink-0">
-                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingBanner(banner); setIsBannerDialogOpen(true); }}><Pencil size={14} /></Button>
-                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDeleteBanner(banner.id)}><Trash2 size={14} /></Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md" onClick={() => { setEditingBanner(banner); setIsBannerDialogOpen(true); }}><Pencil size={14} /></Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive rounded-md" onClick={() => handleDeleteBanner(banner.id)}><Trash2 size={14} /></Button>
                     </div>
                   </CardContent>
                 </Card>
               ))}
               {!bannersLoading && banners?.length === 0 && (
-                <div className="col-span-full text-center py-20 bg-white rounded-[2rem] border border-dashed text-muted-foreground font-bold">
+                <div className="col-span-full text-center py-20 bg-white rounded-xl border border-dashed text-muted-foreground font-bold">
                   Belum ada banner promo.
                 </div>
               )}
@@ -268,7 +264,7 @@ export default function AdminPage() {
           </TabsContent>
 
           <TabsContent value="orders">
-            <Card className="rounded-[2rem] border-none shadow-sm overflow-hidden">
+            <Card className="rounded-xl border-none shadow-sm overflow-hidden">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -304,7 +300,7 @@ export default function AdminPage() {
                           <div className="flex items-center gap-1"><Clock size={12} /> {order.createdAt?.toDate ? order.createdAt.toDate().toLocaleString('id-ID') : 'Baru saja'}</div>
                         </TableCell>
                         <TableCell className="pr-8">
-                          <Badge className="bg-green-100 text-green-700 hover:bg-green-100 uppercase text-[10px]">BERHASIL</Badge>
+                          <Badge className="bg-green-100 text-green-700 hover:bg-green-100 uppercase text-[10px] rounded-md">BERHASIL</Badge>
                         </TableCell>
                       </TableRow>
                     ))
