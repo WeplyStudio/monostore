@@ -24,7 +24,7 @@ import {
 import { CATEGORIES } from '@/lib/data';
 import { uploadToImgBB } from '@/lib/imgbb';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Upload, X, Link as LinkIcon, Package, Zap, Tag, Info } from 'lucide-react';
+import { Loader2, Upload, X, Link as LinkIcon, Package, Zap, Tag, Info, ListChecks } from 'lucide-react';
 import Image from 'next/image';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -119,11 +119,11 @@ export function ProductDialog({ isOpen, onClose, product }: ProductDialogProps) 
       if (product) {
         const docRef = doc(db, 'products', product.id);
         await updateDoc(docRef, payload);
-        toast({ title: 'Success', description: 'Produk diperbarui' });
+        toast({ title: 'Berhasil', description: 'Template website diperbarui' });
       } else {
         const collectionRef = collection(db, 'products');
         await addDoc(collectionRef, { ...payload, createdAt: serverTimestamp() });
-        toast({ title: 'Success', description: 'Produk baru ditambahkan' });
+        toast({ title: 'Berhasil', description: 'Template baru ditambahkan' });
       }
       onClose();
     } catch (error: any) {
@@ -136,33 +136,64 @@ export function ProductDialog({ isOpen, onClose, product }: ProductDialogProps) 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl">
-        <DialogHeader><DialogTitle>{product ? 'Edit Produk' : 'Tambah Produk'}</DialogTitle></DialogHeader>
+        <DialogHeader><DialogTitle>{product ? 'Edit Template' : 'Tambah Template Baru'}</DialogTitle></DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-6 py-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="space-y-4">
-              <div className="space-y-1.5"><Label className="text-xs font-bold uppercase text-gray-400">Nama Produk</Label><Input value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} required className="rounded-xl bg-slate-50 border-none" /></div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5"><Label className="text-xs font-bold uppercase text-gray-400">Harga Promo (IDR)</Label><Input type="number" value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} required className="rounded-xl bg-blue-50 border-none font-bold" /></div>
-                <div className="space-y-1.5"><Label className="text-xs font-bold uppercase text-gray-400">Harga Normal (Coret)</Label><Input type="number" value={formData.originalPrice} onChange={e => setFormData({...formData, originalPrice: e.target.value})} className="rounded-xl bg-slate-50 border-none" /></div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold uppercase text-gray-400">Nama Template</Label>
+                <Input value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} required className="rounded-xl bg-slate-50 border-none" />
               </div>
+              
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5"><Label className="text-xs font-bold uppercase text-gray-400">Stok</Label><Input type="number" value={formData.stock} onChange={e => setFormData({...formData, stock: e.target.value})} required className="rounded-xl bg-slate-50 border-none" /></div>
-                <div className="space-y-1.5"><Label className="text-xs font-bold uppercase text-gray-400">Kategori</Label>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold uppercase text-gray-400">Harga Promo (IDR)</Label>
+                  <Input type="number" value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} required className="rounded-xl bg-blue-50 border-none font-bold" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold uppercase text-gray-400">Harga Normal (Coret)</Label>
+                  <Input type="number" value={formData.originalPrice} onChange={e => setFormData({...formData, originalPrice: e.target.value})} className="rounded-xl bg-slate-50 border-none" />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold uppercase text-gray-400">Stok</Label>
+                  <Input type="number" value={formData.stock} onChange={e => setFormData({...formData, stock: e.target.value})} required className="rounded-xl bg-slate-50 border-none" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs font-bold uppercase text-gray-400">Kategori</Label>
                   <Select value={formData.category} onValueChange={val => setFormData({...formData, category: val})}>
                     <SelectTrigger className="rounded-xl bg-slate-50 border-none"><SelectValue placeholder="Pilih" /></SelectTrigger>
                     <SelectContent>{CATEGORIES.filter(c => c !== 'Semua').map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
               </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold uppercase text-gray-400 flex items-center gap-2">
+                  <ListChecks size={14} /> Fitur Utama (Pisahkan dengan koma)
+                </Label>
+                <Input 
+                  value={formData.features} 
+                  onChange={e => setFormData({...formData, features: e.target.value})} 
+                  placeholder="Responsive, Dark Mode, Next.js 15..."
+                  className="rounded-xl bg-slate-50 border-none" 
+                />
+              </div>
+
               <div className="space-y-1.5 p-4 bg-red-50 rounded-xl border border-red-100">
-                <Label className="text-xs font-bold uppercase text-red-600 flex items-center gap-2"><Zap size={14} className="fill-red-600" /> Flash Sale End Time (Opsional)</Label>
+                <Label className="text-xs font-bold uppercase text-red-600 flex items-center gap-2">
+                  <Zap size={14} className="fill-red-600" /> Flash Sale End Time (Opsional)
+                </Label>
                 <Input type="datetime-local" value={formData.flashSaleEnd} onChange={e => setFormData({...formData, flashSaleEnd: e.target.value})} className="rounded-xl bg-white border-red-200" />
                 <p className="text-[10px] text-red-400 mt-1 italic">*Biarkan kosong jika bukan Flash Sale</p>
               </div>
             </div>
+
             <div className="space-y-4">
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold uppercase text-gray-400">Gambar Produk</Label>
+                <Label className="text-xs font-bold uppercase text-gray-400">Gambar Preview</Label>
                 <div className="border-2 border-dashed border-slate-200 rounded-2xl p-4 text-center relative aspect-square max-w-[200px] mx-auto overflow-hidden">
                   {imagePreview ? (
                     <>
@@ -178,9 +209,12 @@ export function ProductDialog({ isOpen, onClose, product }: ProductDialogProps) 
                   )}
                 </div>
               </div>
-              <div className="space-y-1.5"><Label className="text-xs font-bold uppercase text-gray-400">Link Produk Digital</Label><Input value={formData.deliveryContent} onChange={e => setFormData({...formData, deliveryContent: e.target.value})} placeholder="https://..." className="rounded-xl bg-slate-50 border-none" /></div>
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold uppercase text-gray-400">Deskripsi</Label>
+                <Label className="text-xs font-bold uppercase text-gray-400">Link Source Code (Drive/GitHub)</Label>
+                <Input value={formData.deliveryContent} onChange={e => setFormData({...formData, deliveryContent: e.target.value})} placeholder="https://..." className="rounded-xl bg-slate-50 border-none" />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold uppercase text-gray-400">Deskripsi Template</Label>
                 <Textarea rows={4} value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} required className="rounded-xl bg-slate-50 border-none mb-2" />
                 <div className="p-3 bg-blue-50 rounded-lg border border-blue-100">
                   <div className="flex items-center gap-1 text-[10px] font-bold text-blue-600 uppercase mb-1">
@@ -196,7 +230,7 @@ export function ProductDialog({ isOpen, onClose, product }: ProductDialogProps) 
               </div>
             </div>
           </div>
-          <DialogFooter><Button type="submit" disabled={loading} className="w-full rounded-xl h-12 font-bold">{loading ? <Loader2 className="animate-spin mr-2" /> : 'Simpan Produk'}</Button></DialogFooter>
+          <DialogFooter><Button type="submit" disabled={loading} className="w-full rounded-xl h-12 font-bold">{loading ? <Loader2 className="animate-spin mr-2" /> : 'Simpan Template'}</Button></DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
