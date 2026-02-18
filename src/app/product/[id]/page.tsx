@@ -17,7 +17,9 @@ import {
   Loader2,
   Star,
   MessageSquare,
-  ArrowRight
+  ArrowRight,
+  AlertTriangle,
+  Package
 } from 'lucide-react';
 import { formatRupiah, getPlaceholderImageDetails, formatCompactNumber } from '@/lib/utils';
 import type { Product } from '@/lib/types';
@@ -128,14 +130,24 @@ export default function ProductDetailPage() {
   const imageSrc = isUrl ? product.image : getPlaceholderImageDetails(product.image).src;
   const imageHint = isUrl ? "" : getPlaceholderImageDetails(product.image).hint;
 
+  const stock = product.stock || 0;
+  const isOutOfStock = stock <= 0;
+  const isLowStock = stock > 0 && stock <= 10;
+
   const handlingFee = 0;
   const totalPrice = (product.price || 0) + handlingFee;
 
   const handleBuyNow = () => {
+    if (isOutOfStock) return;
     addToCart(product as Product, 1);
     setView('checkout');
     setIsCartOpen(false);
     router.push('/');
+  };
+
+  const handleAddToCart = () => {
+    if (isOutOfStock) return;
+    addToCart(product as Product, 1);
   };
 
   return (
@@ -156,7 +168,14 @@ export default function ProductDetailPage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           
           <div className="lg:col-span-8 space-y-8">
-            <div className="bg-white rounded-[2rem] overflow-hidden shadow-sm border border-gray-100 p-4">
+            <div className="bg-white rounded-[2rem] overflow-hidden shadow-sm border border-gray-100 p-4 relative">
+              {isOutOfStock && (
+                <div className="absolute inset-0 bg-white/40 backdrop-blur-[2px] z-10 flex items-center justify-center">
+                  <div className="bg-destructive text-white px-6 py-2 rounded-2xl font-bold shadow-xl flex items-center gap-2">
+                    <Package size={20} /> STOK HABIS
+                  </div>
+                </div>
+              )}
               <div className="aspect-square relative w-full max-w-2xl mx-auto rounded-2xl overflow-hidden">
                 <Image
                   src={imageSrc}
@@ -304,6 +323,11 @@ export default function ProductDetailPage() {
                     <h2 className="text-3xl font-bold text-foreground">
                       {formatRupiah(product.price)}
                     </h2>
+                    {isLowStock && (
+                      <div className="mt-2 text-destructive font-black text-[11px] uppercase tracking-widest flex items-center gap-2 animate-pulse">
+                        <AlertTriangle size={14} /> Stok tersisa: {stock}
+                      </div>
+                    )}
                   </div>
 
                   <div className="space-y-4">
@@ -347,8 +371,9 @@ export default function ProductDetailPage() {
                   <div className="flex flex-col gap-3">
                     <div className="grid grid-cols-2 gap-3">
                       <Button 
-                        onClick={() => addToCart(product as Product, 1)}
+                        onClick={handleAddToCart}
                         variant="secondary" 
+                        disabled={isOutOfStock}
                         className="h-14 rounded-2xl font-bold"
                       >
                         <ShoppingCart size={18} className="mr-2" />
@@ -356,9 +381,10 @@ export default function ProductDetailPage() {
                       </Button>
                       <Button 
                         onClick={handleBuyNow}
+                        disabled={isOutOfStock}
                         className="bg-primary hover:bg-primary/90 text-white h-14 rounded-2xl font-bold"
                       >
-                        Beli Sekarang
+                        {isOutOfStock ? 'Stok Habis' : 'Beli Sekarang'}
                       </Button>
                     </div>
                   </div>

@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -90,17 +91,18 @@ export default function PaymentPendingView() {
       // 1. Simpan ke Firestore dulu
       const docRef = await addDoc(ordersRef, orderRecord);
       
-      // 1.5 Update jumlah terjual untuk setiap produk
+      // 1.5 Update jumlah terjual dan KURANGI STOK untuk setiap produk
       for (const item of paymentData.items) {
         const productRef = doc(db, 'products', item.id);
         updateDoc(productRef, {
-          sold: increment(item.quantity || 1)
+          sold: increment(item.quantity || 1),
+          stock: increment(-(item.quantity || 1)) // Mengurangi stok secara otomatis
         }).catch(err => {
-          console.error("Gagal memperbarui jumlah terjual:", err);
+          console.error("Gagal memperbarui jumlah terjual/stok:", err);
         });
       }
       
-      // 2. Kirim Email Invoice via Zoho (Tunggu sampai selesai)
+      // 2. Kirim Email Invoice
       await sendOrderConfirmationEmail({
         customerName: orderRecord.customerName,
         customerEmail: orderRecord.customerEmail,

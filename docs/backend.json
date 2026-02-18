@@ -13,6 +13,7 @@
         "rating": { "type": "number", "description": "Average rating" },
         "reviews": { "type": "number", "description": "Number of reviews" },
         "sold": { "type": "number", "description": "Total units sold" },
+        "stock": { "type": "number", "description": "Remaining stock available" },
         "isBestSeller": { "type": "boolean", "description": "Whether the product is a bestseller" },
         "description": { "type": "string", "description": "Detailed description" },
         "features": { "type": "array", "items": { "type": "string" }, "description": "List of product features" },
@@ -20,7 +21,7 @@
         "deliveryContent": { "type": "string", "description": "The link or file URL delivered to user after purchase" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["name", "price", "category", "description", "image"]
+      "required": ["name", "price", "category", "description", "image", "stock"]
     },
     "Order": {
       "title": "Order",

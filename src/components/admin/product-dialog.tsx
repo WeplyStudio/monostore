@@ -25,7 +25,7 @@ import {
 import { CATEGORIES } from '@/lib/data';
 import { uploadToImgBB } from '@/lib/imgbb';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Upload, X, Link as LinkIcon } from 'lucide-react';
+import { Loader2, Upload, X, Link as LinkIcon, Package } from 'lucide-react';
 import Image from 'next/image';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -49,6 +49,7 @@ export function ProductDialog({ isOpen, onClose, product }: ProductDialogProps) 
     category: '',
     description: '',
     features: '',
+    stock: '',
     isBestSeller: false,
     image: '',
     deliveryContent: ''
@@ -62,6 +63,7 @@ export function ProductDialog({ isOpen, onClose, product }: ProductDialogProps) 
         category: product.category || '',
         description: product.description || '',
         features: product.features?.join(', ') || '',
+        stock: product.stock?.toString() || '0',
         isBestSeller: product.isBestSeller || false,
         image: product.image || '',
         deliveryContent: product.deliveryContent || ''
@@ -74,6 +76,7 @@ export function ProductDialog({ isOpen, onClose, product }: ProductDialogProps) 
         category: '',
         description: '',
         features: '',
+        stock: '0',
         isBestSeller: false,
         image: '',
         deliveryContent: ''
@@ -108,6 +111,7 @@ export function ProductDialog({ isOpen, onClose, product }: ProductDialogProps) 
         category: formData.category,
         description: formData.description,
         features: formData.features.split(',').map(f => f.trim()).filter(f => f !== ''),
+        stock: parseInt(formData.stock) || 0,
         isBestSeller: formData.isBestSeller,
         image: imageUrl,
         deliveryContent: formData.deliveryContent,
@@ -179,6 +183,21 @@ export function ProductDialog({ isOpen, onClose, product }: ProductDialogProps) 
                 </div>
               </div>
 
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label htmlFor="stock" className="text-xs font-bold uppercase text-gray-400 flex items-center gap-1">
+                    <Package size={12} /> Jumlah Stok
+                  </Label>
+                  <Input id="stock" type="number" value={formData.stock} onChange={e => setFormData({...formData, stock: e.target.value})} required className="h-11 rounded-xl bg-slate-50 border-none" />
+                </div>
+                <div className="space-y-1.5 flex flex-col justify-end">
+                  <div className="flex items-center space-x-3 p-2 bg-slate-50 rounded-xl h-11">
+                    <input type="checkbox" id="bestseller" checked={formData.isBestSeller} onChange={e => setFormData({...formData, isBestSeller: e.target.checked})} className="w-5 h-5 rounded-md border-gray-300 text-primary" />
+                    <Label htmlFor="bestseller" className="cursor-pointer font-bold text-xs">Best Seller</Label>
+                  </div>
+                </div>
+              </div>
+
               <div className="space-y-1.5">
                 <Label htmlFor="deliveryContent" className="text-xs font-bold uppercase text-gray-400 flex items-center gap-1">
                   <LinkIcon size={12} /> Link / File Download (Diberikan ke Pembeli)
@@ -189,11 +208,6 @@ export function ProductDialog({ isOpen, onClose, product }: ProductDialogProps) 
               <div className="space-y-1.5">
                 <Label htmlFor="features" className="text-xs font-bold uppercase text-gray-400">Fitur (pisahkan dengan koma)</Label>
                 <Input id="features" placeholder="SEO Ready, Responsive, Dark Mode" value={formData.features} onChange={e => setFormData({...formData, features: e.target.value})} className="h-11 rounded-xl bg-slate-50 border-none" />
-              </div>
-
-              <div className="flex items-center space-x-3 p-3 bg-slate-50 rounded-xl">
-                <input type="checkbox" id="bestseller" checked={formData.isBestSeller} onChange={e => setFormData({...formData, isBestSeller: e.target.checked})} className="w-5 h-5 rounded-md border-gray-300 text-primary" />
-                <Label htmlFor="bestseller" className="cursor-pointer font-bold text-sm">Produk Terlaris (Best Seller)</Label>
               </div>
             </div>
 

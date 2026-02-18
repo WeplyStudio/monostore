@@ -1,3 +1,4 @@
+
 export type Product = {
   id: string; // Changed to string for Firestore ID compatibility
   name: string;
@@ -6,6 +7,7 @@ export type Product = {
   rating: number;
   reviews: number;
   sold: number;
+  stock: number; // Menambahkan stok
   isBestSeller: boolean;
   description: string;
   features: string[];
