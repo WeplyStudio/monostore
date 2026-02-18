@@ -17,7 +17,7 @@ export async function sendOrderConfirmationEmail(orderData: {
     port: 465,
     secure: true, // Use SSL
     auth: {
-      user: 'support@weplystudio.my.id',
+      user: 'hello@itsjason.my.id',
       pass: 'Semarang20?',
     },
     tls: {
@@ -50,7 +50,7 @@ export async function sendOrderConfirmationEmail(orderData: {
     .join('');
 
   const mailOptions = {
-    from: '"MonoStore" <support@weplystudio.my.id>',
+    from: '"MonoStore" <hello@itsjason.my.id>',
     to: orderData.customerEmail,
     subject: `Invoice Pembelian #${orderData.orderId} - MonoStore`,
     html: `
