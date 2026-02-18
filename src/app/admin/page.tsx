@@ -1,9 +1,10 @@
+
 'use client';
 
 import React, { useState } from 'react';
 import { useFirestore, useCollection, useUser, useAuth, useMemoFirebase } from '@/firebase';
 import { collection, deleteDoc, doc, query, orderBy } from 'firebase/firestore';
-import { signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -26,14 +27,16 @@ import {
   Loader2,
   Lock,
   AlertCircle,
-  Clock,
   Ticket,
   Zap,
-  Tag
+  Tag,
+  Clock,
+  Timer
 } from 'lucide-react';
 import { ProductDialog } from '@/components/admin/product-dialog';
 import { BannerDialog } from '@/components/admin/banner-dialog';
 import { VoucherDialog } from '@/components/admin/voucher-dialog';
+import { FlashSaleDialog } from '@/components/admin/flash-sale-dialog';
 import { formatRupiah } from '@/lib/utils';
 import Image from 'next/image';
 import { useToast } from '@/hooks/use-toast';
@@ -55,14 +58,22 @@ export default function AdminPage() {
   const [authError, setAuthError] = useState<string | null>(null);
 
   const [searchTerm, setSearchTerm] = useState('');
+  
+  // Product Dialog
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
 
+  // Banner Dialog
   const [isBannerDialogOpen, setIsBannerDialogOpen] = useState(false);
   const [editingBanner, setEditingBanner] = useState<any>(null);
 
+  // Voucher Dialog
   const [isVoucherDialogOpen, setIsVoucherDialogOpen] = useState(false);
   const [editingVoucher, setEditingVoucher] = useState<any>(null);
+
+  // Flash Sale Dialog
+  const [isFlashSaleDialogOpen, setIsFlashSaleDialogOpen] = useState(false);
+  const [selectedFlashSaleProduct, setSelectedFlashSaleProduct] = useState<any>(null);
 
   // Queries
   const productsQuery = useMemoFirebase(() => {
@@ -159,6 +170,9 @@ export default function AdminPage() {
         <Tabs defaultValue="products" className="space-y-6">
           <TabsList className="bg-white p-1 rounded-xl h-14 w-full md:w-auto shadow-sm flex overflow-x-auto no-scrollbar">
             <TabsTrigger value="products" className="rounded-lg h-12 px-6 font-bold data-[state=active]:bg-primary data-[state=active]:text-white">Produk</TabsTrigger>
+            <TabsTrigger value="flash-sale" className="rounded-lg h-12 px-6 font-bold data-[state=active]:bg-red-600 data-[state=active]:text-white">
+              <Zap size={16} className="mr-2" /> Flash Sale
+            </TabsTrigger>
             <TabsTrigger value="vouchers" className="rounded-lg h-12 px-6 font-bold data-[state=active]:bg-primary data-[state=active]:text-white">Voucher</TabsTrigger>
             <TabsTrigger value="banners" className="rounded-lg h-12 px-6 font-bold data-[state=active]:bg-primary data-[state=active]:text-white">Banner</TabsTrigger>
             <TabsTrigger value="orders" className="rounded-lg h-12 px-6 font-bold data-[state=active]:bg-primary data-[state=active]:text-white">Pesanan</TabsTrigger>
@@ -172,13 +186,13 @@ export default function AdminPage() {
               </div>
               <Button onClick={() => setIsDialogOpen(true)} className="h-14 px-8 rounded-xl font-bold"><Plus size={20} className="mr-2" /> Tambah Produk</Button>
             </div>
-            <Card className="rounded-xl border-none shadow-sm overflow-hidden">
+            <Card className="rounded-xl border-none shadow-sm overflow-hidden bg-white">
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead className="pl-8">Produk</TableHead>
                     <TableHead>Harga</TableHead>
-                    <TableHead>Promo</TableHead>
+                    <TableHead>Status</TableHead>
                     <TableHead>Stok</TableHead>
                     <TableHead className="text-right pr-8">Aksi</TableHead>
                   </TableRow>
@@ -187,11 +201,20 @@ export default function AdminPage() {
                   {productsLoading ? <TableRow><TableCell colSpan={5} className="text-center h-40"><Loader2 className="animate-spin mx-auto" /></TableCell></TableRow> :
                     products?.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase())).map(p => (
                       <TableRow key={p.id}>
-                        <TableCell className="pl-8 py-4 font-bold">{p.name}</TableCell>
+                        <TableCell className="pl-8 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-lg overflow-hidden relative bg-slate-100 shrink-0">
+                              <Image src={p.image.startsWith('http') ? p.image : '/api/placeholder/100/100'} alt="" fill className="object-cover" />
+                            </div>
+                            <span className="font-bold">{p.name}</span>
+                          </div>
+                        </TableCell>
                         <TableCell>{formatRupiah(p.price)}</TableCell>
                         <TableCell>
-                          {p.originalPrice && p.originalPrice > p.price && <Badge className="bg-green-100 text-green-700">-{Math.round(((p.originalPrice - p.price) / p.originalPrice) * 100)}%</Badge>}
-                          {p.flashSaleEnd && new Date(p.flashSaleEnd).getTime() > Date.now() && <Badge className="ml-1 bg-red-100 text-red-700">FLASH SALE</Badge>}
+                          <div className="flex flex-wrap gap-1">
+                            {p.originalPrice && p.originalPrice > p.price && <Badge className="bg-green-100 text-green-700">-{Math.round(((p.originalPrice - p.price) / p.originalPrice) * 100)}%</Badge>}
+                            {p.flashSaleEnd && new Date(p.flashSaleEnd).getTime() > Date.now() && <Badge className="bg-red-100 text-red-700 flex items-center gap-1"><Zap size={10} /> FLASH SALE</Badge>}
+                          </div>
                         </TableCell>
                         <TableCell><Badge variant={p.stock <= 5 ? "destructive" : "secondary"}>{p.stock}</Badge></TableCell>
                         <TableCell className="text-right pr-8">
@@ -204,6 +227,69 @@ export default function AdminPage() {
                 </TableBody>
               </Table>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="flash-sale" className="space-y-6">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-red-50 p-6 rounded-2xl border border-red-100">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-red-600 rounded-xl flex items-center justify-center text-white"><Zap size={24} className="fill-white" /></div>
+                <div>
+                  <h2 className="text-xl font-bold text-red-900 tracking-tight">Pusat Aktivasi Flash Sale</h2>
+                  <p className="text-sm text-red-600 font-medium">Ubah produk menjadi promo kilat dalam sekejap.</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {productsLoading ? <div className="col-span-full py-20 text-center"><Loader2 className="animate-spin mx-auto" /></div> :
+                products?.map((p: any) => {
+                  const isFlashSaleActive = p.flashSaleEnd && new Date(p.flashSaleEnd).getTime() > Date.now();
+                  return (
+                    <Card key={p.id} className={`rounded-2xl border-none shadow-sm overflow-hidden bg-white transition-all ${isFlashSaleActive ? 'ring-2 ring-red-500' : ''}`}>
+                      <div className="aspect-[16/9] relative bg-slate-100">
+                        <Image src={p.image.startsWith('http') ? p.image : '/api/placeholder/400/225'} alt={p.name} fill className="object-cover" />
+                        {isFlashSaleActive && (
+                          <div className="absolute inset-0 bg-red-600/10 backdrop-blur-[1px] flex items-center justify-center">
+                            <Badge className="bg-red-600 text-white text-xs font-black animate-pulse py-1 px-3">SEDANG FLASH SALE</Badge>
+                          </div>
+                        )}
+                      </div>
+                      <CardContent className="p-5 space-y-4">
+                        <div>
+                          <h3 className="font-bold text-base truncate mb-1">{p.name}</h3>
+                          <div className="text-xs text-muted-foreground font-medium">Harga Normal: {formatRupiah(p.originalPrice || p.price)}</div>
+                        </div>
+                        
+                        {isFlashSaleActive ? (
+                          <div className="bg-red-50 p-3 rounded-xl space-y-2">
+                            <div className="flex justify-between items-center">
+                              <span className="text-[10px] font-bold text-red-400 uppercase tracking-widest">Harga Flash Sale</span>
+                              <span className="text-sm font-black text-red-600">{formatRupiah(p.price)}</span>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <span className="text-[10px] font-bold text-red-400 uppercase tracking-widest">Berakhir</span>
+                              <span className="text-[10px] font-bold text-red-600">{new Date(p.flashSaleEnd).toLocaleString('id-ID')}</span>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="h-14 flex items-center justify-center border-2 border-dashed border-slate-100 rounded-xl text-[10px] font-bold text-slate-300 uppercase tracking-[0.2em]">
+                            Flash Sale Mati
+                          </div>
+                        )}
+
+                        <Button 
+                          onClick={() => { setSelectedFlashSaleProduct(p); setIsFlashSaleDialogOpen(true); }}
+                          variant={isFlashSaleActive ? "outline" : "default"}
+                          className={`w-full h-11 rounded-xl font-bold ${!isFlashSaleActive ? 'bg-red-600 hover:bg-red-700 text-white' : 'border-red-200 text-red-600'}`}
+                        >
+                          {isFlashSaleActive ? 'Edit Flash Sale' : 'Aktifkan Flash Sale'}
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  );
+                })
+              }
+            </div>
           </TabsContent>
 
           <TabsContent value="vouchers" className="space-y-6">
@@ -290,7 +376,7 @@ export default function AdminPage() {
                         <TableCell className="font-bold text-primary">{formatRupiah(o.totalAmount)}</TableCell>
                         <TableCell>{o.voucherCode ? <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">{o.voucherCode}</Badge> : '-'}</TableCell>
                         <TableCell className="text-xs text-muted-foreground">{o.createdAt?.toDate ? o.createdAt.toDate().toLocaleString('id-ID') : '...'}</TableCell>
-                        <TableCell className="pr-8"><Badge className="bg-green-500">BERHASIL</Badge></TableCell>
+                        <TableCell className="pr-8"><Badge className="bg-green-500 text-white">BERHASIL</Badge></TableCell>
                       </TableRow>
                     ))
                   }
@@ -304,6 +390,7 @@ export default function AdminPage() {
       <ProductDialog isOpen={isDialogOpen} onClose={() => { setIsDialogOpen(false); setEditingProduct(null); }} product={editingProduct} />
       <BannerDialog isOpen={isBannerDialogOpen} onClose={() => { setIsBannerDialogOpen(false); setEditingBanner(null); }} banner={editingBanner} />
       <VoucherDialog isOpen={isVoucherDialogOpen} onClose={() => { setIsVoucherDialogOpen(false); setEditingVoucher(null); }} voucher={editingVoucher} />
+      <FlashSaleDialog isOpen={isFlashSaleDialogOpen} onClose={() => { setIsFlashSaleDialogOpen(false); setSelectedFlashSaleProduct(null); }} product={selectedFlashSaleProduct} />
     </div>
   );
 }
