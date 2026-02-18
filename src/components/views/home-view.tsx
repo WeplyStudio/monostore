@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Search, Zap, X } from 'lucide-react';
+import { Search, Zap, X, Sparkles } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -40,8 +40,6 @@ export default function HomeView() {
     const fetchRecommendations = async () => {
       setIsRecsLoading(true);
       try {
-        // Normalize products: Convert Timestamps to ISO strings and ensure IDs are strings
-        // This avoids "Only plain objects can be passed to Server Functions" error
         const sanitizedProducts = products.map(p => ({
           ...p,
           id: String(p.id),
@@ -80,8 +78,8 @@ export default function HomeView() {
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 pb-20">
       <div className="text-center mb-10 mt-4">
-        <h1 className="text-3xl md:text-5xl font-bold text-foreground mb-3 tracking-tight">Apa yang ingin kamu buat?</h1>
-        <p className="text-muted-foreground mb-8">Temukan aset digital terbaik untuk projectmu.</p>
+        <h1 className="text-3xl md:text-5xl font-bold text-foreground mb-3 tracking-tight font-headline">Apa yang ingin kamu buat?</h1>
+        <p className="text-muted-foreground mb-8 text-sm md:text-base">Temukan aset digital terbaik untuk project kreatifmu.</p>
         <div className="max-w-2xl mx-auto relative">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           <Input 
@@ -89,18 +87,18 @@ export default function HomeView() {
             placeholder="Cari icon, template, atau e-book..." 
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-12 pr-4 py-4 bg-background border-2 h-14 rounded-2xl shadow-sm focus:border-primary transition-all"
+            className="w-full pl-12 pr-4 py-4 bg-white border-none h-14 rounded-2xl shadow-sm focus:ring-2 focus:ring-primary/20 transition-all text-sm md:text-base"
           />
         </div>
       </div>
 
-      <div className="flex overflow-x-auto gap-3 pb-4 mb-8 justify-start md:justify-center no-scrollbar">
+      <div className="flex overflow-x-auto gap-2 md:gap-3 pb-4 mb-10 justify-start md:justify-center no-scrollbar">
          {CATEGORIES.map((cat) => (
            <Button
              key={cat} 
              onClick={() => setSelectedCategory(cat)}
              variant={selectedCategory === cat ? 'default' : 'secondary'}
-             className={`rounded-full whitespace-nowrap text-sm font-medium transition-colors ${selectedCategory === cat ? 'shadow-lg shadow-primary/20' : ''}`}
+             className={`rounded-full whitespace-nowrap text-xs md:text-sm font-bold h-9 md:h-11 px-5 transition-all ${selectedCategory === cat ? 'shadow-lg shadow-primary/20' : 'bg-white hover:bg-slate-100'}`}
            >
              {cat}
            </Button>
@@ -108,21 +106,21 @@ export default function HomeView() {
       </div>
 
       <div className="mb-16">
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between mb-8">
            <h2 className="text-xl font-bold flex items-center gap-2">
-             <Zap size={20} className="fill-yellow-400 text-yellow-400" /> 
-             {searchTerm ? `Hasil: "${searchTerm}"` : 'Populer'}
+             <Zap size={22} className="fill-yellow-400 text-yellow-400" /> 
+             {searchTerm ? `Hasil: "${searchTerm}"` : 'Populer Minggu Ini'}
            </h2>
            {(searchTerm || selectedCategory !== 'Semua') && (
-             <Button variant="ghost" size="sm" onClick={() => { setSearchTerm(''); setSelectedCategory('Semua'); }} className="text-destructive hover:text-destructive">
-               <X size={14} className="mr-1"/> Reset Filter
+             <Button variant="ghost" size="sm" onClick={() => { setSearchTerm(''); setSelectedCategory('Semua'); }} className="text-destructive hover:text-destructive font-bold text-xs">
+               <X size={14} className="mr-1"/> Reset
              </Button>
            )}
         </div>
 
         {isProductsLoading ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 md:gap-6">
-            {[1, 2, 3, 4, 5, 6, 7, 8].map(i => <Skeleton key={i} className="aspect-[3/4] rounded-2xl" />)}
+            {[1, 2, 3, 4, 5, 6, 7, 8].map(i => <Skeleton key={i} className="aspect-[3/4] rounded-3xl" />)}
           </div>
         ) : filteredProducts.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 md:gap-6">
@@ -131,27 +129,29 @@ export default function HomeView() {
             ))}
           </div>
         ) : (
-          <div className="text-center py-24 bg-secondary/30 rounded-3xl border-2 border-dashed border-border">
-            <div className="w-20 h-20 bg-background rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm">
-              <X size={32} className="text-muted-foreground" />
+          <div className="text-center py-20 bg-white rounded-[2.5rem] border border-slate-100 shadow-sm">
+            <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">
+              <X size={32} className="text-slate-300" />
             </div>
-            <h3 className="text-2xl font-bold text-foreground uppercase tracking-tight">Produk Tidak Tersedia</h3>
-            <p className="text-muted-foreground mt-2 max-w-xs mx-auto">Coba cari dengan kata kunci lain atau periksa kembali kategori yang dipilih.</p>
+            <h3 className="text-xl font-bold text-foreground">Produk Tidak Ditemukan</h3>
+            <p className="text-muted-foreground mt-2 max-w-xs mx-auto text-sm">Coba gunakan kata kunci lain atau pilih kategori yang berbeda.</p>
           </div>
         )}
       </div>
 
       {products.length > 0 && (
-        <div className="bg-secondary/50 rounded-3xl p-6 md:p-10 border">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
+        <div className="bg-primary/5 rounded-[2.5rem] p-6 md:p-12 border border-primary/10">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-10 gap-4">
              <div>
-               <div className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-2">Editor's Pick</div>
-               <h2 className="text-2xl font-bold text-foreground">Rekomendasi Untukmu</h2>
-               <p className="text-muted-foreground text-sm mt-1">Koleksi pilihan yang mungkin kamu butuhkan.</p>
+               <div className="flex items-center gap-2 text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-3">
+                 <Sparkles size={14} /> Editor's Choice
+               </div>
+               <h2 className="text-2xl md:text-3xl font-bold text-foreground">Rekomendasi Untukmu</h2>
+               <p className="text-muted-foreground text-sm mt-2">Koleksi pilihan yang mungkin sesuai dengan minatmu.</p>
              </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
              {isRecsLoading ? (
               <>
                 <RecommendationSkeleton />
@@ -172,22 +172,26 @@ const RecommendationCard = ({ item, addToCart }: { item: Product; addToCart: (pr
     const imageSrc = isUrl ? item.image : getPlaceholderImageDetails(item.image).src;
 
     return (
-        <div className="bg-background p-5 rounded-2xl shadow-sm border flex gap-5 hover:border-primary/50 transition-colors group">
-            <div className="w-24 h-24 bg-secondary rounded-xl shrink-0 overflow-hidden relative">
-                <Image src={imageSrc} alt={item.name} fill className="object-cover group-hover:scale-110 transition-transform duration-300" />
+        <div className="bg-white p-4 rounded-[2rem] shadow-sm border border-slate-100 flex gap-4 hover:shadow-xl hover:border-primary/20 transition-all duration-300 group">
+            <div className="w-24 h-24 sm:w-32 sm:h-32 bg-slate-50 rounded-2xl shrink-0 overflow-hidden relative border border-slate-50">
+                <Image src={imageSrc} alt={item.name} fill className="object-cover group-hover:scale-110 transition-transform duration-500" />
             </div>
-            <div className="flex flex-col justify-between flex-1 py-1">
-                <div>
-                    <div className="flex justify-between items-start">
-                        <Badge variant="outline" className="border-blue-200 bg-blue-50 text-blue-700 mb-2">{item.category}</Badge>
-                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">AI Pick</span>
+            <div className="flex flex-col justify-between flex-1 py-1 min-w-0">
+                <div className="space-y-1">
+                    <div className="flex items-center justify-between gap-2">
+                        <Badge variant="secondary" className="bg-blue-50 text-blue-600 border-none text-[9px] h-5 px-2 font-bold uppercase">{item.category}</Badge>
+                        <span className="text-[8px] font-black text-slate-300 uppercase tracking-widest shrink-0">AI Recommendation</span>
                     </div>
-                    <h3 className="font-bold text-foreground text-lg line-clamp-1">{item.name}</h3>
-                    <p className="text-xs text-muted-foreground line-clamp-1 mt-1">{item.description}</p>
+                    <h3 className="font-bold text-foreground text-base sm:text-xl line-clamp-1 leading-tight">{item.name}</h3>
+                    <p className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed">{item.description}</p>
                 </div>
-                <div className="flex items-center justify-between mt-3">
-                    <span className="font-bold text-foreground">{formatRupiah(item.price).replace(",00", "")}</span>
-                    <Button variant="link" className="p-0 h-auto text-sm font-bold text-primary" onClick={() => addToCart(item)}>
+                <div className="flex items-center justify-between gap-2 mt-4">
+                    <span className="font-bold text-primary text-sm sm:text-lg">{formatRupiah(item.price).replace(",00", "")}</span>
+                    <Button 
+                      variant="ghost" 
+                      className="p-0 h-auto text-[11px] sm:text-sm font-black text-primary hover:bg-transparent hover:text-primary/70" 
+                      onClick={() => addToCart(item)}
+                    >
                         + Keranjang
                     </Button>
                 </div>
@@ -197,17 +201,20 @@ const RecommendationCard = ({ item, addToCart }: { item: Product; addToCart: (pr
 }
 
 const RecommendationSkeleton = () => (
-  <div className="bg-background p-5 rounded-2xl shadow-sm border flex gap-5">
-      <Skeleton className="w-24 h-24 rounded-xl shrink-0" />
+  <div className="bg-white p-4 rounded-[2rem] border border-slate-100 flex gap-4">
+      <Skeleton className="w-24 h-24 sm:w-32 sm:h-32 rounded-2xl shrink-0" />
       <div className="flex flex-col justify-between flex-1 py-1">
-          <div>
-              <Skeleton className="h-5 w-20 mb-2" />
-              <Skeleton className="h-6 w-3/4 mb-1" />
+          <div className="space-y-3">
+              <div className="flex justify-between">
+                <Skeleton className="h-4 w-16" />
+                <Skeleton className="h-3 w-20" />
+              </div>
+              <Skeleton className="h-6 w-3/4" />
               <Skeleton className="h-4 w-full" />
           </div>
-          <div className="flex items-center justify-between mt-3">
+          <div className="flex items-center justify-between mt-4">
               <Skeleton className="h-6 w-24" />
-              <Skeleton className="h-5 w-20" />
+              <Skeleton className="h-4 w-20" />
           </div>
       </div>
   </div>
