@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -53,7 +52,7 @@ export default function PaymentPendingView() {
       const result = await checkPakasirStatus(orderId, amount);
 
       if (result.transaction && (result.transaction.status === 'success' || result.transaction.status === 'completed')) {
-        handlePaymentSuccess();
+        await handlePaymentSuccess();
       } else if (!auto && (!result.transaction || result.transaction.status !== 'success')) {
          toast({ title: "Belum terbayar", description: "Silakan selesaikan pembayaran QRIS Anda." });
       }
@@ -88,11 +87,11 @@ export default function PaymentPendingView() {
     const ordersRef = collection(db, 'orders');
     
     try {
-      // 1. Save to Firestore
+      // 1. Simpan ke Firestore dulu
       const docRef = await addDoc(ordersRef, orderRecord);
       
-      // 2. Send Email Invoice via Zoho
-      sendOrderConfirmationEmail({
+      // 2. Kirim Email Invoice via Zoho (Tunggu sampai selesai)
+      await sendOrderConfirmationEmail({
         customerName: orderRecord.customerName,
         customerEmail: orderRecord.customerEmail,
         orderId: orderRecord.order_id,
@@ -100,10 +99,10 @@ export default function PaymentPendingView() {
         items: orderRecord.items.map(i => ({ name: i.name, deliveryContent: i.deliveryContent }))
       });
 
-      // 3. Update local state and redirect
+      // 3. Update state lokal dan pindah ke halaman sukses
       setLastOrder({ ...orderRecord, id: docRef.id });
       resetCart();
-      toast({ title: "Pembayaran Berhasil!", description: "Aset digital Anda siap diunduh." });
+      toast({ title: "Pembayaran Berhasil!", description: "Aset digital Anda siap diunduh dan telah dikirim ke email." });
       
       setTimeout(() => setView('success'), 1500);
     } catch (error) {
