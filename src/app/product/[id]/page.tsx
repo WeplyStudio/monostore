@@ -75,7 +75,7 @@ export default function ProductDetailPage() {
           </Button>
           
           <div className="hidden md:flex items-center gap-6 text-xs font-bold text-gray-500 uppercase tracking-wider">
-            <span className="cursor-pointer hover:text-foreground">Beranda</span>
+            <span className="cursor-pointer hover:text-foreground text-foreground">Beranda</span>
             <span className="cursor-pointer hover:text-foreground">Produk</span>
             <span className="cursor-pointer hover:text-foreground">Kontak</span>
             <span className="cursor-pointer hover:text-foreground">Login</span>
@@ -281,16 +281,20 @@ export default function ProductDetailPage() {
                   </div>
                 </CardContent>
               </Card>
-
-              {/* Floating Social Icons Simulation */}
-              <div className="flex justify-end pr-2">
-                <div className="w-10 h-10 bg-black text-white rounded-full flex items-center justify-center shadow-lg cursor-pointer hover:scale-110 transition-transform">
-                  <Github size={20} />
-                </div>
-              </div>
             </div>
           </div>
 
+        </div>
+      </div>
+
+      {/* Floating Social Icon (GitHub) */}
+      <div className="fixed bottom-8 right-8 z-[60] flex items-center justify-center">
+        <div className="w-14 h-14 bg-black text-white rounded-full flex items-center justify-center shadow-2xl cursor-pointer hover:scale-110 hover:rotate-12 transition-all duration-300 group">
+          <Github size={28} />
+          {/* Tooltip hint */}
+          <div className="absolute right-full mr-4 bg-black text-white text-[10px] font-bold px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none uppercase tracking-widest shadow-xl">
+             Kunjungi Repo
+          </div>
         </div>
       </div>
     </div>
