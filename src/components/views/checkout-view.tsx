@@ -10,11 +10,14 @@ import { formatRupiah, getPlaceholderImageDetails } from '@/lib/utils';
 import Image from 'next/image';
 import { useToast } from '@/hooks/use-toast';
 import { createPakasirTransaction } from '@/lib/pakasir-actions';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { useFirestore } from '@/firebase';
+import { collection, query, where, getDocs, addDoc, serverTimestamp, doc, updateDoc, increment, getDoc } from 'firebase/firestore';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
+import { sendOrderConfirmationEmail } from '@/lib/email-actions';
 
 export default function CheckoutView() {
-  const { setView, cart, cartTotal, cartSubtotal, discountTotal, totalItems, formData, handleInputChange, setPaymentData, activeVoucher, applyVoucher, removeVoucher } = useApp();
+  const { setView, cart, cartTotal, cartSubtotal, discountTotal, totalItems, formData, handleInputChange, setPaymentData, activeVoucher, applyVoucher, removeVoucher, resetCart, setLastOrder } = useApp();
   const [loading, setLoading] = useState(false);
   const [voucherCode, setVoucherCode] = useState('');
   const [checkingVoucher, setCheckingVoucher] = useState(false);
@@ -52,8 +55,93 @@ export default function CheckoutView() {
         toast({ variant: "destructive", title: "Data tidak lengkap", description: "Harap isi Nama, Email, dan WhatsApp Anda." });
         return;
     }
+    
+    if (!db) return;
     setLoading(true);
     const orderId = "INV" + Date.now().toString().slice(-10);
+
+    // Kasus 1: Transaksi Gratis (Total Rp 0)
+    if (cartTotal === 0) {
+      try {
+        const orderRecord = {
+          customerName: formData.name,
+          customerEmail: formData.email,
+          whatsapp: formData.whatsapp,
+          items: cart.map((item: any) => ({
+            productId: item.id,
+            name: item.name,
+            price: item.price,
+            deliveryContent: item.deliveryContent || ''
+          })),
+          totalAmount: 0,
+          discountAmount: discountTotal,
+          voucherCode: activeVoucher?.code || null,
+          status: 'completed',
+          order_id: orderId,
+          createdAt: serverTimestamp()
+        };
+
+        const ordersRef = collection(db, 'orders');
+        const docRef = await addDoc(ordersRef, orderRecord);
+        
+        // Update Stok dan Sold
+        for (const item of cart) {
+          const productRef = doc(db, 'products', item.id);
+          const productSnap = await getDoc(productRef);
+          
+          if (productSnap.exists()) {
+            const productData = productSnap.data();
+            const qty = item.quantity || 1;
+            
+            let updateData: any = {
+              sold: increment(qty),
+              stock: increment(-qty)
+            };
+
+            if (productData.flashSaleEnd && productData.flashSaleStock !== undefined) {
+              const currentFSStock = productData.flashSaleStock || 0;
+              const newFSStock = currentFSStock - qty;
+              
+              if (newFSStock <= 0) {
+                updateData.price = productData.originalPrice || productData.price;
+                updateData.originalPrice = null;
+                updateData.flashSaleEnd = null;
+                updateData.flashSaleStock = null;
+              } else {
+                updateData.flashSaleStock = newFSStock;
+              }
+            }
+
+            updateDoc(productRef, updateData).catch(err => console.error(err));
+          }
+        }
+
+        // Kirim Email
+        await sendOrderConfirmationEmail({
+          customerName: orderRecord.customerName,
+          customerEmail: orderRecord.customerEmail,
+          orderId: orderRecord.order_id,
+          totalAmount: 0,
+          items: orderRecord.items.map(i => ({ name: i.name, deliveryContent: i.deliveryContent }))
+        });
+
+        setLastOrder({ ...orderRecord, id: docRef.id });
+        resetCart();
+        toast({ title: "Pesanan Berhasil!", description: "Voucher 100% digunakan. Aset Anda siap diunduh." });
+        setView('success');
+      } catch (error: any) {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: 'orders',
+          operation: 'create',
+          requestResourceData: { orderId }
+        }));
+      } finally {
+        setLoading(false);
+      }
+      return;
+    }
+
+    // Kasus 2: Transaksi Berbayar (Via Pakasir)
     try {
       const result = await createPakasirTransaction(orderId, cartTotal);
       if (result && result.payment) {
@@ -180,7 +268,7 @@ export default function CheckoutView() {
                 </div>
 
                 <Button type="submit" form="checkoutForm" className="w-full h-14 rounded-2xl bg-primary text-white font-bold shadow-xl shadow-primary/20 transition-all" disabled={loading}>
-                  {loading ? <Loader2 className="animate-spin mr-2" /> : `Bayar ${formatRupiah(cartTotal)}`}
+                  {loading ? <Loader2 className="animate-spin mr-2" /> : cartTotal === 0 ? 'Dapatkan Gratis' : `Bayar ${formatRupiah(cartTotal)}`}
                 </Button>
 
                 <div className="flex items-center justify-center gap-2 text-[10px] text-gray-400 font-bold uppercase tracking-widest">
