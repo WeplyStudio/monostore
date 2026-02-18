@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -16,6 +15,7 @@ import type { Product } from '@/lib/types';
 import { getPersonalizedRecommendations } from '@/ai/flows/personalized-recommendations-flow';
 import { formatRupiah, getPlaceholderImageDetails } from '@/lib/utils';
 import Image from 'next/image';
+import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   Accordion,
