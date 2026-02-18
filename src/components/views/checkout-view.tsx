@@ -29,14 +29,13 @@ export default function CheckoutView() {
     
     setLoading(true);
     
-    // Generate Order ID unik
-    const orderId = "INV-" + Date.now().toString().slice(-8);
+    // Gunakan format Order ID yang lebih bersih (hanya angka) untuk menghindari error 400 di beberapa API
+    const orderId = "INV" + Date.now().toString().slice(-10);
 
     try {
-      // Panggil Server Action alih-alih fetch langsung (untuk hindari CORS)
       const result = await createPakasirTransaction(orderId, cartTotal);
 
-      if (result.payment) {
+      if (result && result.payment) {
         setPaymentData({
           ...result.payment,
           order_id: orderId,
@@ -48,14 +47,16 @@ export default function CheckoutView() {
         });
         setView('payment-pending');
       } else {
-        throw new Error(result.message || "Gagal membuat transaksi");
+        // Tampilkan pesan error spesifik dari API jika ada
+        const errorMsg = result?.message || "Gagal membuat transaksi. Silakan coba lagi.";
+        throw new Error(errorMsg);
       }
     } catch (error: any) {
       console.error("Pakasir Integration Error:", error);
       toast({
         variant: "destructive",
         title: "Gagal memproses pembayaran",
-        description: error.message || "Terjadi kesalahan koneksi ke payment gateway (Server Action)."
+        description: error.message
       });
     } finally {
       setLoading(false);

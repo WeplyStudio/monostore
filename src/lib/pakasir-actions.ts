@@ -13,26 +13,35 @@ const PAKASIR_API_KEY = "Qz8ylLI2rA37YnuLYCqIEaoMd4ZdM9eT";
  */
 export async function createPakasirTransaction(orderId: string, amount: number) {
   try {
+    const payload = {
+      project: PAKASIR_PROJECT,
+      order_id: orderId,
+      amount: Math.round(amount), // Pastikan jumlahnya bulat
+      api_key: PAKASIR_API_KEY
+    };
+
     const response = await fetch("https://app.pakasir.com/api/transactioncreate/qris", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        project: PAKASIR_PROJECT,
-        order_id: orderId,
-        amount: amount,
-        api_key: PAKASIR_API_KEY
-      }),
+      body: JSON.stringify(payload),
       cache: 'no-store'
     });
 
+    const result = await response.json();
+
     if (!response.ok) {
-      throw new Error(`Pakasir API responded with ${response.status}`);
+      // Jika error, kembalikan pesan dari API jika ada, atau status HTTP
+      return { 
+        error: true, 
+        message: result.message || `Pakasir API error: ${response.status}`,
+        details: result
+      };
     }
 
-    return await response.json();
+    return result;
   } catch (error: any) {
     console.error("Pakasir Create Transaction Error:", error);
-    return { error: true, message: error.message || "Gagal membuat transaksi di server." };
+    return { error: true, message: error.message || "Gagal menghubungi payment gateway." };
   }
 }
 
@@ -41,17 +50,22 @@ export async function createPakasirTransaction(orderId: string, amount: number) 
  */
 export async function checkPakasirStatus(orderId: string, amount: number) {
   try {
-    const url = `https://app.pakasir.com/api/transactiondetail?project=${PAKASIR_PROJECT}&amount=${amount}&order_id=${orderId}&api_key=${PAKASIR_API_KEY}`;
+    const roundedAmount = Math.round(amount);
+    const url = `https://app.pakasir.com/api/transactiondetail?project=${PAKASIR_PROJECT}&amount=${roundedAmount}&order_id=${orderId}&api_key=${PAKASIR_API_KEY}`;
     
     const response = await fetch(url, { cache: 'no-store' });
-    
+    const result = await response.json();
+
     if (!response.ok) {
-      throw new Error(`Pakasir API responded with ${response.status}`);
+      return { 
+        error: true, 
+        message: result.message || `Status check error: ${response.status}` 
+      };
     }
 
-    return await response.json();
+    return result;
   } catch (error: any) {
     console.error("Pakasir Check Status Error:", error);
-    return { error: true, message: error.message || "Gagal mengecek status di server." };
+    return { error: true, message: error.message || "Gagal mengecek status pembayaran." };
   }
 }
