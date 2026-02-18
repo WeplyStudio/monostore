@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -12,6 +13,7 @@ import { useToast } from '@/hooks/use-toast';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { checkPakasirStatus } from '@/lib/pakasir-actions';
+import { sendOrderConfirmationEmail } from '@/lib/email-actions';
 
 export default function PaymentPendingView() {
   const { paymentData, setView, resetCart, setLastOrder } = useApp();
@@ -85,20 +87,32 @@ export default function PaymentPendingView() {
 
     const ordersRef = collection(db, 'orders');
     
-    addDoc(ordersRef, orderRecord)
-      .then((docRef) => {
-        setLastOrder({ ...orderRecord, id: docRef.id });
-        resetCart();
-        toast({ title: "Pembayaran Berhasil!", description: "Aset digital Anda siap diunduh." });
-        setTimeout(() => setView('success'), 1500);
-      })
-      .catch((error) => {
+    try {
+      // 1. Save to Firestore
+      const docRef = await addDoc(ordersRef, orderRecord);
+      
+      // 2. Send Email Invoice via Zoho
+      sendOrderConfirmationEmail({
+        customerName: orderRecord.customerName,
+        customerEmail: orderRecord.customerEmail,
+        orderId: orderRecord.order_id,
+        totalAmount: orderRecord.totalAmount,
+        items: orderRecord.items.map(i => ({ name: i.name, deliveryContent: i.deliveryContent }))
+      });
+
+      // 3. Update local state and redirect
+      setLastOrder({ ...orderRecord, id: docRef.id });
+      resetCart();
+      toast({ title: "Pembayaran Berhasil!", description: "Aset digital Anda siap diunduh." });
+      
+      setTimeout(() => setView('success'), 1500);
+    } catch (error) {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
           path: ordersRef.path,
           operation: 'create',
           requestResourceData: orderRecord
         }));
-      });
+    }
   };
 
   useEffect(() => {
