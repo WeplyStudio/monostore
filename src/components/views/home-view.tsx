@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Search, Zap, X, Sparkles, ShoppingBag, QrCode, Download, HelpCircle, AlertCircle, Headphones, MessageSquare, Mail } from 'lucide-react';
+import { Search, Zap, X, Sparkles, ShoppingBag, QrCode, Download, HelpCircle, AlertCircle, Headphones, MessageSquare, Mail, Clock } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -24,6 +24,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import { Progress } from '@/components/ui/progress';
 
 export default function HomeView() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -42,6 +43,11 @@ export default function HomeView() {
   const { data: dbProducts, loading: isProductsLoading } = useCollection(productsQuery);
 
   const products = (dbProducts as Product[]) || [];
+
+  // Flash Sale Filter
+  const flashSaleProducts = useMemo(() => {
+    return products.filter(p => p.flashSaleEnd && new Date(p.flashSaleEnd).getTime() > Date.now());
+  }, [products]);
 
   useEffect(() => {
     if (products.length === 0) return;
@@ -127,18 +133,23 @@ export default function HomeView() {
       {/* Banner Carousel Section */}
       {!searchTerm && <BannerCarousel />}
 
+      {/* Crazy Flash Sale Section */}
+      {!searchTerm && flashSaleProducts.length > 0 && (
+        <FlashSaleSection products={flashSaleProducts} />
+      )}
+
       {/* Hero Section */}
-      <div className="text-center mb-10 mt-4 animate-fadeIn">
+      <div className="text-center mb-10 mt-12 animate-fadeIn">
         <h1 className="text-3xl md:text-5xl font-bold text-foreground mb-3 tracking-tight font-headline">Apa yang ingin kamu buat?</h1>
         <p className="text-muted-foreground mb-8 text-sm md:text-base">Temukan aset digital terbaik untuk project kreatifmu.</p>
         <div className="max-w-2xl mx-auto relative">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-          <Input 
+          <input 
             type="text" 
             placeholder="Cari icon, template, atau e-book..." 
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-12 pr-4 py-4 bg-white border-none h-14 rounded-2xl shadow-sm focus:ring-2 focus:ring-primary/20 transition-all text-sm md:text-base"
+            className="w-full pl-12 pr-4 py-4 bg-white border-none h-14 rounded-2xl shadow-sm focus:ring-2 focus:ring-primary/20 transition-all text-sm md:text-base outline-none"
           />
         </div>
       </div>
@@ -173,7 +184,7 @@ export default function HomeView() {
 
         {isProductsLoading ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 md:gap-6">
-            {[1, 2, 3, 4, 5, 6, 7, 8].map(i => <Skeleton key={i} className="aspect-[3/4] rounded-3xl" />)}
+            {[1, 2, 3, 4, 5, 6, 7, 8].map(i => <Skeleton key={i} className="aspect-[3/4] rounded-2xl" />)}
           </div>
         ) : filteredProducts.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 md:gap-6">
@@ -182,7 +193,7 @@ export default function HomeView() {
             ))}
           </div>
         ) : (
-          <div className="text-center py-20 bg-white rounded-[2.5rem] border border-slate-100 shadow-sm">
+          <div className="text-center py-20 bg-white rounded-2xl border border-slate-100 shadow-sm">
             <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">
               <X size={32} className="text-slate-300" />
             </div>
@@ -194,7 +205,7 @@ export default function HomeView() {
 
       {/* Recommendations Section */}
       {products.length > 0 && !searchTerm && (
-        <div className="bg-primary/5 rounded-[2.5rem] p-6 md:p-12 border border-primary/10 mb-20">
+        <div className="bg-primary/5 rounded-2xl p-6 md:p-12 border border-primary/10 mb-20">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-10 gap-4">
              <div>
                <div className="flex items-center gap-2 text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-3">
@@ -227,7 +238,7 @@ export default function HomeView() {
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {purchaseSteps.map((step, idx) => (
-              <div key={idx} className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-50 text-center space-y-4 hover:shadow-xl transition-all duration-300">
+              <div key={idx} className="bg-white p-8 rounded-2xl shadow-sm border border-gray-50 text-center space-y-4 hover:shadow-xl transition-all duration-300">
                 <div className="w-16 h-16 bg-primary/5 rounded-2xl flex items-center justify-center mx-auto mb-2">
                   {step.icon}
                 </div>
@@ -246,7 +257,7 @@ export default function HomeView() {
             <HelpCircle size={32} className="text-primary" />
             <h2 className="text-3xl font-bold font-headline">Tanya Jawab</h2>
           </div>
-          <div className="bg-white rounded-[2.5rem] p-6 md:p-10 shadow-sm border border-gray-50">
+          <div className="bg-white rounded-2xl p-6 md:p-10 shadow-sm border border-gray-50">
             <Accordion type="single" collapsible className="w-full">
               {faqs.map((faq, idx) => (
                 <AccordionItem key={idx} value={`item-${idx}`} className="border-b border-gray-50 last:border-0 py-2">
@@ -266,7 +277,7 @@ export default function HomeView() {
       {/* Customer Support Section */}
       {!searchTerm && (
         <div className="mb-20">
-          <div className="bg-primary text-primary-foreground rounded-[2.5rem] p-8 md:p-12 shadow-2xl shadow-primary/20 flex flex-col md:flex-row items-center justify-between gap-8">
+          <div className="bg-primary text-primary-foreground rounded-2xl p-8 md:p-12 shadow-2xl shadow-primary/20 flex flex-col md:flex-row items-center justify-between gap-8">
             <div className="text-center md:text-left space-y-4">
               <div className="flex items-center justify-center md:justify-start gap-3">
                 <Headphones size={32} />
@@ -301,6 +312,92 @@ export default function HomeView() {
   );
 }
 
+const FlashSaleSection = ({ products }: { products: Product[] }) => {
+  const [timeLeft, setTimeLeft] = useState({ h: '00', m: '00', s: '00' });
+
+  useEffect(() => {
+    // Pick the earliest end time
+    const endTimes = products.map(p => new Date(p.flashSaleEnd).getTime());
+    const target = Math.min(...endTimes);
+
+    const timer = setInterval(() => {
+      const now = Date.now();
+      const diff = target - now;
+
+      if (diff <= 0) {
+        clearInterval(timer);
+      } else {
+        const h = Math.floor(diff / 3600000);
+        const m = Math.floor((diff % 3600000) / 60000);
+        const s = Math.floor((diff % 60000) / 1000);
+        setTimeLeft({
+          h: h.toString().padStart(2, '0'),
+          m: m.toString().padStart(2, '0'),
+          s: s.toString().padStart(2, '0')
+        });
+      }
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [products]);
+
+  return (
+    <div className="bg-white rounded-2xl p-6 md:p-10 shadow-sm border border-slate-100 mb-10 animate-fadeIn">
+      <div className="flex flex-col md:flex-row md:items-center gap-6 mb-8">
+        <h2 className="text-2xl font-black text-[#212529] tracking-tight">Crazy Flash Sale</h2>
+        
+        <div className="flex items-center gap-4">
+          <div className="flex gap-1.5">
+            <div className="w-10 h-10 bg-[#333] text-white flex items-center justify-center rounded-lg font-bold text-lg">{timeLeft.h}</div>
+            <div className="w-10 h-10 bg-[#333] text-white flex items-center justify-center rounded-lg font-bold text-lg">{timeLeft.m}</div>
+            <div className="w-10 h-10 bg-[#333] text-white flex items-center justify-center rounded-lg font-bold text-lg">{timeLeft.s}</div>
+          </div>
+          <div className="h-8 w-px bg-slate-200 hidden md:block" />
+          <div className="text-slate-300 font-bold text-xl hidden md:block">19:00</div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+        {products.map(product => (
+          <Link key={product.id} href={`/product/${product.id}`} className="group space-y-3">
+            <div className="aspect-square relative rounded-xl overflow-hidden bg-slate-50 border border-slate-100">
+              <Image 
+                src={product.image.startsWith('http') ? product.image : getPlaceholderImageDetails(product.image).src} 
+                alt={product.name} 
+                fill 
+                className="object-cover group-hover:scale-110 transition-transform duration-500" 
+              />
+              {product.originalPrice && (
+                <div className="absolute top-2 right-2 bg-red-600 text-white text-[10px] font-black px-2 py-1 rounded-lg">
+                  -{Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}%
+                </div>
+              )}
+            </div>
+            
+            <div className="space-y-2">
+              <div className="relative h-5 w-full bg-red-100 rounded-full overflow-hidden flex items-center px-3">
+                <div 
+                  className="absolute inset-0 bg-gradient-to-r from-red-500 to-pink-500" 
+                  style={{ width: `${Math.min(100, (product.sold / (product.sold + product.stock)) * 100)}%` }}
+                />
+                <span className="relative z-10 text-[9px] font-black text-white uppercase flex items-center gap-1">
+                  {product.sold} Terjual <Zap size={10} className="fill-yellow-400 text-yellow-400" />
+                </span>
+              </div>
+              <div className="text-lg font-black text-red-600">
+                {formatRupiah(product.price).replace(",00", "")}
+              </div>
+              <div className="text-[10px] text-slate-400 line-through">
+                {product.originalPrice ? formatRupiah(product.originalPrice).replace(",00", "") : ''}
+              </div>
+            </div>
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 const RecommendationCard = ({ item, addToCart }: { item: Product; addToCart: (product: Product) => void; }) => {
     const isUrl = typeof item.image === 'string' && item.image.startsWith('http');
     const imageSrc = isUrl ? item.image : getPlaceholderImageDetails(item.image).src;
@@ -309,7 +406,7 @@ const RecommendationCard = ({ item, addToCart }: { item: Product; addToCart: (pr
     const isLowStock = stock > 0 && stock <= 10;
 
     return (
-        <Link href={`/product/${item.id}`} className={`bg-white p-4 rounded-[2rem] shadow-sm border border-slate-100 flex flex-col sm:flex-row gap-4 hover:shadow-xl hover:border-primary/20 transition-all duration-300 group overflow-hidden relative ${isOutOfStock ? 'opacity-75' : ''}`}>
+        <Link href={`/product/${item.id}`} className={`bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col sm:flex-row gap-4 hover:shadow-xl hover:border-primary/20 transition-all duration-300 group overflow-hidden relative ${isOutOfStock ? 'opacity-75' : ''}`}>
             {isOutOfStock && (
               <div className="absolute top-2 right-2 z-10 bg-destructive text-destructive-foreground text-[8px] font-black px-2 py-0.5 rounded-full uppercase">
                 Habis
@@ -320,7 +417,7 @@ const RecommendationCard = ({ item, addToCart }: { item: Product; addToCart: (pr
                 Sisa {stock}
               </div>
             )}
-            <div className="w-full sm:w-32 aspect-square sm:h-32 bg-slate-50 rounded-2xl shrink-0 overflow-hidden relative border border-slate-50">
+            <div className="w-full sm:w-32 aspect-square sm:h-32 bg-slate-50 rounded-xl shrink-0 overflow-hidden relative border border-slate-50">
                 <Image src={imageSrc} alt={item.name} fill className={`object-cover group-hover:scale-110 transition-transform duration-500 ${isOutOfStock ? 'grayscale' : ''}`} />
             </div>
             <div className="flex flex-col justify-between flex-1 min-w-0">
@@ -362,8 +459,8 @@ const RecommendationCard = ({ item, addToCart }: { item: Product; addToCart: (pr
 }
 
 const RecommendationSkeleton = () => (
-  <div className="bg-white p-4 rounded-[2rem] border border-slate-100 flex flex-col sm:flex-row gap-4">
-      <Skeleton className="w-full sm:w-32 aspect-square sm:h-32 rounded-2xl shrink-0" />
+  <div className="bg-white p-4 rounded-2xl border border-slate-100 flex flex-col sm:flex-row gap-4">
+      <Skeleton className="w-full sm:w-32 aspect-square sm:h-32 rounded-xl shrink-0" />
       <div className="flex flex-col justify-between flex-1 py-1">
           <div className="space-y-3">
               <div className="flex justify-between">
