@@ -1,4 +1,3 @@
-
 {
   "entities": {
     "Product": {
@@ -6,22 +5,39 @@
       "description": "A digital product sold in the store.",
       "type": "object",
       "properties": {
-        "id": { "type": "string", "description": "Unique identifier (Firestore Auto-ID)" },
-        "name": { "type": "string", "description": "Name of the product" },
-        "price": { "type": "number", "description": "Price in IDR" },
-        "category": { "type": "string", "description": "Category of the product" },
-        "rating": { "type": "number", "description": "Average rating" },
-        "reviews": { "type": "number", "description": "Number of reviews" },
-        "sold": { "type": "number", "description": "Total units sold" },
-        "stock": { "type": "number", "description": "Remaining stock available" },
-        "isBestSeller": { "type": "boolean", "description": "Whether the product is a bestseller" },
-        "description": { "type": "string", "description": "Detailed description" },
-        "features": { "type": "array", "items": { "type": "string" }, "description": "List of product features" },
-        "image": { "type": "string", "description": "URL of the product image" },
-        "deliveryContent": { "type": "string", "description": "The link or file URL delivered to user after purchase" },
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "price": { "type": "number", "description": "Current selling price" },
+        "originalPrice": { "type": "number", "description": "Price before discount (strikethrough)" },
+        "category": { "type": "string" },
+        "rating": { "type": "number" },
+        "reviews": { "type": "number" },
+        "sold": { "type": "number" },
+        "stock": { "type": "number" },
+        "isBestSeller": { "type": "boolean" },
+        "description": { "type": "string" },
+        "features": { "type": "array", "items": { "type": "string" } },
+        "image": { "type": "string" },
+        "deliveryContent": { "type": "string" },
+        "flashSaleEnd": { "type": "string", "format": "date-time", "description": "End time for promotional price" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["name", "price", "category", "description", "image", "stock"]
+    },
+    "Voucher": {
+      "title": "Voucher",
+      "description": "Discount coupon for checkout.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "code": { "type": "string", "description": "Coupon code (e.g. MONO50)" },
+        "type": { "type": "string", "enum": ["percentage", "fixed"], "description": "Type of discount" },
+        "value": { "type": "number", "description": "Discount value (e.g. 10 for 10% or 5000 for IDR 5000)" },
+        "minPurchase": { "type": "number", "description": "Minimum cart total to apply" },
+        "isActive": { "type": "boolean" },
+        "expiryDate": { "type": "string", "format": "date-time" }
+      },
+      "required": ["code", "type", "value", "isActive"]
     },
     "Banner": {
       "title": "Banner",
@@ -29,10 +45,10 @@
       "type": "object",
       "properties": {
         "id": { "type": "string" },
-        "image": { "type": "string", "description": "URL of the banner image" },
-        "title": { "type": "string", "description": "Optional title for the banner" },
-        "link": { "type": "string", "description": "Optional URL to redirect when clicked" },
-        "order": { "type": "number", "description": "Display order (0-9)" },
+        "image": { "type": "string" },
+        "title": { "type": "string" },
+        "link": { "type": "string" },
+        "order": { "type": "number" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["image", "order"]
@@ -60,6 +76,8 @@
           }
         },
         "totalAmount": { "type": "number" },
+        "discountAmount": { "type": "number" },
+        "voucherCode": { "type": "string" },
         "status": { "type": "string", "enum": ["completed", "pending"] },
         "createdAt": { "type": "string", "format": "date-time" }
       },
@@ -85,19 +103,23 @@
   "firestore": {
     "/products/{productId}": {
       "schema": "Product",
-      "description": "Collection of all digital products available in the store."
+      "description": "Collection of all digital products."
     },
     "/products/{productId}/reviews/{reviewId}": {
       "schema": "Review",
-      "description": "Subcollection of reviews for a specific product."
+      "description": "Subcollection of reviews."
     },
     "/banners/{bannerId}": {
       "schema": "Banner",
-      "description": "Collection of home page promotional banners."
+      "description": "Home page promotional banners."
+    },
+    "/vouchers/{voucherId}": {
+      "schema": "Voucher",
+      "description": "Store discount vouchers."
     },
     "/orders/{orderId}": {
       "schema": "Order",
-      "description": "Collection of all successful transactions."
+      "description": "Successful transactions."
     }
   }
 }

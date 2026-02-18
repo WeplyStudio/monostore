@@ -1,8 +1,7 @@
-
 "use client";
 
-import React, { createContext, useContext, useState, ReactNode, useCallback } from 'react';
-import type { Product, CartItem } from '@/lib/types';
+import React, { createContext, useContext, useState, ReactNode, useCallback, useMemo } from 'react';
+import type { Product, CartItem, Voucher } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast"
 
 type AppContextType = {
@@ -12,6 +11,8 @@ type AppContextType = {
   addToCart: (product: Product, quantity?: number) => void;
   removeFromCart: (id: number | string) => void;
   cartTotal: number;
+  cartSubtotal: number;
+  discountTotal: number;
   totalItems: number;
   isCartOpen: boolean;
   setIsCartOpen: (isOpen: boolean) => void;
@@ -25,6 +26,9 @@ type AppContextType = {
   setLastOrder: (order: any) => void;
   paymentData: any;
   setPaymentData: (data: any) => void;
+  activeVoucher: Voucher | null;
+  applyVoucher: (voucher: Voucher) => void;
+  removeVoucher: () => void;
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -36,16 +40,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [viewedProducts, setViewedProducts] = useState<Product[]>([]);
   const [lastOrder, setLastOrder] = useState<any>(null);
   const [paymentData, setPaymentData] = useState<any>(null);
+  const [activeVoucher, setActiveVoucher] = useState<Voucher | null>(null);
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
     email: '',
     name: '',
     whatsapp: '',
-    githubUser: '',
-    cardNumber: '',
-    exp: '',
-    cvc: ''
   });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -74,7 +75,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       return [...prevCart, { ...product, quantity }];
     });
     toast({
-      title: `${product.name} ditambahkan ke keranjang`,
+      title: `${product.name} ditambahkan`,
       description: `Jumlah: ${quantity}`,
     })
     setIsCartOpen(true);
@@ -86,9 +87,32 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   
   const resetCart = () => {
     setCart([]);
+    setActiveVoucher(null);
   }
 
-  const cartTotal = cart.reduce((total, item) => total + (item.price * item.quantity), 0);
+  const applyVoucher = (voucher: Voucher) => {
+    setActiveVoucher(voucher);
+    toast({ title: "Voucher Berhasil!", description: `Diskon diterapkan: ${voucher.code}` });
+  };
+
+  const removeVoucher = () => {
+    setActiveVoucher(null);
+  };
+
+  const cartSubtotal = useMemo(() => cart.reduce((total, item) => total + (item.price * item.quantity), 0), [cart]);
+  
+  const discountTotal = useMemo(() => {
+    if (!activeVoucher) return 0;
+    if (cartSubtotal < activeVoucher.minPurchase) return 0;
+
+    if (activeVoucher.type === 'percentage') {
+      return (cartSubtotal * activeVoucher.value) / 100;
+    } else {
+      return activeVoucher.value;
+    }
+  }, [activeVoucher, cartSubtotal]);
+
+  const cartTotal = Math.max(0, cartSubtotal - discountTotal);
   const totalItems = cart.reduce((acc, item) => acc + item.quantity, 0);
 
   const value = {
@@ -98,6 +122,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     addToCart,
     removeFromCart,
     cartTotal,
+    cartSubtotal,
+    discountTotal,
     totalItems,
     isCartOpen,
     setIsCartOpen,
@@ -110,7 +136,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     lastOrder,
     setLastOrder,
     paymentData,
-    setPaymentData
+    setPaymentData,
+    activeVoucher,
+    applyVoucher,
+    removeVoucher
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

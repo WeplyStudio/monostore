@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -25,7 +24,7 @@ import {
 import { CATEGORIES } from '@/lib/data';
 import { uploadToImgBB } from '@/lib/imgbb';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Upload, X, Link as LinkIcon, Package } from 'lucide-react';
+import { Loader2, Upload, X, Link as LinkIcon, Package, Zap, Tag } from 'lucide-react';
 import Image from 'next/image';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -46,13 +45,15 @@ export function ProductDialog({ isOpen, onClose, product }: ProductDialogProps) 
   const [formData, setFormData] = useState({
     name: '',
     price: '',
+    originalPrice: '',
     category: '',
     description: '',
     features: '',
     stock: '',
     isBestSeller: false,
     image: '',
-    deliveryContent: ''
+    deliveryContent: '',
+    flashSaleEnd: ''
   });
 
   useEffect(() => {
@@ -60,26 +61,21 @@ export function ProductDialog({ isOpen, onClose, product }: ProductDialogProps) 
       setFormData({
         name: product.name || '',
         price: product.price?.toString() || '',
+        originalPrice: product.originalPrice?.toString() || '',
         category: product.category || '',
         description: product.description || '',
         features: product.features?.join(', ') || '',
         stock: product.stock?.toString() || '0',
         isBestSeller: product.isBestSeller || false,
         image: product.image || '',
-        deliveryContent: product.deliveryContent || ''
+        deliveryContent: product.deliveryContent || '',
+        flashSaleEnd: product.flashSaleEnd || ''
       });
       setImagePreview(product.image || '');
     } else {
       setFormData({
-        name: '',
-        price: '',
-        category: '',
-        description: '',
-        features: '',
-        stock: '0',
-        isBestSeller: false,
-        image: '',
-        deliveryContent: ''
+        name: '', price: '', originalPrice: '', category: '', description: '', features: '',
+        stock: '0', isBestSeller: false, image: '', deliveryContent: '', flashSaleEnd: ''
       });
       setImagePreview('');
       setImageFile(null);
@@ -97,17 +93,15 @@ export function ProductDialog({ isOpen, onClose, product }: ProductDialogProps) 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!db) return;
-
     setLoading(true);
     try {
       let imageUrl = formData.image;
-      if (imageFile) {
-        imageUrl = await uploadToImgBB(imageFile);
-      }
+      if (imageFile) imageUrl = await uploadToImgBB(imageFile);
 
       const payload = {
         name: formData.name,
         price: parseFloat(formData.price),
+        originalPrice: formData.originalPrice ? parseFloat(formData.originalPrice) : null,
         category: formData.category,
         description: formData.description,
         features: formData.features.split(',').map(f => f.trim()).filter(f => f !== ''),
@@ -115,6 +109,7 @@ export function ProductDialog({ isOpen, onClose, product }: ProductDialogProps) 
         isBestSeller: formData.isBestSeller,
         image: imageUrl,
         deliveryContent: formData.deliveryContent,
+        flashSaleEnd: formData.flashSaleEnd || null,
         updatedAt: serverTimestamp(),
         rating: product?.rating || 5.0,
         reviews: product?.reviews || 0,
@@ -123,28 +118,16 @@ export function ProductDialog({ isOpen, onClose, product }: ProductDialogProps) 
 
       if (product) {
         const docRef = doc(db, 'products', product.id);
-        updateDoc(docRef, payload)
-          .then(() => {
-            toast({ title: 'Success', description: 'Product updated successfully' });
-            onClose();
-          })
-          .catch(async (error) => {
-            errorEmitter.emit('permission-error', new FirestorePermissionError({ path: docRef.path, operation: 'update', requestResourceData: payload }));
-          });
+        await updateDoc(docRef, payload);
+        toast({ title: 'Success', description: 'Produk diperbarui' });
       } else {
         const collectionRef = collection(db, 'products');
-        const finalPayload = { ...payload, createdAt: serverTimestamp() };
-        addDoc(collectionRef, finalPayload)
-          .then(() => {
-            toast({ title: 'Success', description: 'Product created successfully' });
-            onClose();
-          })
-          .catch(async (error) => {
-            errorEmitter.emit('permission-error', new FirestorePermissionError({ path: collectionRef.path, operation: 'create', requestResourceData: finalPayload }));
-          });
+        await addDoc(collectionRef, { ...payload, createdAt: serverTimestamp() });
+        toast({ title: 'Success', description: 'Produk baru ditambahkan' });
       }
+      onClose();
     } catch (error: any) {
-      toast({ variant: 'destructive', title: 'Error', description: error.message || 'Something went wrong' });
+      toast({ variant: 'destructive', title: 'Error', description: error.message });
     } finally {
       setLoading(false);
     }
@@ -152,97 +135,54 @@ export function ProductDialog({ isOpen, onClose, product }: ProductDialogProps) 
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto rounded-3xl">
-        <DialogHeader>
-          <DialogTitle className="text-xl font-bold">{product ? 'Edit Produk' : 'Tambah Produk Baru'}</DialogTitle>
-        </DialogHeader>
-
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto rounded-2xl">
+        <DialogHeader><DialogTitle>{product ? 'Edit Produk' : 'Tambah Produk'}</DialogTitle></DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-6 py-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="space-y-5">
-              <div className="space-y-1.5">
-                <Label htmlFor="name" className="text-xs font-bold uppercase text-gray-400">Nama Produk</Label>
-                <Input id="name" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} required className="h-11 rounded-xl bg-slate-50 border-none" />
-              </div>
-
+            <div className="space-y-4">
+              <div className="space-y-1.5"><Label className="text-xs font-bold uppercase text-gray-400">Nama Produk</Label><Input value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} required className="rounded-xl bg-slate-50 border-none" /></div>
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label htmlFor="price" className="text-xs font-bold uppercase text-gray-400">Harga (IDR)</Label>
-                  <Input id="price" type="number" value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} required className="h-11 rounded-xl bg-slate-50 border-none" />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="category" className="text-xs font-bold uppercase text-gray-400">Kategori</Label>
+                <div className="space-y-1.5"><Label className="text-xs font-bold uppercase text-gray-400">Harga Promo (IDR)</Label><Input type="number" value={formData.price} onChange={e => setFormData({...formData, price: e.target.value})} required className="rounded-xl bg-blue-50 border-none font-bold" /></div>
+                <div className="space-y-1.5"><Label className="text-xs font-bold uppercase text-gray-400">Harga Normal (Coret)</Label><Input type="number" value={formData.originalPrice} onChange={e => setFormData({...formData, originalPrice: e.target.value})} className="rounded-xl bg-slate-50 border-none" /></div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5"><Label className="text-xs font-bold uppercase text-gray-400">Stok</Label><Input type="number" value={formData.stock} onChange={e => setFormData({...formData, stock: e.target.value})} required className="rounded-xl bg-slate-50 border-none" /></div>
+                <div className="space-y-1.5"><Label className="text-xs font-bold uppercase text-gray-400">Kategori</Label>
                   <Select value={formData.category} onValueChange={val => setFormData({...formData, category: val})}>
-                    <SelectTrigger className="h-11 rounded-xl bg-slate-50 border-none">
-                      <SelectValue placeholder="Pilih Kategori" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {CATEGORIES.filter(c => c !== 'Semua').map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
-                    </SelectContent>
+                    <SelectTrigger className="rounded-xl bg-slate-50 border-none"><SelectValue placeholder="Pilih" /></SelectTrigger>
+                    <SelectContent>{CATEGORIES.filter(c => c !== 'Semua').map(cat => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}</SelectContent>
                   </Select>
                 </div>
               </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                  <Label htmlFor="stock" className="text-xs font-bold uppercase text-gray-400 flex items-center gap-1">
-                    <Package size={12} /> Jumlah Stok
-                  </Label>
-                  <Input id="stock" type="number" value={formData.stock} onChange={e => setFormData({...formData, stock: e.target.value})} required className="h-11 rounded-xl bg-slate-50 border-none" />
-                </div>
-                <div className="space-y-1.5 flex flex-col justify-end">
-                  <div className="flex items-center space-x-3 p-2 bg-slate-50 rounded-xl h-11">
-                    <input type="checkbox" id="bestseller" checked={formData.isBestSeller} onChange={e => setFormData({...formData, isBestSeller: e.target.checked})} className="w-5 h-5 rounded-md border-gray-300 text-primary" />
-                    <Label htmlFor="bestseller" className="cursor-pointer font-bold text-xs">Best Seller</Label>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="deliveryContent" className="text-xs font-bold uppercase text-gray-400 flex items-center gap-1">
-                  <LinkIcon size={12} /> Link / File Download (Diberikan ke Pembeli)
-                </Label>
-                <Input id="deliveryContent" placeholder="https://..." value={formData.deliveryContent} onChange={e => setFormData({...formData, deliveryContent: e.target.value})} className="h-11 rounded-xl bg-blue-50 border-none focus:ring-blue-200" />
-              </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="features" className="text-xs font-bold uppercase text-gray-400">Fitur (pisahkan dengan koma)</Label>
-                <Input id="features" placeholder="SEO Ready, Responsive, Dark Mode" value={formData.features} onChange={e => setFormData({...formData, features: e.target.value})} className="h-11 rounded-xl bg-slate-50 border-none" />
+              <div className="space-y-1.5 p-4 bg-red-50 rounded-xl border border-red-100">
+                <Label className="text-xs font-bold uppercase text-red-600 flex items-center gap-2"><Zap size={14} className="fill-red-600" /> Flash Sale End Time (Opsional)</Label>
+                <Input type="datetime-local" value={formData.flashSaleEnd} onChange={e => setFormData({...formData, flashSaleEnd: e.target.value})} className="rounded-xl bg-white border-red-200" />
+                <p className="text-[10px] text-red-400 mt-1 italic">*Biarkan kosong jika bukan Flash Sale</p>
               </div>
             </div>
-
-            <div className="space-y-5">
+            <div className="space-y-4">
               <div className="space-y-1.5">
                 <Label className="text-xs font-bold uppercase text-gray-400">Gambar Produk</Label>
-                <div className="border-2 border-dashed border-slate-200 rounded-2xl p-4 text-center hover:bg-slate-50 transition-colors relative">
+                <div className="border-2 border-dashed border-slate-200 rounded-2xl p-4 text-center relative aspect-square max-w-[200px] mx-auto overflow-hidden">
                   {imagePreview ? (
-                    <div className="relative aspect-square w-full max-w-[200px] mx-auto overflow-hidden rounded-xl border border-slate-100 shadow-sm">
+                    <>
                       <Image src={imagePreview} alt="Preview" fill className="object-cover" />
-                      <button type="button" onClick={() => { setImagePreview(''); setImageFile(null); }} className="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1.5"><X size={14} /></button>
-                    </div>
+                      <button type="button" onClick={() => { setImagePreview(''); setImageFile(null); }} className="absolute top-2 right-2 bg-black/60 text-white rounded-full p-1"><X size={14} /></button>
+                    </>
                   ) : (
-                    <label className="cursor-pointer flex flex-col items-center gap-3 py-10">
-                      <div className="w-14 h-14 bg-slate-100 rounded-2xl flex items-center justify-center text-slate-400"><Upload size={24} /></div>
-                      <span className="text-sm font-bold text-slate-500">Klik untuk upload gambar</span>
+                    <label className="cursor-pointer flex flex-col items-center justify-center h-full gap-2">
+                      <Upload size={24} className="text-slate-400" />
+                      <span className="text-[10px] font-bold text-slate-400">UPLOAD</span>
                       <input type="file" className="hidden" accept="image/*" onChange={handleImageChange} />
                     </label>
                   )}
                 </div>
               </div>
-
-              <div className="space-y-1.5">
-                <Label htmlFor="description" className="text-xs font-bold uppercase text-gray-400">Deskripsi Produk</Label>
-                <Textarea id="description" rows={5} value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} required className="rounded-xl bg-slate-50 border-none" />
-              </div>
+              <div className="space-y-1.5"><Label className="text-xs font-bold uppercase text-gray-400">Link Produk Digital</Label><Input value={formData.deliveryContent} onChange={e => setFormData({...formData, deliveryContent: e.target.value})} placeholder="https://..." className="rounded-xl bg-slate-50 border-none" /></div>
+              <div className="space-y-1.5"><Label className="text-xs font-bold uppercase text-gray-400">Deskripsi</Label><Textarea rows={4} value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} required className="rounded-xl bg-slate-50 border-none" /></div>
             </div>
           </div>
-
-          <DialogFooter className="pt-6">
-            <Button type="button" variant="ghost" onClick={onClose} disabled={loading} className="rounded-xl font-bold">Batal</Button>
-            <Button type="submit" disabled={loading} className="min-w-[150px] rounded-xl font-bold h-11">
-              {loading ? <Loader2 className="animate-spin mr-2 h-4 w-4" /> : (product ? 'Simpan Perubahan' : 'Tambah Produk')}
-            </Button>
-          </DialogFooter>
+          <DialogFooter><Button type="submit" disabled={loading} className="w-full rounded-xl h-12 font-bold">{loading ? <Loader2 className="animate-spin mr-2" /> : 'Simpan Produk'}</Button></DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

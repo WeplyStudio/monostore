@@ -1,21 +1,32 @@
-
 export type Product = {
-  id: string; // Changed to string for Firestore ID compatibility
+  id: string;
   name: string;
   price: number;
+  originalPrice?: number;
   category: string;
   rating: number;
   reviews: number;
   sold: number;
-  stock: number; // Menambahkan stok
+  stock: number;
   isBestSeller: boolean;
   description: string;
   features: string[];
   image: string;
   imageHint?: string;
-  deliveryContent?: string; // Menambahkan link/file produk digital
+  deliveryContent?: string;
+  flashSaleEnd?: string | any;
   createdAt?: any;
   updatedAt?: any;
+};
+
+export type Voucher = {
+  id: string;
+  code: string;
+  type: 'percentage' | 'fixed';
+  value: number;
+  minPurchase: number;
+  isActive: boolean;
+  expiryDate?: any;
 };
 
 export type Recommendation = {
