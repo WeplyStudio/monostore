@@ -2,20 +2,27 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Aturan untuk koleksi Produk
     match /products/{productId} {
-      allow read: if true;
-      allow update: if true; // Diperlukan untuk update rating/review count secara otomatis
+      // Izinkan siapa pun membaca produk dan memperbarui rating/jumlah ulasan
+      allow read, update: if true;
+      // Hanya admin yang bisa membuat, menghapus, atau mengedit detail produk
       allow write: if request.auth != null && request.auth.token.email == 'matchboxdevelopment@gmail.com';
-      
-      match /reviews/{reviewId} {
-        allow read: if true;
-        allow create: if true; // Siapa pun bisa memberikan review setelah beli
-        allow update, delete: if request.auth != null && request.auth.token.email == 'matchboxdevelopment@gmail.com';
-      }
     }
     
+    // Aturan untuk subkoleksi Ulasan (dipisah agar lebih eksplisit)
+    match /products/{productId}/reviews/{reviewId} {
+      // Siapa pun bisa melihat ulasan dan memberikan ulasan baru
+      allow read, create: if true;
+      // Hanya admin yang bisa mengelola ulasan (hapus/edit)
+      allow update, delete: if request.auth != null && request.auth.token.email == 'matchboxdevelopment@gmail.com';
+    }
+    
+    // Aturan untuk koleksi Pesanan
     match /orders/{orderId} {
+      // Izinkan pembuatan pesanan saat checkout berhasil (tanpa login)
       allow create: if true;
+      // Hanya admin yang bisa melihat daftar pesanan
       allow read, update, delete: if request.auth != null && request.auth.token.email == 'matchboxdevelopment@gmail.com';
     }
   }

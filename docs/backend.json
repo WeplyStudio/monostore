@@ -31,7 +31,7 @@
         "customerName": { "type": "string" },
         "customerEmail": { "type": "string" },
         "whatsapp": { "type": "string" },
-        "githubUser": { "type": "string" },
+        "order_id": { "type": "string" },
         "items": { 
           "type": "array", 
           "items": { 
