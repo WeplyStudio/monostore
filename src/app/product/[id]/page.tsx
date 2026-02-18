@@ -19,7 +19,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { formatRupiah, getPlaceholderImageDetails } from '@/lib/utils';
-import { PRODUCTS, INITIAL_RECOMMENDATIONS } from '@/lib/data';
+import { PRODUCTS } from '@/lib/data';
 import type { Product } from '@/lib/types';
 import { useRouter, useParams } from 'next/navigation';
 import { getPersonalizedRecommendations } from '@/ai/flows/personalized-recommendations-flow';
@@ -63,20 +63,16 @@ export default function ProductDetailPage() {
           allProducts: PRODUCTS,
         });
 
-        if (result.recommendations && result.recommendations.length > 0) {
+        if (result && result.recommendations && result.recommendations.length > 0) {
           setRecommendations(result.recommendations);
         } else {
-          const fallbackRecs = PRODUCTS.filter(p => 
-            p.id !== product.id && 
-            INITIAL_RECOMMENDATIONS.some(rec => rec.id === p.id)
-          ).slice(0, 4);
+          // Fallback: Ambil 4 produk lain selain produk saat ini
+          const fallbackRecs = PRODUCTS.filter(p => p.id !== product.id).slice(0, 4);
           setRecommendations(fallbackRecs);
         }
       } catch (error) {
-        const fallbackRecs = PRODUCTS.filter(p => 
-          p.id !== product.id && 
-          INITIAL_RECOMMENDATIONS.some(rec => rec.id === p.id)
-        ).slice(0, 4);
+        // Fallback: Ambil 4 produk lain selain produk saat ini
+        const fallbackRecs = PRODUCTS.filter(p => p.id !== product.id).slice(0, 4);
         setRecommendations(fallbackRecs);
       } finally {
         setIsRecsLoading(false);
@@ -242,9 +238,13 @@ export default function ProductDetailPage() {
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {recommendations.map((rec) => (
-                      <ProductCard key={rec.id} product={rec} />
-                    ))}
+                    {recommendations.length > 0 ? (
+                      recommendations.map((rec) => (
+                        <ProductCard key={rec.id} product={rec} />
+                      ))
+                    ) : (
+                      <p className="text-sm text-muted-foreground col-span-full py-4">Tidak ada produk serupa saat ini.</p>
+                    )}
                   </div>
                 )}
               </div>
