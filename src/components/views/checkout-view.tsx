@@ -3,30 +3,71 @@
 
 import React, { useState } from 'react';
 import { useApp } from '@/context/app-context';
+import { useFirestore } from '@/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Lock, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Lock, ShieldCheck, Loader2 } from 'lucide-react';
 import { formatRupiah } from '@/lib/utils';
 import Image from 'next/image';
 import { getPlaceholderImageDetails } from '@/lib/utils';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 export default function CheckoutView() {
-  const { setView, cart, cartTotal, totalItems, formData, handleInputChange, resetCart } = useApp();
+  const { setView, cart, cartTotal, totalItems, formData, handleInputChange, resetCart, setLastOrder } = useApp();
   const [loading, setLoading] = useState(false);
+  const db = useFirestore();
 
-  const handleCheckoutSubmit = (e: React.FormEvent) => {
+  const handleCheckoutSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.email || !formData.name || !formData.cardNumber || !formData.exp || !formData.cvc) {
-        alert("Please fill all required fields.");
+        alert("Harap lengkapi semua data yang diperlukan.");
         return;
     }
+    
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
-      setView('success');
-      resetCart();
-    }, 2000);
+    
+    if (!db) {
+        setLoading(false);
+        return;
+    }
+
+    const orderData = {
+      customerName: formData.name,
+      customerEmail: formData.email,
+      whatsapp: formData.whatsapp || '',
+      githubUser: formData.githubUser || '',
+      items: cart.map(item => ({
+        productId: item.id,
+        name: item.name,
+        price: item.price,
+        deliveryContent: item.deliveryContent || ''
+      })),
+      totalAmount: cartTotal,
+      status: 'completed',
+      createdAt: serverTimestamp()
+    };
+
+    const ordersRef = collection(db, 'orders');
+    
+    addDoc(ordersRef, orderData)
+      .then((docRef) => {
+        setLastOrder({ ...orderData, id: docRef.id });
+        setLoading(false);
+        resetCart();
+        setView('success');
+      })
+      .catch(async (error) => {
+        const permissionError = new FirestorePermissionError({
+          path: ordersRef.path,
+          operation: 'create',
+          requestResourceData: orderData
+        });
+        errorEmitter.emit('permission-error', permissionError);
+        setLoading(false);
+      });
   };
 
   return (
@@ -41,7 +82,6 @@ export default function CheckoutView() {
         </Button>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          {/* Form Section */}
           <div className="lg:col-span-7 space-y-6">
             <Card className="rounded-3xl border-none shadow-sm overflow-hidden bg-white">
               <CardHeader className="p-6 md:p-8 pb-0">
@@ -49,7 +89,6 @@ export default function CheckoutView() {
               </CardHeader>
               <CardContent className="p-6 md:p-8">
                 <form id="checkoutForm" onSubmit={handleCheckoutSubmit} className="space-y-8">
-                  {/* Data Diri Section */}
                   <div className="space-y-5">
                     <div className="flex items-center gap-3 mb-2">
                       <div className="w-2 h-2 rounded-full bg-primary" />
@@ -57,17 +96,29 @@ export default function CheckoutView() {
                     </div>
                     
                     <div className="grid gap-4">
-                      <div className="space-y-1.5">
-                        <label className="text-[10px] font-bold uppercase text-gray-400 tracking-widest ml-1">Email</label>
-                        <Input 
-                          name="email" 
-                          type="email" 
-                          placeholder="email@kamu.com" 
-                          value={formData.email} 
-                          onChange={handleInputChange} 
-                          required 
-                          className="h-12 rounded-xl bg-[#F8F9FA] border-none focus-visible:ring-primary/20 transition-all text-sm px-4"
-                        />
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-bold uppercase text-gray-400 tracking-widest ml-1">Email</label>
+                          <Input 
+                            name="email" 
+                            type="email" 
+                            placeholder="email@kamu.com" 
+                            value={formData.email} 
+                            onChange={handleInputChange} 
+                            required 
+                            className="h-12 rounded-xl bg-[#F8F9FA] border-none focus-visible:ring-primary/20 transition-all text-sm px-4"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-bold uppercase text-gray-400 tracking-widest ml-1">WhatsApp</label>
+                          <Input 
+                            name="whatsapp" 
+                            placeholder="0812..." 
+                            value={formData.whatsapp} 
+                            onChange={handleInputChange} 
+                            className="h-12 rounded-xl bg-[#F8F9FA] border-none focus-visible:ring-primary/20 transition-all text-sm px-4"
+                          />
+                        </div>
                       </div>
                       <div className="space-y-1.5">
                         <label className="text-[10px] font-bold uppercase text-gray-400 tracking-widest ml-1">Nama Lengkap</label>
@@ -83,7 +134,6 @@ export default function CheckoutView() {
                     </div>
                   </div>
                   
-                  {/* Pembayaran Section */}
                   <div className="space-y-5">
                     <div className="flex items-center gap-3 mb-2">
                       <div className="w-2 h-2 rounded-full bg-primary" />
@@ -140,7 +190,6 @@ export default function CheckoutView() {
             </Card>
           </div>
 
-          {/* Summary Section */}
           <div className="lg:col-span-5">
             <div className="lg:sticky lg:top-24 space-y-4">
               <Card className="rounded-3xl border-none shadow-sm overflow-hidden bg-white">
@@ -179,10 +228,6 @@ export default function CheckoutView() {
                       <span>Subtotal</span>
                       <span>{formatRupiah(cartTotal).replace(",00", "")}</span>
                     </div>
-                    <div className="flex justify-between text-xs font-bold text-gray-400 uppercase tracking-widest">
-                      <span>Biaya Layanan</span>
-                      <span>Rp 0</span>
-                    </div>
                     <div className="flex justify-between items-center pt-2">
                       <span className="text-sm font-bold text-[#212529]">Total Bayar</span>
                       <span className="text-xl font-bold text-primary">{formatRupiah(cartTotal)}</span>
@@ -192,15 +237,10 @@ export default function CheckoutView() {
                   <Button 
                     type="submit"
                     form="checkoutForm"
-                    className="w-full h-14 rounded-2xl bg-primary hover:bg-primary/90 text-white font-bold text-base shadow-xl shadow-primary/20 transition-all hover:-translate-y-1" 
+                    className="w-full h-14 rounded-2xl bg-primary hover:bg-primary/90 text-white font-bold text-base shadow-xl shadow-primary/20 transition-all" 
                     disabled={loading}
                   >
-                    {loading ? (
-                      <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                        <span>Memproses...</span>
-                      </div>
-                    ) : `Bayar Sekarang`}
+                    {loading ? <Loader2 className="animate-spin mr-2" /> : `Bayar Sekarang`}
                   </Button>
 
                   <div className="flex items-center justify-center gap-2 text-[10px] text-gray-400 font-bold uppercase tracking-widest">

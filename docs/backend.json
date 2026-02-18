@@ -17,9 +17,38 @@
         "description": { "type": "string", "description": "Detailed description" },
         "features": { "type": "array", "items": { "type": "string" }, "description": "List of product features" },
         "image": { "type": "string", "description": "URL of the product image" },
+        "deliveryContent": { "type": "string", "description": "The link or file URL delivered to user after purchase" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["name", "price", "category", "description", "image"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "A purchase record of digital products.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "customerName": { "type": "string" },
+        "customerEmail": { "type": "string" },
+        "whatsapp": { "type": "string" },
+        "githubUser": { "type": "string" },
+        "items": { 
+          "type": "array", 
+          "items": { 
+            "type": "object",
+            "properties": {
+              "productId": { "type": "string" },
+              "name": { "type": "string" },
+              "price": { "type": "number" },
+              "deliveryContent": { "type": "string" }
+            }
+          }
+        },
+        "totalAmount": { "type": "number" },
+        "status": { "type": "string", "enum": ["completed", "pending"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["customerName", "customerEmail", "items", "totalAmount"]
     }
   },
   "auth": {
@@ -29,6 +58,10 @@
     "/products/{productId}": {
       "schema": "Product",
       "description": "Collection of all digital products available in the store."
+    },
+    "/orders/{orderId}": {
+      "schema": "Order",
+      "description": "Collection of all successful transactions."
     }
   }
 }

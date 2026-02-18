@@ -1,27 +1,21 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useApp } from '@/context/app-context';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { 
   ArrowLeft, 
-  MessageCircle, 
   CheckCircle2, 
-  Globe, 
-  Github, 
-  Info,
-  ShieldCheck,
   Sparkles,
   ShoppingCart,
   Loader2
 } from 'lucide-react';
 import { formatRupiah, getPlaceholderImageDetails } from '@/lib/utils';
-import { PRODUCTS } from '@/lib/data';
 import type { Product } from '@/lib/types';
 import { useRouter, useParams } from 'next/navigation';
 import { getPersonalizedRecommendations } from '@/ai/flows/personalized-recommendations-flow';
@@ -31,7 +25,7 @@ import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, collection, getDocs, limit, query } from 'firebase/firestore';
 
 export default function ProductDetailPage() {
-  const { addToCart, addViewedProduct, viewedProducts, setView, setIsCartOpen } = useApp();
+  const { addToCart, addViewedProduct, viewedProducts, setView, setIsCartOpen, formData, handleInputChange } = useApp();
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const db = useFirestore();
@@ -47,8 +41,6 @@ export default function ProductDetailPage() {
   
   const [recommendations, setRecommendations] = useState<Product[]>([]);
   const [isRecsLoading, setIsRecsLoading] = useState(true);
-  const [whatsapp, setWhatsapp] = useState('');
-  const [githubUser, setGithubUser] = useState('');
 
   const product = firestoreProduct;
 
@@ -64,7 +56,6 @@ export default function ProductDetailPage() {
     const fetchRecommendations = async () => {
       setIsRecsLoading(true);
       try {
-        // Fetch some products for context
         const productsSnap = await getDocs(query(collection(db, 'products'), limit(20)));
         const allProducts = productsSnap.docs.map(doc => ({
           ...doc.data(),
@@ -124,7 +115,7 @@ export default function ProductDetailPage() {
   const imageSrc = isUrl ? product.image : getPlaceholderImageDetails(product.image).src;
   const imageHint = isUrl ? "" : getPlaceholderImageDetails(product.image).hint;
 
-  const handlingFee = 2250;
+  const handlingFee = 0;
   const totalPrice = (product.price || 0) + handlingFee;
 
   const handleBuyNow = () => {
@@ -152,8 +143,8 @@ export default function ProductDetailPage() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           
           <div className="lg:col-span-8 space-y-8">
-            <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100">
-              <div className="aspect-square relative w-full max-w-2xl mx-auto">
+            <div className="bg-white rounded-[2rem] overflow-hidden shadow-sm border border-gray-100 p-4">
+              <div className="aspect-square relative w-full max-w-2xl mx-auto rounded-2xl overflow-hidden">
                 <Image
                   src={imageSrc}
                   alt={product.name}
@@ -218,69 +209,67 @@ export default function ProductDetailPage() {
 
           <div className="lg:col-span-4">
             <div className="sticky top-24 space-y-4">
-              <Card className="rounded-2xl border-none shadow-sm overflow-hidden">
-                <CardContent className="p-6 space-y-6">
+              <Card className="rounded-[2rem] border-none shadow-sm overflow-hidden">
+                <CardContent className="p-8 space-y-6">
                   <div>
-                    <h2 className="text-2xl font-bold text-foreground">
+                    <h2 className="text-3xl font-bold text-foreground">
                       {formatRupiah(product.price)}
                     </h2>
                   </div>
 
                   <div className="space-y-4">
-                    <h3 className="text-sm font-bold text-gray-800">Lengkapi Data Pesanan</h3>
+                    <h3 className="text-sm font-bold text-gray-800 uppercase tracking-widest">Lengkapi Data Pesanan</h3>
                     <div className="space-y-3">
                       <div className="space-y-1.5">
-                        <label className="text-[10px] font-bold uppercase text-gray-400 tracking-wider">WhatsApp</label>
+                        <label className="text-[10px] font-bold uppercase text-gray-400 tracking-wider">Email</label>
                         <Input 
-                          placeholder="Masukkan WhatsApp" 
-                          value={whatsapp}
-                          onChange={(e) => setWhatsapp(e.target.value)}
-                          className="bg-gray-50 border-gray-100 h-11 rounded-lg"
+                          name="email"
+                          placeholder="email@kamu.com" 
+                          value={formData.email}
+                          onChange={handleInputChange}
+                          className="bg-gray-50 border-none h-12 rounded-xl"
                         />
                       </div>
                       <div className="space-y-1.5">
-                        <label className="text-[10px] font-bold uppercase text-gray-400 tracking-wider">Username Github</label>
+                        <label className="text-[10px] font-bold uppercase text-gray-400 tracking-wider">WhatsApp</label>
                         <Input 
-                          placeholder="Masukkan Username Github" 
-                          value={githubUser}
-                          onChange={(e) => setGithubUser(e.target.value)}
-                          className="bg-gray-50 border-gray-100 h-11 rounded-lg"
+                          name="whatsapp"
+                          placeholder="0812..." 
+                          value={formData.whatsapp}
+                          onChange={handleInputChange}
+                          className="bg-gray-50 border-none h-12 rounded-xl"
                         />
                       </div>
                     </div>
                   </div>
 
                   <div className="space-y-2 pt-2">
-                    <div className="flex justify-between text-xs font-medium text-gray-500">
+                    <div className="flex justify-between text-xs font-bold text-gray-400 uppercase">
                       <span>Harga Produk</span>
                       <span>{formatRupiah(product.price)}</span>
                     </div>
-                    <div className="flex justify-between text-xs font-medium text-gray-500">
-                      <span>Biaya Penanganan</span>
-                      <span>{formatRupiah(handlingFee)}</span>
-                    </div>
                     <Separator className="my-3 opacity-50" />
-                    <div className="flex justify-between text-sm font-bold text-foreground">
+                    <div className="flex justify-between text-lg font-bold text-foreground">
                       <span>Total</span>
                       <span>{formatRupiah(totalPrice)}</span>
                     </div>
                   </div>
 
                   <div className="flex flex-col gap-3">
-                    <div className="flex gap-2">
+                    <div className="grid grid-cols-2 gap-3">
                       <Button 
                         onClick={() => addToCart(product as Product, 1)}
-                        variant="outline" 
-                        className="flex-1 border-primary text-primary hover:bg-primary/5 h-12 rounded-xl font-bold"
+                        variant="secondary" 
+                        className="h-14 rounded-2xl font-bold"
                       >
                         <ShoppingCart size={18} className="mr-2" />
-                        Keranjang
+                        + Keranjang
                       </Button>
                       <Button 
                         onClick={handleBuyNow}
-                        className="flex-1 bg-primary hover:bg-primary/90 text-white h-12 rounded-xl font-bold"
+                        className="bg-primary hover:bg-primary/90 text-white h-14 rounded-2xl font-bold"
                       >
-                        Beli
+                        Beli Sekarang
                       </Button>
                     </div>
                   </div>

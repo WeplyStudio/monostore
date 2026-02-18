@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { createContext, useContext, useState, ReactNode, useCallback } from 'react';
@@ -15,10 +16,13 @@ type AppContextType = {
   isCartOpen: boolean;
   setIsCartOpen: (isOpen: boolean) => void;
   formData: any;
+  setFormData: (data: any) => void;
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   resetCart: () => void;
   viewedProducts: Product[];
   addViewedProduct: (product: Product) => void;
+  lastOrder: any;
+  setLastOrder: (order: any) => void;
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -28,11 +32,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [viewedProducts, setViewedProducts] = useState<Product[]>([]);
+  const [lastOrder, setLastOrder] = useState<any>(null);
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
     email: '',
     name: '',
+    whatsapp: '',
+    githubUser: '',
     cardName: '',
     cardNumber: '',
     exp: '',
@@ -65,13 +72,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       return [...prevCart, { ...product, quantity }];
     });
     toast({
-      title: `${product.name} added to cart`,
-      description: `Quantity: ${quantity}`,
+      title: `${product.name} ditambahkan ke keranjang`,
+      description: `Jumlah: ${quantity}`,
     })
     setIsCartOpen(true);
   };
 
-  const removeFromCart = (id: number) => {
+  const removeFromCart = (id: string | number) => {
     setCart(cart.filter(item => item.id !== id));
   };
   
@@ -93,10 +100,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     isCartOpen,
     setIsCartOpen,
     formData,
+    setFormData,
     handleInputChange,
     resetCart,
     viewedProducts,
     addViewedProduct,
+    lastOrder,
+    setLastOrder
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
