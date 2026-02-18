@@ -5,7 +5,7 @@
  * Handles CORS issues by executing API calls on the server.
  */
 
-const PAKASIR_PROJECT = "depodomain";
+const PAKASIR_PROJECT = "itsjason";
 const PAKASIR_API_KEY = "Qz8ylLI2rA37YnuLYCqIEaoMd4ZdM9eT";
 
 /**
