@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -27,6 +26,8 @@ import { uploadToImgBB } from '@/lib/imgbb';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, Upload, X } from 'lucide-react';
 import Image from 'next/image';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 interface ProductDialogProps {
   isOpen: boolean;
@@ -94,7 +95,6 @@ export function ProductDialog({ isOpen, onClose, product }: ProductDialogProps) 
     try {
       let imageUrl = formData.image;
 
-      // Upload to ImgBB if a new file is selected
       if (imageFile) {
         imageUrl = await uploadToImgBB(imageFile);
       }
@@ -108,25 +108,44 @@ export function ProductDialog({ isOpen, onClose, product }: ProductDialogProps) 
         isBestSeller: formData.isBestSeller,
         image: imageUrl,
         updatedAt: serverTimestamp(),
-        // Default values for new products
         rating: product?.rating || 5.0,
         reviews: product?.reviews || 0,
         sold: product?.sold || 0,
       };
 
       if (product) {
-        await updateDoc(doc(db, 'products', product.id), payload);
-        toast({ title: 'Success', description: 'Product updated successfully' });
+        const docRef = doc(db, 'products', product.id);
+        updateDoc(docRef, payload)
+          .then(() => {
+            toast({ title: 'Success', description: 'Product updated successfully' });
+            onClose();
+          })
+          .catch(async (serverError) => {
+            const permissionError = new FirestorePermissionError({
+              path: docRef.path,
+              operation: 'update',
+              requestResourceData: payload,
+            } satisfies SecurityRuleContext);
+            errorEmitter.emit('permission-error', permissionError);
+          });
       } else {
-        await addDoc(collection(db, 'products'), {
-          ...payload,
-          createdAt: serverTimestamp(),
-        });
-        toast({ title: 'Success', description: 'Product created successfully' });
+        const collectionRef = collection(db, 'products');
+        const finalPayload = { ...payload, createdAt: serverTimestamp() };
+        addDoc(collectionRef, finalPayload)
+          .then(() => {
+            toast({ title: 'Success', description: 'Product created successfully' });
+            onClose();
+          })
+          .catch(async (serverError) => {
+            const permissionError = new FirestorePermissionError({
+              path: collectionRef.path,
+              operation: 'create',
+              requestResourceData: finalPayload,
+            } satisfies SecurityRuleContext);
+            errorEmitter.emit('permission-error', permissionError);
+          });
       }
-      onClose();
     } catch (error: any) {
-      console.error(error);
       toast({ 
         variant: 'destructive', 
         title: 'Error', 

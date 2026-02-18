@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState } from 'react';
@@ -16,7 +15,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+} from '@/table';
 import { 
   Plus, 
   Pencil, 
@@ -35,6 +34,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError, type SecurityRuleContext } from '@/firebase/errors';
 
 const ADMIN_EMAIL = 'matchboxdevelopment@gmail.com';
 
@@ -62,7 +63,6 @@ export default function AdminPage() {
     setIsLoggingIn(true);
     setAuthError(null);
 
-    // Validasi email lengkap
     if (loginEmail.trim() !== ADMIN_EMAIL) {
       setAuthError(`Email harus tepat: ${ADMIN_EMAIL}`);
       setIsLoggingIn(false);
@@ -73,22 +73,17 @@ export default function AdminPage() {
       await signInWithEmailAndPassword(auth, loginEmail, loginPassword);
       toast({ title: 'Welcome back!', description: 'Logged in successfully.' });
     } catch (error: any) {
-      console.error('Login Error:', error.code, error.message);
-      
-      // Jika user tidak ditemukan atau kredensial salah (Firebase sering merespon invalid-credential untuk keamanan)
-      // Kita coba buat akun otomatis khusus untuk email admin ini
       if (loginEmail === ADMIN_EMAIL && (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential')) {
         try {
           await createUserWithEmailAndPassword(auth, loginEmail, loginPassword);
           toast({ title: 'Akun Admin Dibuat', description: 'Selamat datang di dashboard Anda!' });
         } catch (regError: any) {
-          console.error('Registration Error:', regError.code, regError.message);
           if (regError.code === 'auth/operation-not-allowed') {
             setAuthError('Metode Email/Password belum diaktifkan di Firebase Console.');
           } else if (regError.code === 'auth/weak-password') {
             setAuthError('Password terlalu lemah. Gunakan minimal 6 karakter.');
           } else {
-            setAuthError(regError.message || 'Gagal masuk. Periksa koneksi atau kredensial Anda.');
+            setAuthError(regError.message || 'Gagal masuk.');
           }
         }
       } else {
@@ -165,17 +160,6 @@ export default function AdminPage() {
                 {isLoggingIn ? <Loader2 className="animate-spin mr-2" /> : null}
                 {isLoggingIn ? 'Memproses...' : 'Sign In / Daftar Admin'}
               </Button>
-
-              {user && user.email !== ADMIN_EMAIL && (
-                <div className="text-center space-y-4">
-                  <p className="text-xs text-destructive font-bold">
-                    Akun {user.email} tidak memiliki akses.
-                  </p>
-                  <Button variant="ghost" onClick={handleLogout} className="w-full rounded-xl">
-                    Logout & Ganti Akun
-                  </Button>
-                </div>
-              )}
             </form>
           </CardContent>
         </Card>
@@ -188,19 +172,21 @@ export default function AdminPage() {
     p.category.toLowerCase().includes(searchTerm.toLowerCase())
   ) || [];
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = (id: string) => {
     if (!db || !window.confirm('Hapus produk ini secara permanen?')) return;
     
-    try {
-      await deleteDoc(doc(db, 'products', id));
-      toast({ title: 'Berhasil', description: 'Produk telah dihapus.' });
-    } catch (error) {
-      toast({ 
-        variant: 'destructive', 
-        title: 'Error', 
-        description: 'Gagal menghapus produk.' 
+    const docRef = doc(db, 'products', id);
+    deleteDoc(docRef)
+      .then(() => {
+        toast({ title: 'Berhasil', description: 'Produk telah dihapus.' });
+      })
+      .catch(async (serverError) => {
+        const permissionError = new FirestorePermissionError({
+          path: docRef.path,
+          operation: 'delete',
+        } satisfies SecurityRuleContext);
+        errorEmitter.emit('permission-error', permissionError);
       });
-    }
   };
 
   return (
