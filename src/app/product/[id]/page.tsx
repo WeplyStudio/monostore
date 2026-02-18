@@ -23,7 +23,7 @@ import {
   Zap,
   Clock
 } from 'lucide-react';
-import { formatRupiah, getPlaceholderImageDetails, formatCompactNumber } from '@/lib/utils';
+import { formatRupiah, getPlaceholderImageDetails, formatCompactNumber, parseDescriptionToHtml } from '@/lib/utils';
 import type { Product } from '@/lib/types';
 import { useRouter, useParams } from 'next/navigation';
 import { getPersonalizedRecommendations } from '@/ai/flows/personalized-recommendations-flow';
@@ -212,7 +212,10 @@ export default function ProductDetailPage() {
 
               <div className="space-y-4">
                 <h3 className="text-xs font-bold uppercase tracking-widest text-gray-400">Deskripsi</h3>
-                <p className="text-sm text-gray-600 leading-relaxed">{product.description}</p>
+                <div 
+                  className="text-sm text-gray-600 leading-relaxed"
+                  dangerouslySetInnerHTML={{ __html: parseDescriptionToHtml(product.description) }}
+                />
               </div>
 
               <div className="space-y-4">

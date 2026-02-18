@@ -24,7 +24,7 @@ import {
 import { CATEGORIES } from '@/lib/data';
 import { uploadToImgBB } from '@/lib/imgbb';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Upload, X, Link as LinkIcon, Package, Zap, Tag } from 'lucide-react';
+import { Loader2, Upload, X, Link as LinkIcon, Package, Zap, Tag, Info } from 'lucide-react';
 import Image from 'next/image';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -179,7 +179,21 @@ export function ProductDialog({ isOpen, onClose, product }: ProductDialogProps) 
                 </div>
               </div>
               <div className="space-y-1.5"><Label className="text-xs font-bold uppercase text-gray-400">Link Produk Digital</Label><Input value={formData.deliveryContent} onChange={e => setFormData({...formData, deliveryContent: e.target.value})} placeholder="https://..." className="rounded-xl bg-slate-50 border-none" /></div>
-              <div className="space-y-1.5"><Label className="text-xs font-bold uppercase text-gray-400">Deskripsi</Label><Textarea rows={4} value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} required className="rounded-xl bg-slate-50 border-none" /></div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold uppercase text-gray-400">Deskripsi</Label>
+                <Textarea rows={4} value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} required className="rounded-xl bg-slate-50 border-none mb-2" />
+                <div className="p-3 bg-blue-50 rounded-lg border border-blue-100">
+                  <div className="flex items-center gap-1 text-[10px] font-bold text-blue-600 uppercase mb-1">
+                    <Info size={10} /> Tips Format Teks:
+                  </div>
+                  <div className="grid grid-cols-2 gap-y-1 text-[9px] text-blue-500 font-medium">
+                    <span>*teks* = <strong>Tebal</strong></span>
+                    <span>_teks_ = <em>Miring</em></span>
+                    <span>*_teks_* = <strong><em>Tebal Miring</em></strong></span>
+                    <span>&lt;b&gt;teks&lt;b&gt; = <span className="font-bold">JUDUL BESAR</span></span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
           <DialogFooter><Button type="submit" disabled={loading} className="w-full rounded-xl h-12 font-bold">{loading ? <Loader2 className="animate-spin mr-2" /> : 'Simpan Produk'}</Button></DialogFooter>

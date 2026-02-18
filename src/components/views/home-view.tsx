@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -14,7 +13,7 @@ import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy } from 'firebase/firestore';
 import type { Product } from '@/lib/types';
 import { getPersonalizedRecommendations } from '@/ai/flows/personalized-recommendations-flow';
-import { formatRupiah, getPlaceholderImageDetails } from '@/lib/utils';
+import { formatRupiah, getPlaceholderImageDetails, parseDescriptionToHtml } from '@/lib/utils';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -419,8 +418,6 @@ const FlashSaleSection = ({ products }: { products: Product[] }) => {
           // Progress dihitung sebagai: total transaksi / jumlah stok flash sale
           const fsStock = product.flashSaleStock || 0;
           const soldCount = product.sold || 0;
-          // Kami asumsikan 'flashSaleStock' di sini adalah total kuota yang dialokasikan
-          // Jika di checkout ia berkurang, maka (sold / (sold + remaining)) adalah cara untuk mendapatkan total transaksi vs total kuota
           const progressValue = fsStock > 0 
             ? Math.min(100, (soldCount / (soldCount + fsStock)) * 100) 
             : 100;
@@ -484,7 +481,10 @@ const RecommendationCard = ({ item, addToCart }: { item: Product; addToCart: (pr
                         <span className="text-[8px] font-black text-slate-300 uppercase tracking-widest truncate">AI Recommendation</span>
                     </div>
                     <h3 className="font-bold text-foreground text-base sm:text-lg line-clamp-1 leading-tight">{item.name}</h3>
-                    <p className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed h-8 sm:h-auto">{item.description}</p>
+                    <div 
+                      className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed h-8 sm:h-auto overflow-hidden"
+                      dangerouslySetInnerHTML={{ __html: parseDescriptionToHtml(item.description) }}
+                    />
                 </div>
                 <div className="flex flex-row sm:flex-row items-center justify-between gap-2 mt-4 pt-2 border-t border-slate-50 sm:border-none">
                     <span className={`font-bold text-sm sm:text-base whitespace-nowrap ${isOutOfStock ? 'text-muted-foreground line-through' : 'text-primary'}`}>

@@ -26,6 +26,35 @@ export function formatCompactNumber(number: number) {
   return (value % 1 === 0 ? value.toFixed(0) : value.toFixed(1)) + 'M';
 }
 
+/**
+ * Parses custom markdown-like formatting for product descriptions.
+ * *text* -> bold
+ * _text_ -> italic
+ * *_text_* -> bold italic
+ * <b>text<b> -> large title text
+ */
+export function parseDescriptionToHtml(text: string) {
+  if (!text) return "";
+  
+  // Escape HTML to prevent XSS, but preserve our custom formatting
+  let safeText = text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+
+  // Apply formatting
+  return safeText
+    // Big Title: <b>text<b>
+    .replace(/&lt;b&gt;(.*?)&lt;b&gt;/g, '<span class="text-xl font-bold block mt-4 mb-2 text-foreground">$1</span>')
+    // Bold Italic: *_text_*
+    .replace(/\*_(.*?)\_\*/g, '<strong><em>$1</em></strong>')
+    // Bold: *text*
+    .replace(/\*(.*?)\*/g, '<strong>$1</strong>')
+    // Italic: _text_
+    .replace(/\_(.*?)\_/g, '<em>$1</em>')
+    // Line breaks
+    .replace(/\n/g, '<br/>');
+}
 
 export function getPlaceholderImage(id: string) {
   const image = PlaceHolderImages.find((img) => img.id === id);
