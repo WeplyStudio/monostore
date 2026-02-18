@@ -1,9 +1,8 @@
-
 /**
  * Service to handle image uploads to ImgBB.
  */
 export async function uploadToImgBB(file: File): Promise<string> {
-  const apiKey = 'YOUR_IMGBB_API_KEY'; // User should replace this with their actual key
+  const apiKey = '1fa90970c71549cdd68ce59dcf6f3a12';
   const formData = new FormData();
   formData.append('image', file);
 
