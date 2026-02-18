@@ -104,7 +104,7 @@ export default function HomeView() {
     {
       icon: <ShoppingBag className="text-primary" size={24} />,
       title: "Pilih Produk",
-      desc: "Temukan aset digital terbaik yang sesuai dengan kebutuhan proyek kreatifmu."
+      desc: "Temukan produk digital terbaik yang sesuai dengan kebutuhan proyek kreatifmu."
     },
     {
       icon: <QrCode className="text-primary" size={24} />,
@@ -121,19 +121,19 @@ export default function HomeView() {
   const faqs = [
     {
       q: "Apa itu MonoStore?",
-      a: "MonoStore adalah platform penyedia aset digital premium seperti ikon, template desain, aset 3D, hingga e-book berkualitas tinggi untuk membantu mempercepat alur kerja kreatif Anda."
+      a: "MonoStore adalah platform penyedia produk digital premium seperti ikon, template desain, aset 3D, hingga e-book berkualitas tinggi untuk membantu mempercepat alur kerja kreatif Anda."
     },
     {
       q: "Bagaimana cara mendapatkan file setelah membeli?",
-      a: "Setelah pembayaran QRIS berhasil dideteksi otomatis, Anda akan diarahkan ke halaman sukses yang berisi tombol unduh. Selain itu, kami juga mengirimkan invoice beserta link akses ke email yang Anda daftarkan."
+      a: "Setelah pembayaran QRIS berhasil dideteksi otomatis, Anda akan diarahkan ke halaman sukses yang berisi tombol unduh. Selain itu, kami juga mengirimkan invoice beserta link akses produk digital ke email yang Anda daftarkan."
     },
     {
       q: "Apakah ada biaya langganan bulanan?",
-      a: "Tidak ada. Semua produk di MonoStore adalah 'One-Time Purchase'. Anda cukup bayar sekali dan aset tersebut menjadi milik Anda selamanya."
+      a: "Tidak ada. Semua produk di MonoStore adalah 'One-Time Purchase'. Anda cukup bayar sekali dan produk tersebut menjadi milik Anda selamanya."
     },
     {
-      q: "Dapatkah saya menggunakan aset ini untuk proyek klien?",
-      a: "Ya, tentu saja! Lisensi standar kami mengizinkan penggunaan aset untuk proyek pribadi maupun komersial milik klien Anda."
+      q: "Dapatkah saya menggunakan produk ini untuk proyek klien?",
+      a: "Ya, tentu saja! Lisensi standar kami mengizinkan penggunaan produk untuk proyek pribadi maupun komersial milik klien Anda."
     }
   ];
 
@@ -144,12 +144,12 @@ export default function HomeView() {
 
       <div className="text-center mb-10 mt-12 animate-fadeIn">
         <h1 className="text-3xl md:text-5xl font-bold text-foreground mb-3 tracking-tight font-headline">Apa yang ingin kamu buat?</h1>
-        <p className="text-muted-foreground mb-8 text-sm md:text-base">Temukan aset digital terbaik untuk project kreatifmu.</p>
+        <p className="text-muted-foreground mb-8 text-sm md:text-base">Temukan produk digital terbaik untuk project kreatifmu.</p>
         <div className="max-w-2xl mx-auto relative">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           <input 
             type="text" 
-            placeholder="Cari icon, template, atau e-book..." 
+            placeholder="Cari produk digital..." 
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-12 pr-4 py-4 bg-white border-none h-14 rounded-2xl shadow-sm focus:ring-2 focus:ring-primary/20 transition-all text-sm md:text-base outline-none"
@@ -237,7 +237,7 @@ export default function HomeView() {
         <div className="mb-20">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold font-headline mb-4">Proses Pembelian</h2>
-            <p className="text-muted-foreground max-w-lg mx-auto text-sm">Hanya butuh beberapa detik untuk mendapatkan aset digital impianmu.</p>
+            <p className="text-muted-foreground max-w-lg mx-auto text-sm">Hanya butuh beberapa detik untuk mendapatkan produk digital impianmu.</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {purchaseSteps.map((step, idx) => (
@@ -267,7 +267,7 @@ export default function HomeView() {
                 <span className="text-primary">Kualitas Terjamin.</span>
               </h2>
               <p className="text-lg text-muted-foreground leading-relaxed max-w-lg">
-                Kami memahami pentingnya setiap aset untuk proyek Anda. Itulah mengapa kami memberikan jaminan penuh untuk setiap produk yang Anda beli di MonoStore.
+                Kami memahami pentingnya setiap produk digital untuk proyek Anda. Itulah mengapa kami memberikan jaminan penuh untuk setiap produk yang Anda beli di MonoStore.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 pt-4">
                 <Button className="h-14 px-10 rounded-2xl font-bold text-lg shadow-2xl shadow-primary/20 hover:-translate-y-1 transition-transform">
@@ -289,10 +289,10 @@ export default function HomeView() {
             </div>
             <div className="lg:col-span-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
               {[
-                { icon: <ShieldCheck className="text-green-500" size={24} />, title: "File Bergaransi", desc: "Jika file rusak atau korup, kami kirim ulang secara instan." },
+                { icon: <ShieldCheck className="text-green-500" size={24} />, title: "Produk Bergaransi", desc: "Jika file rusak atau korup, kami kirim ulang secara instan." },
                 { icon: <Headphones className="text-blue-500" size={24} />, title: "Bantuan Teknis", desc: "Tim ahli kami siap membantu kendala instalasi Anda." },
-                { icon: <RefreshCw className="text-purple-500" size={24} />, title: "Update Gratis", desc: "Akses selamanya ke setiap update versi terbaru aset." },
-                { icon: <Zap className="text-orange-500" size={24} />, title: "Lisensi Komersial", desc: "Semua aset bebas digunakan untuk proyek klien Anda." },
+                { icon: <RefreshCw className="text-purple-500" size={24} />, title: "Update Gratis", desc: "Akses selamanya ke setiap update versi terbaru produk." },
+                { icon: <Zap className="text-orange-500" size={24} />, title: "Lisensi Komersial", desc: "Semua produk bebas digunakan untuk proyek klien Anda." },
               ].map((item, idx) => (
                 <div key={idx} className="p-6 bg-[#F8F9FA] rounded-[2rem] border border-white space-y-4 hover:bg-white hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
                   <div className="w-12 h-12 bg-white rounded-2xl shadow-sm flex items-center justify-center">
@@ -415,7 +415,6 @@ const FlashSaleSection = ({ products }: { products: Product[] }) => {
 
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
         {products.map(product => {
-          // Progress dihitung sebagai: total transaksi / jumlah stok flash sale
           const fsStock = product.flashSaleStock || 0;
           const soldCount = product.sold || 0;
           const progressValue = fsStock > 0 

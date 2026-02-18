@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState } from 'react';
@@ -75,14 +74,14 @@ export default function SuccessView() {
       </div>
       <h2 className="text-3xl font-bold mb-3 text-foreground font-headline">Yeay, Berhasil!</h2>
       <p className="text-muted-foreground mb-10 max-w-md leading-relaxed">
-        Transaksi sukses. Kami telah mengirimkan invoice ke{' '}
+        Transaksi sukses. Kami telah mengirimkan invoice beserta link akses produk digital ke{' '}
         <span className="text-foreground font-bold underline decoration-wavy decoration-border">{formData.email}</span>.
       </p>
 
       {lastOrder && lastOrder.items && (
         <div className="w-full max-w-xl space-y-6">
           <div className="bg-white rounded-[2.5rem] p-8 border border-gray-100 shadow-sm space-y-6">
-            <h3 className="text-sm font-bold uppercase tracking-widest text-gray-400 text-left">Aset Digital Anda</h3>
+            <h3 className="text-sm font-bold uppercase tracking-widest text-gray-400 text-left">Produk Digital Anda</h3>
             <div className="space-y-4">
               {lastOrder.items.map((item: any, idx: number) => (
                 <div key={idx} className="space-y-4 p-5 bg-[#F8F9FA] rounded-[2rem] border border-gray-50">

@@ -30,7 +30,7 @@ import { getPersonalizedRecommendations } from '@/ai/flows/personalized-recommen
 import ProductCard from '@/components/product-card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
-import { doc, collection, getDocs, limit, query, orderBy } from 'firebase/firestore';
+import { doc, collection, getDocs, limit, query, orderBy, where } from 'firebase/firestore';
 import Link from 'next/link';
 
 export default function ProductDetailPage() {
@@ -94,7 +94,7 @@ export default function ProductDetailPage() {
     const fetchRecommendations = async () => {
       setIsRecsLoading(true);
       try {
-        const productsSnap = await getDocs(query(collection(db, 'products'), limit(20)));
+        const productsSnap = await getDocs(query(collection(db, 'products'), limit(30)));
         // Sanitize data to plain objects before passing to Server Action
         const sanitizedAllProducts = productsSnap.docs.map(doc => {
           const d = doc.data();
@@ -122,7 +122,16 @@ export default function ProductDetailPage() {
         if (result?.recommendations?.length > 0) {
           setRecommendations(result.recommendations as Product[]);
         } else {
-          setRecommendations(sanitizedAllProducts.filter(p => p.id !== id).slice(0, 4) as any);
+          // Fallback logic: same category products
+          const fallback = sanitizedAllProducts
+            .filter(p => p.id !== id && p.category === product.category)
+            .slice(0, 4);
+          
+          if (fallback.length > 0) {
+            setRecommendations(fallback as any);
+          } else {
+            setRecommendations(sanitizedAllProducts.filter(p => p.id !== id).slice(0, 4) as any);
+          }
         }
       } catch (error) {
         console.error("Failed to fetch recommendations:", error);
@@ -317,7 +326,11 @@ export default function ProductDetailPage() {
             </div>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              {recommendations.map(rec => <ProductCard key={rec.id} product={rec} />)}
+              {recommendations.length > 0 ? (
+                recommendations.map(rec => <ProductCard key={rec.id} product={rec} />)
+              ) : (
+                <div className="col-span-full text-center py-10 text-muted-foreground text-sm">Belum ada produk serupa lainnya.</div>
+              )}
             </div>
           )}
         </div>

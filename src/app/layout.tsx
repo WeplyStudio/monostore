@@ -8,7 +8,7 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: 'MonoStore',
-  description: 'Premium digital assets for modern creators.',
+  description: 'Produk digital premium untuk kreator modern.',
 };
 
 export default function RootLayout({
