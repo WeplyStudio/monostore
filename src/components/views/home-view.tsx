@@ -281,7 +281,7 @@ export default function HomeView() {
               </Button>
               <Button 
                 variant="outline" 
-                className="h-14 px-8 rounded-2xl font-bold border-white/20 hover:bg-white/10 text-white"
+                className="h-14 px-8 rounded-2xl font-bold bg-transparent border-white/20 hover:bg-white/10 text-white"
                 onClick={() => window.location.href = 'mailto:hello@itsjason.my.id'}
               >
                 <Mail size={20} className="mr-2" />
