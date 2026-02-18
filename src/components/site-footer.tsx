@@ -5,11 +5,13 @@ import { Instagram, Twitter, Globe } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export default function SiteFooter() {
-  const [year, setYear] = useState<number | null>(null);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setYear(new Date().getFullYear());
+    setMounted(true);
   }, []);
+
+  const currentYear = new Date().getFullYear();
 
   return (
     <footer className="border-t border-border/50 bg-background pt-12 pb-8 mt-auto">
@@ -39,7 +41,7 @@ export default function SiteFooter() {
         </div>
 
         <div className="pt-8 border-t border-border/50 text-center text-xs text-muted-foreground">
-          <p>&copy; {year || '...'} MonoStore Digital Inc. All rights reserved.</p>
+          <p>&copy; {mounted ? currentYear : '2025'} MonoStore Digital Inc. All rights reserved.</p>
         </div>
       </div>
     </footer>
