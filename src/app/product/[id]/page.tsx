@@ -8,12 +8,15 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { 
   ArrowLeft, 
   CheckCircle2, 
   Sparkles,
   ShoppingCart,
-  Loader2
+  Loader2,
+  Star,
+  MessageSquare
 } from 'lucide-react';
 import { formatRupiah, getPlaceholderImageDetails } from '@/lib/utils';
 import type { Product } from '@/lib/types';
@@ -21,8 +24,8 @@ import { useRouter, useParams } from 'next/navigation';
 import { getPersonalizedRecommendations } from '@/ai/flows/personalized-recommendations-flow';
 import ProductCard from '@/components/product-card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { doc, collection, getDocs, limit, query } from 'firebase/firestore';
+import { useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
+import { doc, collection, getDocs, limit, query, orderBy } from 'firebase/firestore';
 
 export default function ProductDetailPage() {
   const { addToCart, addViewedProduct, viewedProducts, setView, setIsCartOpen, formData, handleInputChange } = useApp();
@@ -39,6 +42,14 @@ export default function ProductDetailPage() {
 
   const { data: firestoreProduct, loading: productLoading } = useDoc<any>(productRef);
   
+  // Reviews Query
+  const reviewsQuery = useMemoFirebase(() => {
+    if (!db || !id) return null;
+    return query(collection(db, 'products', id, 'reviews'), orderBy('createdAt', 'desc'), limit(10));
+  }, [db, id]);
+  
+  const { data: reviews, loading: reviewsLoading } = useCollection<any>(reviewsQuery);
+
   const [recommendations, setRecommendations] = useState<Product[]>([]);
   const [isRecsLoading, setIsRecsLoading] = useState(true);
 
@@ -156,10 +167,19 @@ export default function ProductDetailPage() {
               </div>
             </div>
 
-            <div className="space-y-6">
-              <h1 className="text-3xl font-bold text-[#212529] leading-tight">
-                {product.name}
-              </h1>
+            <div className="space-y-8">
+              <div className="space-y-2">
+                <h1 className="text-3xl font-bold text-[#212529] leading-tight">
+                  {product.name}
+                </h1>
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1 bg-yellow-50 text-yellow-700 px-3 py-1 rounded-full text-xs font-bold">
+                    <Star size={14} className="fill-yellow-500 text-yellow-500" />
+                    {product.rating} <span className="text-yellow-400 font-medium ml-1">({product.reviews} Review)</span>
+                  </div>
+                  <div className="text-xs font-bold text-gray-400 uppercase tracking-widest">{product.sold}+ Terjual</div>
+                </div>
+              </div>
 
               <div className="space-y-4">
                 <h3 className="text-sm font-bold uppercase tracking-widest text-gray-400">Keunggulan & Fitur</h3>
@@ -178,6 +198,54 @@ export default function ProductDetailPage() {
                 <p className="text-sm text-gray-600 leading-relaxed">
                   {product.description}
                 </p>
+              </div>
+
+              <Separator className="opacity-50" />
+
+              {/* Review Section */}
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <MessageSquare size={20} className="text-primary" />
+                    <h2 className="text-xl font-bold">Ulasan Pengguna</h2>
+                  </div>
+                </div>
+
+                {reviewsLoading ? (
+                  <div className="space-y-4">
+                    {[1, 2].map(i => <Skeleton key={i} className="h-24 w-full rounded-2xl" />)}
+                  </div>
+                ) : reviews && reviews.length > 0 ? (
+                  <div className="grid grid-cols-1 gap-4">
+                    {reviews.map((rev: any) => (
+                      <div key={rev.id} className="bg-white p-6 rounded-[2rem] border border-gray-50 shadow-sm space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-10 w-10 border-2 border-primary/10">
+                              <AvatarFallback className="bg-primary/5 text-primary font-bold">{rev.userName?.charAt(0) || 'U'}</AvatarFallback>
+                            </Avatar>
+                            <div>
+                              <div className="text-sm font-bold">{rev.userName}</div>
+                              <div className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+                                {rev.createdAt?.toDate ? rev.createdAt.toDate().toLocaleDateString('id-ID') : 'Baru saja'}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex gap-0.5">
+                            {[1, 2, 3, 4, 5].map(s => (
+                              <Star key={s} size={12} className={s <= rev.rating ? "fill-yellow-400 text-yellow-400" : "text-gray-200"} />
+                            ))}
+                          </div>
+                        </div>
+                        <p className="text-sm text-gray-600 leading-relaxed italic">"{rev.comment}"</p>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-10 bg-white rounded-[2rem] border border-dashed border-gray-200">
+                    <p className="text-sm text-muted-foreground">Belum ada ulasan untuk produk ini.</p>
+                  </div>
+                )}
               </div>
 
               <div className="space-y-6 pt-12">
@@ -209,7 +277,7 @@ export default function ProductDetailPage() {
 
           <div className="lg:col-span-4">
             <div className="sticky top-24 space-y-4">
-              <Card className="rounded-[2rem] border-none shadow-sm overflow-hidden">
+              <Card className="rounded-[2.5rem] border-none shadow-sm overflow-hidden">
                 <CardContent className="p-8 space-y-6">
                   <div>
                     <h2 className="text-3xl font-bold text-foreground">

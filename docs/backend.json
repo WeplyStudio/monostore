@@ -49,6 +49,19 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["customerName", "customerEmail", "items", "totalAmount"]
+    },
+    "Review": {
+      "title": "Review",
+      "description": "User review for a specific product.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userName": { "type": "string" },
+        "rating": { "type": "number" },
+        "comment": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userName", "rating", "comment"]
     }
   },
   "auth": {
@@ -58,6 +71,10 @@
     "/products/{productId}": {
       "schema": "Product",
       "description": "Collection of all digital products available in the store."
+    },
+    "/products/{productId}/reviews/{reviewId}": {
+      "schema": "Review",
+      "description": "Subcollection of reviews for a specific product."
     },
     "/orders/{orderId}": {
       "schema": "Order",
