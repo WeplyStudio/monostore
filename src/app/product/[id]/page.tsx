@@ -12,25 +12,29 @@ import {
   ArrowLeft, 
   MessageCircle, 
   CheckCircle2, 
-  ChevronRight, 
   Globe, 
   Github, 
   Info,
   ShieldCheck,
-  LayoutGrid
+  Sparkles
 } from 'lucide-react';
 import { formatRupiah, getPlaceholderImageDetails } from '@/lib/utils';
-import { PRODUCTS } from '@/lib/data';
+import { PRODUCTS, INITIAL_RECOMMENDATIONS } from '@/lib/data';
 import type { Product } from '@/lib/types';
 import { useRouter, useParams } from 'next/navigation';
+import { getPersonalizedRecommendations } from '@/ai/flows/personalized-recommendations-flow';
+import ProductCard from '@/components/product-card';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export default function ProductDetailPage() {
-  const { addToCart, addViewedProduct } = useApp();
+  const { addToCart, addViewedProduct, viewedProducts } = useApp();
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const [product, setProduct] = useState<Product | null>(null);
   const [whatsapp, setWhatsapp] = useState('');
   const [githubUser, setGithubUser] = useState('');
+  const [recommendations, setRecommendations] = useState<Product[]>([]);
+  const [isRecsLoading, setIsRecsLoading] = useState(true);
   
   const id = params?.id;
 
@@ -45,6 +49,42 @@ export default function ProductDetailPage() {
       router.push('/');
     }
   }, [id, addViewedProduct, router]);
+
+  useEffect(() => {
+    if (!product) return;
+
+    const fetchRecommendations = async () => {
+      setIsRecsLoading(true);
+      try {
+        const viewedProductIds = viewedProducts.map(p => p.id);
+        const result = await getPersonalizedRecommendations({
+          viewedProductIds,
+          currentProductId: product.id,
+          allProducts: PRODUCTS,
+        });
+
+        if (result.recommendations && result.recommendations.length > 0) {
+          setRecommendations(result.recommendations);
+        } else {
+          const fallbackRecs = PRODUCTS.filter(p => 
+            p.id !== product.id && 
+            INITIAL_RECOMMENDATIONS.some(rec => rec.id === p.id)
+          ).slice(0, 4);
+          setRecommendations(fallbackRecs);
+        }
+      } catch (error) {
+        const fallbackRecs = PRODUCTS.filter(p => 
+          p.id !== product.id && 
+          INITIAL_RECOMMENDATIONS.some(rec => rec.id === p.id)
+        ).slice(0, 4);
+        setRecommendations(fallbackRecs);
+      } finally {
+        setIsRecsLoading(false);
+      }
+    };
+
+    fetchRecommendations();
+  }, [product, viewedProducts]);
 
   if (!product) {
     return (
@@ -183,29 +223,30 @@ export default function ProductDetailPage() {
                 </ul>
               </div>
 
-              {/* Product Gallery Section */}
-              <div className="space-y-6 pt-8">
+              {/* AI Product Recommendations Section */}
+              <div className="space-y-6 pt-12">
                 <div className="flex items-center gap-2">
-                   <LayoutGrid size={20} className="text-foreground" />
-                   <h2 className="text-xl font-bold">Galeri Produk</h2>
+                   <Sparkles size={20} className="text-primary fill-primary/20" />
+                   <h2 className="text-xl font-bold">Produk Serupa Untukmu</h2>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {[1, 2, 3, 4].map((i) => (
-                    <div key={i} className="aspect-[3/4] relative bg-white rounded-xl overflow-hidden border border-gray-100 group cursor-pointer shadow-sm">
-                      <Image 
-                        src={`https://picsum.photos/seed/${product.id + i}/300/400`} 
-                        alt="Gallery" 
-                        fill 
-                        className="object-cover group-hover:scale-105 transition-transform duration-500"
-                      />
-                      {i === 4 && (
-                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center">
-                          <span className="text-white font-bold text-lg">+1 Foto</span>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
+                
+                {isRecsLoading ? (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {[1, 2, 3, 4].map((i) => (
+                      <div key={i} className="space-y-3">
+                        <Skeleton className="aspect-square w-full rounded-2xl" />
+                        <Skeleton className="h-4 w-3/4" />
+                        <Skeleton className="h-4 w-1/2" />
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    {recommendations.map((rec) => (
+                      <ProductCard key={rec.id} product={rec} />
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>
