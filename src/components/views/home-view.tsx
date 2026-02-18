@@ -25,7 +25,6 @@ export default function HomeView() {
   const { addToCart, viewedProducts } = useApp();
   const db = useFirestore();
 
-  // Memoize products query to prevent infinite render loops
   const productsQuery = useMemoFirebase(() => {
     if (!db) return null;
     return query(collection(db, 'products'), orderBy('createdAt', 'desc'));
@@ -33,7 +32,6 @@ export default function HomeView() {
 
   const { data: dbProducts, loading: isProductsLoading } = useCollection(productsQuery);
 
-  // Use DB products if available
   const products = (dbProducts as Product[]) || [];
 
   useEffect(() => {
@@ -42,16 +40,25 @@ export default function HomeView() {
     const fetchRecommendations = async () => {
       setIsRecsLoading(true);
       try {
-        const viewedProductIds = viewedProducts.map(p => p.id);
+        // Normalize products: Convert Timestamps to ISO strings and ensure IDs are strings
+        // This avoids "Only plain objects can be passed to Server Functions" error
+        const sanitizedProducts = products.map(p => ({
+          ...p,
+          id: String(p.id),
+          createdAt: p.createdAt?.toDate ? p.createdAt.toDate().toISOString() : (p.createdAt || null),
+          updatedAt: p.updatedAt?.toDate ? p.updatedAt.toDate().toISOString() : (p.updatedAt || null),
+        }));
+
+        const viewedProductIds = viewedProducts.map(p => String(p.id));
+        
         const result = await getPersonalizedRecommendations({
           viewedProductIds,
-          allProducts: products,
+          allProducts: sanitizedProducts as any,
         });
 
         if (result.recommendations && result.recommendations.length > 0) {
-            setRecommendations(result.recommendations);
+            setRecommendations(result.recommendations as Product[]);
         } else {
-            // Fallback: Just take some products
             setRecommendations(products.slice(0, 4));
         }
       } catch (error) {
@@ -161,8 +168,7 @@ export default function HomeView() {
 }
 
 const RecommendationCard = ({ item, addToCart }: { item: Product; addToCart: (product: Product) => void; }) => {
-    // Check if image is a URL or a placeholder ID
-    const isUrl = item.image.startsWith('http');
+    const isUrl = typeof item.image === 'string' && item.image.startsWith('http');
     const imageSrc = isUrl ? item.image : getPlaceholderImageDetails(item.image).src;
 
     return (

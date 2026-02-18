@@ -11,9 +11,9 @@
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
 
-// Schema for a single product from the main PRODUCTS list provided by the user
+// Schema for a single product. ID is now string to support Firestore IDs.
 const ProductDataSchema = z.object({
-  id: z.number(),
+  id: z.string().describe("The unique identifier of the product."),
   name: z.string(),
   price: z.number(),
   category: z.string(),
@@ -28,21 +28,21 @@ const ProductDataSchema = z.object({
 
 // Input schema for the recommendation flow
 const ProductRecommendationInputSchema = z.object({
-  viewedProductIds: z.array(z.number()).describe("A list of product IDs the user has previously viewed."),
-  currentProductId: z.number().optional().describe("The ID of the product the user is currently viewing."),
+  viewedProductIds: z.array(z.string()).describe("A list of product IDs the user has previously viewed."),
+  currentProductId: z.string().optional().describe("The ID of the product the user is currently viewing."),
   allProducts: z.array(ProductDataSchema).describe("A list of all available products in the store."),
 });
 
 export type ProductRecommendationInput = z.infer<typeof ProductRecommendationInputSchema>;
 
-// Intermediate output schema for the prompt (just the recommended IDs)
+// Intermediate output schema for the prompt
 const PromptOutputSchema = z.object({
   recommendedProductIds: z.array(
-    z.number().describe("The ID of a recommended product.")
-  ).max(5).describe("A list of up to 5 product IDs recommended for the user. These IDs must exist in the provided allProducts list and not be in the viewedProductIds or currentProductId.")
+    z.string().describe("The ID of a recommended product.")
+  ).max(5).describe("A list of up to 5 product IDs recommended for the user.")
 });
 
-// Final output schema for the flow (full product objects)
+// Final output schema for the flow
 const ProductRecommendationOutputSchema = z.object({
   recommendations: z.array(ProductDataSchema).describe("A list of up to 5 product recommendations with full details.")
 });
@@ -54,24 +54,20 @@ const personalizedRecommendationPrompt = ai.definePrompt({
   name: 'personalizedRecommendationPrompt',
   input: { schema: ProductRecommendationInputSchema },
   output: { schema: PromptOutputSchema },
-  prompt: `You are an expert product recommendation system for an e-commerce store called MonoStore, which sells digital assets. Your goal is to suggest relevant and interesting products to a user based on their viewing history and current product of interest.
+  prompt: `You are an expert product recommendation system for an e-commerce store called MonoStore.
+Your goal is to suggest relevant and interesting digital products to a user based on their history.
 
 User's previously viewed product IDs: {{#if viewedProductIds}}{{{viewedProductIdsJson}}}{{else}}None{{/if}}
 User's currently viewed product ID: {{#if currentProductId}}{{{currentProductId}}}{{else}}None{{/if}}
 
-Here is a list of all available products in the store. Each product object includes its 'id', 'name', 'category', and 'description'.
-[\n{{#each allProducts}}\n  {"id": {{this.id}}, "name": "{{this.name}}", "category": "{{this.category}}", "description": "{{this.description}}"}\n  {{#unless @last}},{{/unless}}\n{{/each}}\n]
+Available products:
+[\n{{#each allProducts}}\n  {"id": "{{this.id}}", "name": "{{this.name}}", "category": "{{this.category}}", "description": "{{this.description}}"}\n  {{#unless @last}},{{/unless}}\n{{/each}}\n]
 
-Please recommend up to 5 unique product IDs from the provided list that the user might be interested in.
-Crucially, *do not recommend any products that are already in the \`viewedProductIds\` list or is the \`currentProductId\`*.
-Ensure your recommendations are diverse yet relevant to the user's apparent interests.
-
-Output your recommendations strictly as a JSON object containing a \`recommendedProductIds\` array of numbers. For example:
-{"recommendedProductIds": [101, 103, 105]}
+Please recommend up to 5 unique product IDs.
+Do not recommend products already in viewedProductIds or the currentProductId.
 `
 });
 
-// Define the Genkit flow
 const personalizedRecommendationsFlow = ai.defineFlow(
   {
     name: 'personalizedRecommendationsFlow',
@@ -82,7 +78,6 @@ const personalizedRecommendationsFlow = ai.defineFlow(
     try {
       const { viewedProductIds, currentProductId, allProducts } = input;
 
-      // Call the prompt to get recommended product IDs
       const { output: promptOutput } = await personalizedRecommendationPrompt({
         viewedProductIds,
         currentProductId,
@@ -95,28 +90,17 @@ const personalizedRecommendationsFlow = ai.defineFlow(
       }
 
       const recommendedIds = promptOutput.recommendedProductIds;
-
-      // Filter allProducts to get the full details of the recommended products
       const recommendations = allProducts.filter(product =>
         recommendedIds.includes(product.id)
       );
 
-      // Ensure the output matches the schema, even if some IDs weren't found
       return { recommendations };
     } catch (error) {
-      // Gracefully handle API errors (like quota exhaustion) by returning no recommendations
-      // This allows the client side to use its fallback logic without crashing.
       return { recommendations: [] };
     }
   }
 );
 
-/**
- * Generates personalized product recommendations based on user interaction history.
- *
- * @param input - An object containing the user's viewed product IDs, optionally the current product ID, and a list of all available products.
- * @returns An object containing an array of recommended product details.
- */
 export async function getPersonalizedRecommendations(
   input: ProductRecommendationInput
 ): Promise<ProductRecommendationOutput> {

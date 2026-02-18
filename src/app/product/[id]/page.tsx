@@ -28,7 +28,7 @@ import { getPersonalizedRecommendations } from '@/ai/flows/personalized-recommen
 import ProductCard from '@/components/product-card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { doc, collection, getDocs, limit, query } from 'firebase/firestore';
 
 export default function ProductDetailPage() {
   const { addToCart, addViewedProduct, viewedProducts, setView, setIsCartOpen } = useApp();
@@ -38,7 +38,6 @@ export default function ProductDetailPage() {
   
   const id = params?.id as string;
   
-  // Memoize document reference to avoid infinite loops
   const productRef = useMemoFirebase(() => {
     if (!db || !id) return null;
     return doc(db, 'products', id);
@@ -51,8 +50,7 @@ export default function ProductDetailPage() {
   const [whatsapp, setWhatsapp] = useState('');
   const [githubUser, setGithubUser] = useState('');
 
-  // Gabungkan data statis dan dinamis (utamakan dinamis)
-  const product = firestoreProduct || PRODUCTS.find(p => p.id.toString() === id);
+  const product = firestoreProduct;
 
   useEffect(() => {
     if (product) {
@@ -66,22 +64,37 @@ export default function ProductDetailPage() {
     const fetchRecommendations = async () => {
       setIsRecsLoading(true);
       try {
-        const viewedProductIds = viewedProducts.map(p => p.id);
+        // Fetch some products for context
+        const productsSnap = await getDocs(query(collection(db, 'products'), limit(20)));
+        const allProducts = productsSnap.docs.map(doc => ({
+          ...doc.data(),
+          id: doc.id,
+          createdAt: (doc.data() as any).createdAt?.toDate ? (doc.data() as any).createdAt.toDate().toISOString() : ((doc.data() as any).createdAt || null),
+          updatedAt: (doc.data() as any).updatedAt?.toDate ? (doc.data() as any).updatedAt.toDate().toISOString() : ((doc.data() as any).updatedAt || null),
+        }));
+
+        const sanitizedCurrentProduct = {
+          ...product,
+          id: String(product.id),
+          createdAt: product.createdAt?.toDate ? product.createdAt.toDate().toISOString() : (product.createdAt || null),
+          updatedAt: product.updatedAt?.toDate ? product.updatedAt.toDate().toISOString() : (product.updatedAt || null),
+        };
+
+        const viewedProductIds = viewedProducts.map(p => String(p.id));
+
         const result = await getPersonalizedRecommendations({
           viewedProductIds,
-          currentProductId: product.id,
-          allProducts: PRODUCTS, // Fallback to static for now
+          currentProductId: sanitizedCurrentProduct.id,
+          allProducts: allProducts as any,
         });
 
         if (result && result.recommendations && result.recommendations.length > 0) {
           setRecommendations(result.recommendations as Product[]);
         } else {
-          const fallbackRecs = PRODUCTS.filter(p => p.id.toString() !== id).slice(0, 4);
-          setRecommendations(fallbackRecs as Product[]);
+          setRecommendations(allProducts.filter(p => p.id !== id).slice(0, 4) as Product[]);
         }
       } catch (error) {
-        const fallbackRecs = PRODUCTS.filter(p => p.id.toString() !== id).slice(0, 4);
-        setRecommendations(fallbackRecs as Product[]);
+        setRecommendations([]);
       } finally {
         setIsRecsLoading(false);
       }
@@ -107,8 +120,7 @@ export default function ProductDetailPage() {
     );
   }
 
-  // Handle image source (URL vs placeholder ID)
-  const isUrl = product.image?.startsWith('http');
+  const isUrl = typeof product.image === 'string' && product.image.startsWith('http');
   const imageSrc = isUrl ? product.image : getPlaceholderImageDetails(product.image).src;
   const imageHint = isUrl ? "" : getPlaceholderImageDetails(product.image).hint;
 
