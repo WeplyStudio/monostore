@@ -28,7 +28,7 @@ import ProductCard from '@/components/product-card';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function ProductDetailPage() {
-  const { addToCart, addViewedProduct, viewedProducts, setView } = useApp();
+  const { addToCart, addViewedProduct, viewedProducts, setView, setIsCartOpen } = useApp();
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const [product, setProduct] = useState<Product | null>(null);
@@ -101,6 +101,7 @@ export default function ProductDetailPage() {
   const handleBuyNow = () => {
     addToCart(product, 1);
     setView('checkout');
+    setIsCartOpen(false); // Tutup drawer keranjang agar tidak menutupi halaman checkout
     router.push('/');
   };
 
