@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '@/context/app-context';
 import { useFirestore } from '@/firebase';
-import { collection, addDoc, serverTimestamp, doc, updateDoc, increment } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, updateDoc, increment, getDoc } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, RefreshCw, Smartphone, CheckCircle2, AlertTriangle, ArrowLeft, Lock } from 'lucide-react';
@@ -27,7 +27,6 @@ export default function PaymentPendingView() {
   const amount = paymentData?.amount;
   const qrData = paymentData?.payment_number;
 
-  // Countdown timer logic
   useEffect(() => {
     if (timeLeft <= 0 || status === 'success') return;
     
@@ -88,21 +87,40 @@ export default function PaymentPendingView() {
     const ordersRef = collection(db, 'orders');
     
     try {
-      // 1. Simpan ke Firestore dulu
       const docRef = await addDoc(ordersRef, orderRecord);
       
-      // 1.5 Update jumlah terjual dan KURANGI STOK untuk setiap produk
       for (const item of paymentData.items) {
         const productRef = doc(db, 'products', item.id);
-        updateDoc(productRef, {
-          sold: increment(item.quantity || 1),
-          stock: increment(-(item.quantity || 1)) // Mengurangi stok secara otomatis
-        }).catch(err => {
-          console.error("Gagal memperbarui jumlah terjual/stok:", err);
-        });
+        const productSnap = await getDoc(productRef);
+        
+        if (productSnap.exists()) {
+          const productData = productSnap.data();
+          const qty = item.quantity || 1;
+          
+          let updateData: any = {
+            sold: increment(qty),
+            stock: increment(-qty)
+          };
+
+          // Logika pembatasan stok Flash Sale
+          if (productData.flashSaleEnd && productData.flashSaleStock !== undefined) {
+            const newFSStock = (productData.flashSaleStock || 0) - qty;
+            
+            if (newFSStock <= 0) {
+              // Jika stok promo habis, matikan flash sale dan kembalikan harga ke normal
+              updateData.price = productData.originalPrice || productData.price;
+              updateData.originalPrice = null;
+              updateData.flashSaleEnd = null;
+              updateData.flashSaleStock = null;
+            } else {
+              updateData.flashSaleStock = newFSStock;
+            }
+          }
+
+          updateDoc(productRef, updateData).catch(err => console.error(err));
+        }
       }
       
-      // 2. Kirim Email Invoice
       await sendOrderConfirmationEmail({
         customerName: orderRecord.customerName,
         customerEmail: orderRecord.customerEmail,
@@ -111,7 +129,6 @@ export default function PaymentPendingView() {
         items: orderRecord.items.map(i => ({ name: i.name, deliveryContent: i.deliveryContent }))
       });
 
-      // 3. Update state lokal dan pindah ke halaman sukses
       setLastOrder({ ...orderRecord, id: docRef.id });
       resetCart();
       toast({ title: "Pembayaran Berhasil!", description: "Aset digital Anda siap diunduh dan telah dikirim ke email." });

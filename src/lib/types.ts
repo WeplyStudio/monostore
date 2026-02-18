@@ -1,3 +1,4 @@
+
 export type Product = {
   id: string;
   name: string;
@@ -8,6 +9,7 @@ export type Product = {
   reviews: number;
   sold: number;
   stock: number;
+  flashSaleStock?: number;
   isBestSeller: boolean;
   description: string;
   features: string[];

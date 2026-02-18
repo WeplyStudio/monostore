@@ -1,3 +1,4 @@
+
 {
   "entities": {
     "Product": {
@@ -14,6 +15,7 @@
         "reviews": { "type": "number" },
         "sold": { "type": "number" },
         "stock": { "type": "number" },
+        "flashSaleStock": { "type": "number", "description": "Number of stocks allocated for flash sale" },
         "isBestSeller": { "type": "boolean" },
         "description": { "type": "string" },
         "features": { "type": "array", "items": { "type": "string" } },

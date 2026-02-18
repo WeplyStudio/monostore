@@ -16,7 +16,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Zap, AlertTriangle, Clock } from 'lucide-react';
+import { Loader2, Zap, AlertTriangle, Clock, Package } from 'lucide-react';
 import { formatRupiah } from '@/lib/utils';
 
 interface FlashSaleDialogProps {
@@ -32,18 +32,16 @@ export function FlashSaleDialog({ isOpen, onClose, product }: FlashSaleDialogPro
   
   const [formData, setFormData] = useState({
     price: '',
-    flashSaleEnd: ''
+    flashSaleEnd: '',
+    flashSaleStock: ''
   });
 
   useEffect(() => {
     if (product) {
-      // If product is already in flash sale, use current price as promo price
-      // and if not, suggest a 20% discount as default
-      const isFlashSale = product.flashSaleEnd && new Date(product.flashSaleEnd).getTime() > Date.now();
-      
       setFormData({
         price: product.price?.toString() || '',
-        flashSaleEnd: product.flashSaleEnd || ''
+        flashSaleEnd: product.flashSaleEnd || '',
+        flashSaleStock: product.flashSaleStock?.toString() || ''
       });
     }
   }, [product, isOpen]);
@@ -55,15 +53,15 @@ export function FlashSaleDialog({ isOpen, onClose, product }: FlashSaleDialogPro
     setLoading(true);
     try {
       const flashPrice = parseFloat(formData.price);
+      const fsStock = parseInt(formData.flashSaleStock) || 0;
       
-      // We set originalPrice to the current base price if it's not already set
-      // to ensure we can show the strikethrough.
       const originalPrice = product.originalPrice || product.price;
 
       const payload = {
         price: flashPrice,
         originalPrice: originalPrice,
         flashSaleEnd: formData.flashSaleEnd,
+        flashSaleStock: fsStock,
         updatedAt: serverTimestamp(),
       };
 
@@ -85,13 +83,13 @@ export function FlashSaleDialog({ isOpen, onClose, product }: FlashSaleDialogPro
     if (!db || !product) return;
     setLoading(true);
     try {
-      // When disabling, we revert the price to the originalPrice
       const revertPrice = product.originalPrice || product.price;
       
       await updateDoc(doc(db, 'products', product.id), {
         price: revertPrice,
         originalPrice: null,
         flashSaleEnd: null,
+        flashSaleStock: null,
         updatedAt: serverTimestamp()
       });
 
@@ -114,7 +112,7 @@ export function FlashSaleDialog({ isOpen, onClose, product }: FlashSaleDialogPro
             <Zap size={20} className="fill-red-600" /> Pengaturan Flash Sale
           </DialogTitle>
           <DialogDescription>
-            Atur harga khusus dan durasi promo untuk <strong>{product.name}</strong>.
+            Atur harga khusus, kuota stok promo, dan durasi promo untuk <strong>{product.name}</strong>.
           </DialogDescription>
         </DialogHeader>
 
@@ -137,23 +135,37 @@ export function FlashSaleDialog({ isOpen, onClose, product }: FlashSaleDialogPro
               />
             </div>
 
-            <div className="space-y-1.5">
-              <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-1">
-                <Clock size={12} /> Waktu Berakhir
-              </Label>
-              <Input 
-                type="datetime-local" 
-                value={formData.flashSaleEnd} 
-                onChange={e => setFormData({...formData, flashSaleEnd: e.target.value})} 
-                required 
-                className="h-12 rounded-xl bg-slate-50 border-none" 
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-1">
+                  <Package size={12} /> Stok Promo
+                </Label>
+                <Input 
+                  type="number" 
+                  value={formData.flashSaleStock} 
+                  onChange={e => setFormData({...formData, flashSaleStock: e.target.value})} 
+                  required 
+                  className="h-12 rounded-xl bg-slate-50 border-none" 
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest flex items-center gap-1">
+                  <Clock size={12} /> Selesai
+                </Label>
+                <Input 
+                  type="datetime-local" 
+                  value={formData.flashSaleEnd} 
+                  onChange={e => setFormData({...formData, flashSaleEnd: e.target.value})} 
+                  required 
+                  className="h-12 rounded-xl bg-slate-50 border-none text-[10px]" 
+                />
+              </div>
             </div>
 
             <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-xl border border-blue-100">
               <AlertTriangle size={16} className="text-blue-500 shrink-0" />
               <p className="text-[10px] text-blue-600 font-medium leading-relaxed">
-                Harga normal akan otomatis dicoret dan section Flash Sale akan muncul di beranda.
+                Jika Stok Promo habis, harga akan otomatis kembali normal meskipun waktu belum berakhir.
               </p>
             </div>
           </div>

@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -43,9 +44,13 @@ export default function HomeView() {
 
   const products = (dbProducts as Product[]) || [];
 
-  // Flash Sale Filter
+  // Flash Sale Filter - Sekarang juga memeriksa flashSaleStock
   const flashSaleProducts = useMemo(() => {
-    return products.filter(p => p.flashSaleEnd && new Date(p.flashSaleEnd).getTime() > Date.now());
+    return products.filter(p => 
+      p.flashSaleEnd && 
+      new Date(p.flashSaleEnd).getTime() > Date.now() &&
+      (p.flashSaleStock === undefined || p.flashSaleStock > 0)
+    );
   }, [products]);
 
   useEffect(() => {
@@ -54,7 +59,6 @@ export default function HomeView() {
     const fetchRecommendations = async () => {
       setIsRecsLoading(true);
       try {
-        // Sanitize data to plain objects before passing to Server Action
         const sanitizedProducts = products.map(p => ({
           id: String(p.id),
           name: p.name || '',
@@ -138,10 +142,8 @@ export default function HomeView() {
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 pb-20">
       
-      {/* Banner Carousel Section */}
       {!searchTerm && <BannerCarousel />}
 
-      {/* Hero Section */}
       <div className="text-center mb-10 mt-12 animate-fadeIn">
         <h1 className="text-3xl md:text-5xl font-bold text-foreground mb-3 tracking-tight font-headline">Apa yang ingin kamu buat?</h1>
         <p className="text-muted-foreground mb-8 text-sm md:text-base">Temukan aset digital terbaik untuk project kreatifmu.</p>
@@ -157,7 +159,6 @@ export default function HomeView() {
         </div>
       </div>
 
-      {/* Category Tabs */}
       <div className="flex overflow-x-auto gap-2 md:gap-3 pb-4 mb-10 justify-start md:justify-center no-scrollbar">
          {CATEGORIES.map((cat) => (
            <Button
@@ -171,7 +172,6 @@ export default function HomeView() {
          ))}
       </div>
 
-      {/* Products Grid */}
       <div className="mb-20">
         <div className="flex items-center justify-between mb-8">
            <h2 className="text-xl font-bold flex items-center gap-2">
@@ -206,18 +206,16 @@ export default function HomeView() {
         )}
       </div>
 
-      {/* Crazy Flash Sale Section - Moved here below Products Grid */}
       {!searchTerm && flashSaleProducts.length > 0 && (
         <FlashSaleSection products={flashSaleProducts} />
       )}
 
-      {/* Recommendations Section */}
       {products.length > 0 && !searchTerm && (
         <div className="bg-primary/5 rounded-2xl p-6 md:p-12 border border-primary/10 mb-20">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-10 gap-4">
              <div>
                <div className="flex items-center gap-2 text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-3">
-                 <Sparkles size={14} /> Editor's Choice
+                 <SafeIcon name="Sparkles" size={14} /> Editor's Choice
                </div>
                <h2 className="text-2xl md:text-3xl font-bold text-foreground font-headline">Rekomendasi Untukmu</h2>
                <p className="text-muted-foreground text-sm mt-2">Koleksi pilihan yang mungkin sesuai dengan minatmu.</p>
@@ -237,7 +235,6 @@ export default function HomeView() {
         </div>
       )}
 
-      {/* Purchase Process Section */}
       {!searchTerm && (
         <div className="mb-20">
           <div className="text-center mb-12">
@@ -258,7 +255,6 @@ export default function HomeView() {
         </div>
       )}
 
-      {/* FAQ Section */}
       {!searchTerm && (
         <div className="max-w-3xl mx-auto mb-20">
           <div className="flex items-center justify-center gap-3 mb-10">
@@ -282,7 +278,6 @@ export default function HomeView() {
         </div>
       )}
 
-      {/* Customer Support Section */}
       {!searchTerm && (
         <div className="mb-20">
           <div className="bg-primary text-primary-foreground rounded-2xl p-8 md:p-12 shadow-2xl shadow-primary/20 flex flex-col md:flex-row items-center justify-between gap-8">
@@ -324,7 +319,6 @@ const FlashSaleSection = ({ products }: { products: Product[] }) => {
   const [timeLeft, setTimeLeft] = useState({ h: '00', m: '00', s: '00' });
 
   useEffect(() => {
-    // Pick the earliest end time
     const endTimes = products.map(p => new Date(p.flashSaleEnd).getTime());
     const target = Math.min(...endTimes);
 
@@ -366,41 +360,48 @@ const FlashSaleSection = ({ products }: { products: Product[] }) => {
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-        {products.map(product => (
-          <Link key={product.id} href={`/product/${product.id}`} className="group space-y-3">
-            <div className="aspect-square relative rounded-xl overflow-hidden bg-slate-50 border border-slate-100">
-              <Image 
-                src={product.image.startsWith('http') ? product.image : getPlaceholderImageDetails(product.image).src} 
-                alt={product.name} 
-                fill 
-                className="object-cover group-hover:scale-110 transition-transform duration-500" 
-              />
-              {product.originalPrice && (
-                <div className="absolute top-2 right-2 bg-red-600 text-white text-[10px] font-black px-2 py-1 rounded-lg">
-                  -{Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}%
-                </div>
-              )}
-            </div>
-            
-            <div className="space-y-2">
-              <div className="relative h-5 w-full bg-red-100 rounded-full overflow-hidden flex items-center px-3">
-                <div 
-                  className="absolute inset-0 bg-gradient-to-r from-red-500 to-pink-500" 
-                  style={{ width: `${Math.min(100, (product.sold / (product.sold + product.stock)) * 100)}%` }}
+        {products.map(product => {
+          // Progress dihitung berdasarkan terjual vs total stok promo yang tersedia
+          const progressValue = product.flashSaleStock !== undefined 
+            ? Math.min(100, (product.sold / (product.sold + product.flashSaleStock)) * 100)
+            : Math.min(100, (product.sold / (product.sold + product.stock)) * 100);
+
+          return (
+            <Link key={product.id} href={`/product/${product.id}`} className="group space-y-3">
+              <div className="aspect-square relative rounded-xl overflow-hidden bg-slate-50 border border-slate-100">
+                <Image 
+                  src={product.image.startsWith('http') ? product.image : getPlaceholderImageDetails(product.image).src} 
+                  alt={product.name} 
+                  fill 
+                  className="object-cover group-hover:scale-110 transition-transform duration-500" 
                 />
-                <span className="relative z-10 text-[9px] font-black text-white uppercase flex items-center gap-1">
-                  {product.sold} Terjual <Zap size={10} className="fill-yellow-400 text-yellow-400" />
-                </span>
+                {product.originalPrice && (
+                  <div className="absolute top-2 right-2 bg-red-600 text-white text-[10px] font-black px-2 py-1 rounded-lg">
+                    -{Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}%
+                  </div>
+                )}
               </div>
-              <div className="text-lg font-black text-red-600">
-                {formatRupiah(product.price).replace(",00", "")}
+              
+              <div className="space-y-2">
+                <div className="relative h-5 w-full bg-red-100 rounded-full overflow-hidden flex items-center px-3">
+                  <div 
+                    className="absolute inset-0 bg-gradient-to-r from-red-500 to-pink-500" 
+                    style={{ width: `${progressValue}%` }}
+                  />
+                  <span className="relative z-10 text-[9px] font-black text-white uppercase flex items-center gap-1">
+                    {product.sold} Terjual <Zap size={10} className="fill-yellow-400 text-yellow-400" />
+                  </span>
+                </div>
+                <div className="text-lg font-black text-red-600">
+                  {formatRupiah(product.price).replace(",00", "")}
+                </div>
+                <div className="text-[10px] text-slate-400 line-through">
+                  {product.originalPrice ? formatRupiah(product.originalPrice).replace(",00", "") : ''}
+                </div>
               </div>
-              <div className="text-[10px] text-slate-400 line-through">
-                {product.originalPrice ? formatRupiah(product.originalPrice).replace(",00", "") : ''}
-              </div>
-            </div>
-          </Link>
-        ))}
+            </Link>
+          );
+        })}
       </div>
     </div>
   );
@@ -411,20 +412,9 @@ const RecommendationCard = ({ item, addToCart }: { item: Product; addToCart: (pr
     const imageSrc = isUrl ? item.image : getPlaceholderImageDetails(item.image).src;
     const stock = item.stock ?? 0;
     const isOutOfStock = stock <= 0;
-    const isLowStock = stock > 0 && stock <= 10;
 
     return (
         <Link href={`/product/${item.id}`} className={`bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex flex-col sm:flex-row gap-4 hover:shadow-xl hover:border-primary/20 transition-all duration-300 group overflow-hidden relative ${isOutOfStock ? 'opacity-75' : ''}`}>
-            {isOutOfStock && (
-              <div className="absolute top-2 right-2 z-10 bg-destructive text-destructive-foreground text-[8px] font-black px-2 py-0.5 rounded-full uppercase">
-                Habis
-              </div>
-            )}
-            {isLowStock && (
-              <div className="absolute top-2 left-2 z-10 bg-accent text-white text-[8px] font-black px-2 py-0.5 rounded-full uppercase">
-                Sisa {stock}
-              </div>
-            )}
             <div className="w-full sm:w-32 aspect-square sm:h-32 bg-slate-50 rounded-xl shrink-0 overflow-hidden relative border border-slate-50">
                 <Image src={imageSrc} alt={item.name} fill className={`object-cover group-hover:scale-110 transition-transform duration-500 ${isOutOfStock ? 'grayscale' : ''}`} />
             </div>
@@ -436,11 +426,6 @@ const RecommendationCard = ({ item, addToCart }: { item: Product; addToCart: (pr
                     </div>
                     <h3 className="font-bold text-foreground text-base sm:text-lg line-clamp-1 leading-tight">{item.name}</h3>
                     <p className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed h-8 sm:h-auto">{item.description}</p>
-                    {isLowStock && (
-                      <div className="text-[10px] text-destructive font-bold uppercase tracking-tight flex items-center gap-1">
-                        <AlertCircle size={10} /> Stok Tersisa: {stock}
-                      </div>
-                    )}
                 </div>
                 <div className="flex flex-row sm:flex-row items-center justify-between gap-2 mt-4 pt-2 border-t border-slate-50 sm:border-none">
                     <span className={`font-bold text-sm sm:text-base whitespace-nowrap ${isOutOfStock ? 'text-muted-foreground line-through' : 'text-primary'}`}>
@@ -485,3 +470,9 @@ const RecommendationSkeleton = () => (
       </div>
   </div>
 )
+
+function SafeIcon({ name, size, className }: { name: string, size?: number, className?: string }) {
+  const Icon = require('lucide-react')[name];
+  if (!Icon) return null;
+  return <Icon size={size} className={className} />;
+}
