@@ -2,26 +2,28 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Rules for Products
+    
+    // Aturan untuk Produk
     match /products/{productId} {
       allow read: if true;
-      allow update: if true; // Allowed for stock decrement and rating updates
+      // Diperlukan untuk update stok dan rating rata-rata setelah review
+      allow update: if true; 
       allow write: if request.auth != null && request.auth.token.email == 'matchboxdevelopment@gmail.com';
       
-      // Rules for Reviews subcollection
-      match /products/{productId}/reviews/{reviewId} {
+      // Aturan untuk Sub-koleksi Reviews (Dibetulkan jalurnya)
+      match /reviews/{reviewId} {
         allow read, create: if true;
         allow update, delete: if request.auth != null && request.auth.token.email == 'matchboxdevelopment@gmail.com';
       }
     }
 
-    // Rules for Banners - PUBLIC READ ACCESS
+    // Aturan untuk Banners - Akses Baca Publik
     match /banners/{bannerId} {
       allow read: if true;
       allow write: if request.auth != null && request.auth.token.email == 'matchboxdevelopment@gmail.com';
     }
     
-    // Rules for Orders
+    // Aturan untuk Orders
     match /orders/{orderId} {
       allow create: if true;
       allow read, update, delete: if request.auth != null && request.auth.token.email == 'matchboxdevelopment@gmail.com';
