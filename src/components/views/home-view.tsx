@@ -1,7 +1,8 @@
+
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Search, Zap, X, Sparkles, ShoppingBag, QrCode, Download, HelpCircle } from 'lucide-react';
+import { Search, Zap, X, Sparkles, ShoppingBag, QrCode, Download, HelpCircle, PackageX } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -21,6 +22,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
+import Link from 'next/link';
 
 export default function HomeView() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -262,11 +264,17 @@ export default function HomeView() {
 const RecommendationCard = ({ item, addToCart }: { item: Product; addToCart: (product: Product) => void; }) => {
     const isUrl = typeof item.image === 'string' && item.image.startsWith('http');
     const imageSrc = isUrl ? item.image : getPlaceholderImageDetails(item.image).src;
+    const isOutOfStock = (item.stock ?? 0) <= 0;
 
     return (
-        <div className="bg-white p-4 rounded-[2rem] shadow-sm border border-slate-100 flex flex-col sm:flex-row gap-4 hover:shadow-xl hover:border-primary/20 transition-all duration-300 group overflow-hidden">
+        <Link href={`/product/${item.id}`} className={`bg-white p-4 rounded-[2rem] shadow-sm border border-slate-100 flex flex-col sm:flex-row gap-4 hover:shadow-xl hover:border-primary/20 transition-all duration-300 group overflow-hidden relative ${isOutOfStock ? 'opacity-75' : ''}`}>
+            {isOutOfStock && (
+              <div className="absolute top-2 right-2 z-10 bg-destructive text-destructive-foreground text-[8px] font-black px-2 py-0.5 rounded-full uppercase">
+                Habis
+              </div>
+            )}
             <div className="w-full sm:w-32 aspect-square sm:h-32 bg-slate-50 rounded-2xl shrink-0 overflow-hidden relative border border-slate-50">
-                <Image src={imageSrc} alt={item.name} fill className="object-cover group-hover:scale-110 transition-transform duration-500" />
+                <Image src={imageSrc} alt={item.name} fill className={`object-cover group-hover:scale-110 transition-transform duration-500 ${isOutOfStock ? 'grayscale' : ''}`} />
             </div>
             <div className="flex flex-col justify-between flex-1 min-w-0">
                 <div className="space-y-1">
@@ -278,17 +286,26 @@ const RecommendationCard = ({ item, addToCart }: { item: Product; addToCart: (pr
                     <p className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed h-8 sm:h-auto">{item.description}</p>
                 </div>
                 <div className="flex flex-row sm:flex-row items-center justify-between gap-2 mt-4 pt-2 border-t border-slate-50 sm:border-none">
-                    <span className="font-bold text-primary text-sm sm:text-base whitespace-nowrap">{formatRupiah(item.price).replace(",00", "")}</span>
-                    <Button 
-                      variant="ghost" 
-                      className="p-0 h-auto text-[11px] sm:text-xs font-black text-primary hover:bg-transparent hover:text-primary/70 shrink-0" 
-                      onClick={() => addToCart(item)}
-                    >
-                        + Keranjang
-                    </Button>
+                    <span className={`font-bold text-sm sm:text-base whitespace-nowrap ${isOutOfStock ? 'text-muted-foreground line-through' : 'text-primary'}`}>
+                      {formatRupiah(item.price).replace(",00", "")}
+                    </span>
+                    {!isOutOfStock ? (
+                      <Button 
+                        variant="ghost" 
+                        className="p-0 h-auto text-[11px] sm:text-xs font-black text-primary hover:bg-transparent hover:text-primary/70 shrink-0" 
+                        onClick={(e) => {
+                          e.preventDefault();
+                          addToCart(item);
+                        }}
+                      >
+                          + Keranjang
+                      </Button>
+                    ) : (
+                      <span className="text-[10px] font-bold text-destructive uppercase">Stok Habis</span>
+                    )}
                 </div>
             </div>
-        </div>
+        </Link>
     )
 }
 
