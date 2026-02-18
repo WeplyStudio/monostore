@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState } from 'react';
@@ -10,9 +9,7 @@ import { ArrowLeft, Lock, ShieldCheck, Loader2, QrCode } from 'lucide-react';
 import { formatRupiah, getPlaceholderImageDetails } from '@/lib/utils';
 import Image from 'next/image';
 import { useToast } from '@/hooks/use-toast';
-
-const PAKASIR_PROJECT = "depodomain";
-const PAKASIR_API_KEY = "Qz8ylLI2rA37YnuLYCqIEaoMd4ZdM9eT";
+import { createPakasirTransaction } from '@/lib/pakasir-actions';
 
 export default function CheckoutView() {
   const { setView, cart, cartTotal, totalItems, formData, handleInputChange, setPaymentData } = useApp();
@@ -36,19 +33,8 @@ export default function CheckoutView() {
     const orderId = "INV-" + Date.now().toString().slice(-8);
 
     try {
-      // Panggil API Pakasir untuk membuat transaksi QRIS
-      const response = await fetch("https://app.pakasir.com/api/transactioncreate/qris", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          project: PAKASIR_PROJECT,
-          order_id: orderId,
-          amount: cartTotal,
-          api_key: PAKASIR_API_KEY
-        })
-      });
-
-      const result = await response.json();
+      // Panggil Server Action alih-alih fetch langsung (untuk hindari CORS)
+      const result = await createPakasirTransaction(orderId, cartTotal);
 
       if (result.payment) {
         setPaymentData({
@@ -65,11 +51,11 @@ export default function CheckoutView() {
         throw new Error(result.message || "Gagal membuat transaksi");
       }
     } catch (error: any) {
-      console.error("Pakasir API Error:", error);
+      console.error("Pakasir Integration Error:", error);
       toast({
         variant: "destructive",
         title: "Gagal memproses pembayaran",
-        description: error.message || "Terjadi kesalahan koneksi ke payment gateway."
+        description: error.message || "Terjadi kesalahan koneksi ke payment gateway (Server Action)."
       });
     } finally {
       setLoading(false);

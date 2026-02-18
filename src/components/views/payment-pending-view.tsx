@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -12,9 +11,7 @@ import { formatRupiah } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
-
-const PAKASIR_PROJECT = "depodomain";
-const PAKASIR_API_KEY = "Qz8ylLI2rA37YnuLYCqIEaoMd4ZdM9eT";
+import { checkPakasirStatus } from '@/lib/pakasir-actions';
 
 export default function PaymentPendingView() {
   const { paymentData, setView, resetCart, setLastOrder } = useApp();
@@ -27,23 +24,18 @@ export default function PaymentPendingView() {
   const amount = paymentData?.amount;
   const qrData = paymentData?.payment_number;
 
-  const checkPaymentStatus = async (auto = false) => {
-    if (!orderId || !db) return;
+  const handleCheckStatus = async (auto = false) => {
+    if (!orderId || !db || !amount) return;
     
     if (!auto) setIsChecking(true);
     
     try {
-      // API Get Transaction Detail Pakasir
-      const url = `https://app.pakasir.com/api/transactiondetail?project=${PAKASIR_PROJECT}&amount=${amount}&order_id=${orderId}&api_key=${PAKASIR_API_KEY}`;
-      
-      const response = await fetch(url);
-      const result = await response.json();
+      // Panggil Server Action alih-alih fetch langsung
+      const result = await checkPakasirStatus(orderId, amount);
 
-      // Jika pembayaran sukses (logika status bisa disesuaikan dengan respon asli Pakasir)
-      // Biasanya respon berisi status: "success" atau "completed"
       if (result.transaction && (result.transaction.status === 'success' || result.transaction.status === 'completed')) {
         handlePaymentSuccess();
-      } else if (!auto && !result.transaction) {
+      } else if (!auto && (!result.transaction || result.transaction.status !== 'success')) {
          toast({ title: "Belum terbayar", description: "Silakan selesaikan pembayaran QRIS Anda." });
       }
     } catch (error) {
@@ -95,14 +87,14 @@ export default function PaymentPendingView() {
 
   // Polling otomatis setiap 5 detik
   useEffect(() => {
-    if (status === 'success') return;
+    if (status === 'success' || !orderId) return;
     
     const interval = setInterval(() => {
-      checkPaymentStatus(true);
+      handleCheckStatus(true);
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [orderId, status]);
+  }, [orderId, status, amount]);
 
   if (!paymentData) {
     return (
@@ -180,12 +172,12 @@ export default function PaymentPendingView() {
                 </div>
 
                 <Button 
-                    onClick={() => checkPaymentStatus()} 
+                    onClick={() => handleCheckStatus()} 
                     disabled={isChecking || status === 'success'}
                     variant="outline"
                     className="w-full h-12 rounded-xl font-bold gap-2"
                 >
-                    {isChecking ? <Loader2 className="animate-spin h-4 w-4" /> : <RefreshCw h-4 w-4 />}
+                    {isChecking ? <Loader2 className="animate-spin h-4 w-4" /> : <RefreshCw className="h-4 w-4" />}
                     Cek Status Pembayaran
                 </Button>
             </div>
