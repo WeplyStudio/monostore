@@ -16,7 +16,8 @@ import {
   Github, 
   Info,
   ShieldCheck,
-  Sparkles
+  Sparkles,
+  ShoppingCart
 } from 'lucide-react';
 import { formatRupiah, getPlaceholderImageDetails } from '@/lib/utils';
 import { PRODUCTS } from '@/lib/data';
@@ -27,7 +28,7 @@ import ProductCard from '@/components/product-card';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function ProductDetailPage() {
-  const { addToCart, addViewedProduct, viewedProducts } = useApp();
+  const { addToCart, addViewedProduct, viewedProducts, setView } = useApp();
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const [product, setProduct] = useState<Product | null>(null);
@@ -96,6 +97,12 @@ export default function ProductDetailPage() {
   const imageDetails = getPlaceholderImageDetails(product.image);
   const handlingFee = 2250;
   const totalPrice = product.price + handlingFee;
+
+  const handleBuyNow = () => {
+    addToCart(product, 1);
+    setView('checkout');
+    router.push('/');
+  };
 
   return (
     <div className="min-h-screen bg-[#F8F9FA]">
@@ -309,15 +316,26 @@ export default function ProductDetailPage() {
                     Stok Tersedia
                   </div>
 
-                  <div className="flex gap-2">
-                    <Button variant="secondary" className="bg-[#566270] hover:bg-[#4a5461] text-white px-4 h-12 rounded-xl">
+                  <div className="flex flex-col gap-3">
+                    <div className="flex gap-2">
+                      <Button 
+                        onClick={() => addToCart(product, 1)}
+                        variant="outline" 
+                        className="flex-1 border-primary text-primary hover:bg-primary/5 h-12 rounded-xl font-bold"
+                      >
+                        <ShoppingCart size={18} className="mr-2" />
+                        Keranjang
+                      </Button>
+                      <Button 
+                        onClick={handleBuyNow}
+                        className="flex-1 bg-primary hover:bg-primary/90 text-white h-12 rounded-xl font-bold"
+                      >
+                        Beli
+                      </Button>
+                    </div>
+                    <Button variant="secondary" className="w-full bg-[#566270] hover:bg-[#4a5461] text-white h-12 rounded-xl flex items-center justify-center gap-2">
                       <MessageCircle size={20} />
-                    </Button>
-                    <Button 
-                      onClick={() => addToCart(product, 1)}
-                      className="flex-1 bg-[#212529] hover:bg-black text-white h-12 rounded-xl font-bold"
-                    >
-                      Beli
+                      <span>Tanya Admin</span>
                     </Button>
                   </div>
                 </CardContent>
