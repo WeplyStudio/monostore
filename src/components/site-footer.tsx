@@ -41,7 +41,7 @@ export default function SiteFooter() {
         </div>
 
         <div className="pt-8 border-t border-border/50 text-center text-xs text-muted-foreground">
-          <p>&copy; {mounted ? currentYear : '2025'} MonoStore Digital Inc. All rights reserved.</p>
+          <p suppressHydrationWarning>&copy; {mounted ? currentYear : '2025'} MonoStore Digital Inc. All rights reserved.</p>
         </div>
       </div>
     </footer>
