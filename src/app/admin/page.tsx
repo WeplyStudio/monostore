@@ -1,9 +1,10 @@
+
 'use client';
 
 import React, { useState } from 'react';
 import { useFirestore, useCollection, useUser, useAuth } from '@/firebase';
 import { collection, deleteDoc, doc, query, orderBy } from 'firebase/firestore';
-import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword } from 'firebase/auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -25,7 +26,8 @@ import {
   ExternalLink,
   Loader2,
   LogOut,
-  Lock
+  Lock,
+  UserPlus
 } from 'lucide-react';
 import { ProductDialog } from '@/components/admin/product-dialog';
 import { formatRupiah } from '@/lib/utils';
@@ -60,10 +62,27 @@ export default function AdminPage() {
       await signInWithEmailAndPassword(auth, loginEmail, loginPassword);
       toast({ title: 'Welcome back!', description: 'Logged in successfully.' });
     } catch (error: any) {
+      // Jika user tidak ditemukan, tawarkan untuk membuat akun (khusus untuk admin email ini)
+      if (loginEmail === ADMIN_EMAIL && (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential')) {
+        toast({ 
+          title: 'Mencoba Login...', 
+          description: 'Jika akun belum ada, kami akan mencoba mendaftarkannya.' 
+        });
+        
+        try {
+          await createUserWithEmailAndPassword(auth, loginEmail, loginPassword);
+          toast({ title: 'Akun Admin Dibuat', description: 'Selamat datang di dashboard Anda!' });
+          setIsLoggingIn(false);
+          return;
+        } catch (regError: any) {
+          console.error(regError);
+        }
+      }
+
       toast({ 
         variant: 'destructive', 
-        title: 'Login Failed', 
-        description: 'Invalid credentials or connection error.' 
+        title: 'Login Gagal', 
+        description: 'Email atau password salah. Pastikan Email/Password Auth sudah aktif di Firebase Console.' 
       });
     } finally {
       setIsLoggingIn(false);
@@ -83,7 +102,6 @@ export default function AdminPage() {
     );
   }
 
-  // Login Form if not authenticated or not the admin
   if (!user || user.email !== ADMIN_EMAIL) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
@@ -94,7 +112,7 @@ export default function AdminPage() {
             </div>
             <CardTitle className="text-2xl font-bold">Admin Portal</CardTitle>
             <CardDescription className="text-primary-foreground/70">
-              Please sign in to manage your products.
+              Gunakan kredensial admin untuk mengelola produk.
             </CardDescription>
           </CardHeader>
           <CardContent className="p-8">
@@ -125,16 +143,16 @@ export default function AdminPage() {
               </div>
               {user && user.email !== ADMIN_EMAIL && (
                 <p className="text-xs text-destructive font-bold text-center">
-                  Account {user.email} is not authorized.
+                  Akun {user.email} tidak memiliki akses admin.
                 </p>
               )}
               <Button type="submit" className="w-full h-12 rounded-xl text-base font-bold" disabled={isLoggingIn}>
                 {isLoggingIn ? <Loader2 className="animate-spin mr-2" /> : null}
-                Sign In
+                Sign In / Daftar Admin
               </Button>
               {user && user.email !== ADMIN_EMAIL && (
                 <Button variant="ghost" onClick={handleLogout} className="w-full">
-                  Logout & Switch Account
+                  Logout & Ganti Akun
                 </Button>
               )}
             </form>
@@ -144,23 +162,22 @@ export default function AdminPage() {
     );
   }
 
-  // Main Dashboard if authenticated as admin
   const filteredProducts = products?.filter(p => 
     p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     p.category.toLowerCase().includes(searchTerm.toLowerCase())
   ) || [];
 
   const handleDelete = async (id: string) => {
-    if (!db || !window.confirm('Are you sure you want to delete this product?')) return;
+    if (!db || !window.confirm('Hapus produk ini?')) return;
     
     try {
       await deleteDoc(doc(db, 'products', id));
-      toast({ title: 'Success', description: 'Product deleted successfully' });
+      toast({ title: 'Berhasil', description: 'Produk telah dihapus.' });
     } catch (error) {
       toast({ 
         variant: 'destructive', 
         title: 'Error', 
-        description: 'Failed to delete product' 
+        description: 'Gagal menghapus produk.' 
       });
     }
   };
@@ -181,7 +198,7 @@ export default function AdminPage() {
           <div className="flex gap-2">
             <Button onClick={() => setIsDialogOpen(true)} className="rounded-xl h-11 px-6 shadow-lg shadow-primary/20">
               <Plus size={18} className="mr-2" />
-              Add New Product
+              Tambah Produk
             </Button>
             <Button variant="outline" onClick={handleLogout} className="rounded-xl h-11 border-none shadow-sm hover:bg-destructive/10 hover:text-destructive">
               <LogOut size={18} className="mr-2" />
@@ -194,7 +211,7 @@ export default function AdminPage() {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground h-4 w-4" />
             <Input 
-              placeholder="Search by name or category..." 
+              placeholder="Cari berdasarkan nama atau kategori..." 
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10 h-12 bg-white border-none shadow-sm rounded-xl"
@@ -205,12 +222,12 @@ export default function AdminPage() {
             <Table>
               <TableHeader className="bg-slate-50">
                 <TableRow>
-                  <TableHead className="w-[80px]">Image</TableHead>
-                  <TableHead>Product Name</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Price</TableHead>
-                  <TableHead>Sales</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  <TableHead className="w-[80px]">Gambar</TableHead>
+                  <TableHead>Nama Produk</TableHead>
+                  <TableHead>Kategori</TableHead>
+                  <TableHead>Harga</TableHead>
+                  <TableHead>Terjual</TableHead>
+                  <TableHead className="text-right">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -219,14 +236,14 @@ export default function AdminPage() {
                     <TableCell colSpan={6} className="h-40 text-center">
                       <div className="flex flex-col items-center gap-2 text-muted-foreground">
                         <Loader2 className="animate-spin" />
-                        <span>Loading products...</span>
+                        <span>Memuat produk...</span>
                       </div>
                     </TableCell>
                   </TableRow>
                 ) : filteredProducts.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="h-40 text-center text-muted-foreground">
-                      No products found.
+                      Belum ada produk. Tambahkan produk pertama Anda!
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -245,19 +262,19 @@ export default function AdminPage() {
                       <TableCell>
                         <div className="font-bold">{product.name}</div>
                         {product.isBestSeller && (
-                          <span className="text-[10px] bg-yellow-100 text-yellow-700 font-bold px-1.5 py-0.5 rounded">BEST SELLER</span>
+                          <span className="text-[10px] bg-yellow-100 text-yellow-700 font-bold px-1.5 py-0.5 rounded">TERLARIS</span>
                         )}
                       </TableCell>
                       <TableCell>{product.category}</TableCell>
                       <TableCell className="font-medium">{formatRupiah(product.price)}</TableCell>
-                      <TableCell className="text-muted-foreground">{product.sold || 0} Sold</TableCell>
+                      <TableCell className="text-muted-foreground">{product.sold || 0}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
                           <Button 
                             variant="ghost" 
                             size="icon" 
                             asChild
-                            title="View Product"
+                            title="Lihat"
                           >
                             <Link href={`/product/${product.id}`} target="_blank">
                               <ExternalLink size={16} />
@@ -277,7 +294,7 @@ export default function AdminPage() {
                             size="icon"
                             onClick={() => handleDelete(product.id)}
                             className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                            title="Delete"
+                            title="Hapus"
                           >
                             <Trash2 size={16} />
                           </Button>
@@ -300,4 +317,3 @@ export default function AdminPage() {
     </div>
   );
 }
-

@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -17,7 +18,8 @@ import {
   Info,
   ShieldCheck,
   Sparkles,
-  ShoppingCart
+  ShoppingCart,
+  Loader2
 } from 'lucide-react';
 import { formatRupiah, getPlaceholderImageDetails } from '@/lib/utils';
 import { PRODUCTS } from '@/lib/data';
@@ -26,33 +28,37 @@ import { useRouter, useParams } from 'next/navigation';
 import { getPersonalizedRecommendations } from '@/ai/flows/personalized-recommendations-flow';
 import ProductCard from '@/components/product-card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useFirestore, useDoc, useCollection } from '@/firebase';
+import { doc, collection, query, limit } from 'firebase/firestore';
 
 export default function ProductDetailPage() {
   const { addToCart, addViewedProduct, viewedProducts, setView, setIsCartOpen } = useApp();
   const router = useRouter();
   const params = useParams<{ id: string }>();
-  const [product, setProduct] = useState<Product | null>(null);
-  const [whatsapp, setWhatsapp] = useState('');
-  const [githubUser, setGithubUser] = useState('');
+  const db = useFirestore();
+  
+  const id = params?.id as string;
+  
+  // Ambil data produk dari Firestore
+  const productRef = db && id ? doc(db, 'products', id) : null;
+  const { data: firestoreProduct, loading: productLoading } = useDoc<any>(productRef);
+  
   const [recommendations, setRecommendations] = useState<Product[]>([]);
   const [isRecsLoading, setIsRecsLoading] = useState(true);
-  
-  const id = params?.id;
+  const [whatsapp, setWhatsapp] = useState('');
+  const [githubUser, setGithubUser] = useState('');
+
+  // Gabungkan data statis dan dinamis (utamakan dinamis)
+  const product = firestoreProduct || PRODUCTS.find(p => p.id.toString() === id);
 
   useEffect(() => {
-    if (!id) return;
-    const productId = parseInt(id as string, 10);
-    const foundProduct = PRODUCTS.find((p) => p.id === productId);
-    if (foundProduct) {
-      setProduct(foundProduct);
-      addViewedProduct(foundProduct);
-    } else {
-      router.push('/');
+    if (product) {
+      addViewedProduct(product as Product);
     }
-  }, [id, addViewedProduct, router]);
+  }, [product, addViewedProduct]);
 
   useEffect(() => {
-    if (!product) return;
+    if (!product || !db) return;
 
     const fetchRecommendations = async () => {
       setIsRecsLoading(true);
@@ -61,53 +67,60 @@ export default function ProductDetailPage() {
         const result = await getPersonalizedRecommendations({
           viewedProductIds,
           currentProductId: product.id,
-          allProducts: PRODUCTS,
+          allProducts: PRODUCTS, // Fallback to static for now
         });
 
         if (result && result.recommendations && result.recommendations.length > 0) {
-          setRecommendations(result.recommendations);
+          setRecommendations(result.recommendations as Product[]);
         } else {
-          // Fallback: Ambil 4 produk lain selain produk saat ini
-          const fallbackRecs = PRODUCTS.filter(p => p.id !== product.id).slice(0, 4);
-          setRecommendations(fallbackRecs);
+          const fallbackRecs = PRODUCTS.filter(p => p.id.toString() !== id).slice(0, 4);
+          setRecommendations(fallbackRecs as Product[]);
         }
       } catch (error) {
-        // Fallback: Ambil 4 produk lain selain produk saat ini
-        const fallbackRecs = PRODUCTS.filter(p => p.id !== product.id).slice(0, 4);
-        setRecommendations(fallbackRecs);
+        const fallbackRecs = PRODUCTS.filter(p => p.id.toString() !== id).slice(0, 4);
+        setRecommendations(fallbackRecs as Product[]);
       } finally {
         setIsRecsLoading(false);
       }
     };
 
     fetchRecommendations();
-  }, [product, viewedProducts]);
+  }, [product, viewedProducts, db, id]);
 
-  if (!product) {
+  if (productLoading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-pulse flex flex-col items-center">
-          <div className="h-12 w-12 bg-secondary rounded-full mb-4"></div>
-          <div className="h-4 w-32 bg-secondary rounded"></div>
-        </div>
+        <Loader2 className="animate-spin text-primary" size={40} />
       </div>
     );
   }
 
-  const imageDetails = getPlaceholderImageDetails(product.image);
+  if (!product && !productLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen">
+        <h2 className="text-xl font-bold mb-4">Produk tidak ditemukan</h2>
+        <Button onClick={() => router.push('/')}>Kembali ke Beranda</Button>
+      </div>
+    );
+  }
+
+  // Handle image source (URL vs placeholder ID)
+  const isUrl = product.image?.startsWith('http');
+  const imageSrc = isUrl ? product.image : getPlaceholderImageDetails(product.image).src;
+  const imageHint = isUrl ? "" : getPlaceholderImageDetails(product.image).hint;
+
   const handlingFee = 2250;
-  const totalPrice = product.price + handlingFee;
+  const totalPrice = (product.price || 0) + handlingFee;
 
   const handleBuyNow = () => {
-    addToCart(product, 1);
+    addToCart(product as Product, 1);
     setView('checkout');
-    setIsCartOpen(false); // Tutup drawer keranjang agar tidak menutupi halaman checkout
+    setIsCartOpen(false);
     router.push('/');
   };
 
   return (
     <div className="min-h-screen bg-[#F8F9FA]">
-      {/* Top Navigation */}
       <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-100">
         <div className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
           <Button 
@@ -115,36 +128,21 @@ export default function ProductDetailPage() {
             variant="ghost" 
             className="text-sm font-bold hover:bg-transparent px-0"
           >
-            <ArrowLeft size={18} className="mr-2" /> Back
+            <ArrowLeft size={18} className="mr-2" /> Kembali
           </Button>
-          
-          <div className="hidden md:flex items-center gap-6 text-xs font-bold text-gray-500 uppercase tracking-wider">
-            <span className="cursor-pointer hover:text-foreground text-foreground">Beranda</span>
-            <span className="cursor-pointer hover:text-foreground">Produk</span>
-            <span className="cursor-pointer hover:text-foreground">Kontak</span>
-            <span className="cursor-pointer hover:text-foreground">Login</span>
-            <div className="flex items-center gap-2 border-l pl-6">
-              <div className="w-8 h-4 bg-gray-200 rounded-full relative">
-                <div className="absolute left-1 top-1 w-2 h-2 bg-white rounded-full"></div>
-              </div>
-              <span>Light</span>
-            </div>
-          </div>
         </div>
       </nav>
 
       <div className="max-w-6xl mx-auto px-4 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           
-          {/* Main Content (Left Column) */}
           <div className="lg:col-span-8 space-y-8">
-            {/* Main Product Image */}
             <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-gray-100">
               <div className="aspect-square relative w-full max-w-2xl mx-auto">
                 <Image
-                  src={imageDetails.src}
+                  src={imageSrc}
                   alt={product.name}
-                  data-ai-hint={imageDetails.hint}
+                  data-ai-hint={imageHint}
                   fill
                   className="object-cover"
                   priority
@@ -152,82 +150,30 @@ export default function ProductDetailPage() {
               </div>
             </div>
 
-            {/* Title & Description */}
             <div className="space-y-6">
               <h1 className="text-3xl font-bold text-[#212529] leading-tight">
                 {product.name}
               </h1>
 
               <div className="space-y-4">
-                <h3 className="text-sm font-bold uppercase tracking-widest text-gray-400">Benefits & Features</h3>
+                <h3 className="text-sm font-bold uppercase tracking-widest text-gray-400">Keunggulan & Fitur</h3>
                 <ul className="grid grid-cols-1 md:grid-cols-2 gap-y-3 gap-x-6">
-                  {product.features.map((feature, idx) => (
+                  {(product.features || []).map((feature: string, idx: number) => (
                     <li key={idx} className="flex items-start gap-3 text-sm text-gray-600">
                       <CheckCircle2 size={16} className="text-primary mt-0.5 shrink-0" />
                       <span>{feature}</span>
                     </li>
                   ))}
-                  <li className="flex items-start gap-3 text-sm text-gray-600">
-                    <CheckCircle2 size={16} className="text-primary mt-0.5 shrink-0" />
-                    <span>Auto Download</span>
-                  </li>
-                  <li className="flex items-start gap-3 text-sm text-gray-600">
-                    <CheckCircle2 size={16} className="text-primary mt-0.5 shrink-0" />
-                    <span>Chatbot + Logic</span>
-                  </li>
-                  <li className="flex items-start gap-3 text-sm text-gray-600">
-                    <CheckCircle2 size={16} className="text-primary mt-0.5 shrink-0" />
-                    <span>Cloud Storage</span>
-                  </li>
-                  <li className="flex items-start gap-3 text-sm text-gray-600">
-                    <CheckCircle2 size={16} className="text-primary mt-0.5 shrink-0" />
-                    <span>Premium Support</span>
-                  </li>
                 </ul>
               </div>
 
               <div className="space-y-4">
-                <h3 className="text-sm font-bold uppercase tracking-widest text-gray-400">Requirements</h3>
-                <ul className="space-y-2">
-                  <li className="flex items-center gap-3 text-sm text-gray-600">
-                    <Globe size={16} className="text-gray-400" />
-                    <span>NodeJS {'>'}= 20 (Recommended v20.18.1)</span>
-                  </li>
-                  <li className="flex items-center gap-3 text-sm text-gray-600">
-                    <Info size={16} className="text-gray-400" />
-                    <span>FFMPEG installed</span>
-                  </li>
-                  <li className="flex items-center gap-3 text-sm text-gray-600">
-                    <ShieldCheck size={16} className="text-gray-400" />
-                    <span>Server CPU/RAM 1/1 GB</span>
-                  </li>
-                </ul>
+                <h3 className="text-sm font-bold uppercase tracking-widest text-gray-400">Deskripsi</h3>
+                <p className="text-sm text-gray-600 leading-relaxed">
+                  {product.description}
+                </p>
               </div>
 
-              <div className="space-y-4">
-                <h3 className="text-sm font-bold uppercase tracking-widest text-gray-400">Notes</h3>
-                <ol className="list-decimal list-inside space-y-3 text-sm text-gray-600 leading-relaxed">
-                  <li>Script premium sudah termasuk additional feature kecuali Payment Gateway.</li>
-                  <li>Terbiasa/Familiar dengan command Linux/Windows/NPM sangat disarankan.</li>
-                  <li>Lisensi akan digenerate secara otomatis setelah pembayaran.</li>
-                </ol>
-              </div>
-
-              <div className="space-y-4">
-                <h3 className="text-sm font-bold uppercase tracking-widest text-gray-400">Rules</h3>
-                <ul className="space-y-3 text-sm text-gray-600 leading-relaxed">
-                  <li className="flex gap-3">
-                    <span className="text-primary">•</span>
-                    <span>Dilarang keras menyebarluaskan atau menjual kembali script ini tanpa izin.</span>
-                  </li>
-                  <li className="flex gap-3">
-                    <span className="text-primary">•</span>
-                    <span>Update gratis tersedia selama masa langganan aktif.</span>
-                  </li>
-                </ul>
-              </div>
-
-              {/* AI Product Recommendations Section */}
               <div className="space-y-6 pt-12">
                 <div className="flex items-center gap-2">
                    <Sparkles size={20} className="text-primary fill-primary/20" />
@@ -246,20 +192,15 @@ export default function ProductDetailPage() {
                   </div>
                 ) : (
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    {recommendations.length > 0 ? (
-                      recommendations.map((rec) => (
-                        <ProductCard key={rec.id} product={rec} />
-                      ))
-                    ) : (
-                      <p className="text-sm text-muted-foreground col-span-full py-4">Tidak ada produk serupa saat ini.</p>
-                    )}
+                    {recommendations.map((rec) => (
+                      <ProductCard key={rec.id} product={rec} />
+                    ))}
                   </div>
                 )}
               </div>
             </div>
           </div>
 
-          {/* Checkout Card (Right Column) */}
           <div className="lg:col-span-4">
             <div className="sticky top-24 space-y-4">
               <Card className="rounded-2xl border-none shadow-sm overflow-hidden">
@@ -284,14 +225,12 @@ export default function ProductDetailPage() {
                       </div>
                       <div className="space-y-1.5">
                         <label className="text-[10px] font-bold uppercase text-gray-400 tracking-wider">Username Github</label>
-                        <div className="relative">
-                          <Input 
-                            placeholder="Masukkan Username Github" 
-                            value={githubUser}
-                            onChange={(e) => setGithubUser(e.target.value)}
-                            className="bg-gray-50 border-gray-100 h-11 rounded-lg"
-                          />
-                        </div>
+                        <Input 
+                          placeholder="Masukkan Username Github" 
+                          value={githubUser}
+                          onChange={(e) => setGithubUser(e.target.value)}
+                          className="bg-gray-50 border-gray-100 h-11 rounded-lg"
+                        />
                       </div>
                     </div>
                   </div>
@@ -312,15 +251,10 @@ export default function ProductDetailPage() {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 text-[10px] font-bold text-green-600 uppercase">
-                    <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></div>
-                    Stok Tersedia
-                  </div>
-
                   <div className="flex flex-col gap-3">
                     <div className="flex gap-2">
                       <Button 
-                        onClick={() => addToCart(product, 1)}
+                        onClick={() => addToCart(product as Product, 1)}
                         variant="outline" 
                         className="flex-1 border-primary text-primary hover:bg-primary/5 h-12 rounded-xl font-bold"
                       >
@@ -334,27 +268,12 @@ export default function ProductDetailPage() {
                         Beli
                       </Button>
                     </div>
-                    <Button variant="secondary" className="w-full bg-[#566270] hover:bg-[#4a5461] text-white h-12 rounded-xl flex items-center justify-center gap-2">
-                      <MessageCircle size={20} />
-                      <span>Tanya Admin</span>
-                    </Button>
                   </div>
                 </CardContent>
               </Card>
             </div>
           </div>
 
-        </div>
-      </div>
-
-      {/* Floating Social Icon (GitHub) */}
-      <div className="fixed bottom-8 right-8 z-[60] flex items-center justify-center">
-        <div className="w-14 h-14 bg-black text-white rounded-full flex items-center justify-center shadow-2xl cursor-pointer hover:scale-110 hover:rotate-12 transition-all duration-300 group">
-          <Github size={28} />
-          {/* Tooltip hint */}
-          <div className="absolute right-full mr-4 bg-black text-white text-[10px] font-bold px-3 py-1.5 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none uppercase tracking-widest shadow-xl">
-             Kunjungi Repo
-          </div>
         </div>
       </div>
     </div>
