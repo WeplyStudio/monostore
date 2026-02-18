@@ -141,11 +141,6 @@ export default function HomeView() {
       {/* Banner Carousel Section */}
       {!searchTerm && <BannerCarousel />}
 
-      {/* Crazy Flash Sale Section */}
-      {!searchTerm && flashSaleProducts.length > 0 && (
-        <FlashSaleSection products={flashSaleProducts} />
-      )}
-
       {/* Hero Section */}
       <div className="text-center mb-10 mt-12 animate-fadeIn">
         <h1 className="text-3xl md:text-5xl font-bold text-foreground mb-3 tracking-tight font-headline">Apa yang ingin kamu buat?</h1>
@@ -210,6 +205,11 @@ export default function HomeView() {
           </div>
         )}
       </div>
+
+      {/* Crazy Flash Sale Section - Moved here below Products Grid */}
+      {!searchTerm && flashSaleProducts.length > 0 && (
+        <FlashSaleSection products={flashSaleProducts} />
+      )}
 
       {/* Recommendations Section */}
       {products.length > 0 && !searchTerm && (
