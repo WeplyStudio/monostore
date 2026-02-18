@@ -2,7 +2,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Search, Zap, X, Sparkles, ShoppingBag, QrCode, Download, HelpCircle, AlertCircle, Headphones, MessageSquare, Mail, Clock } from 'lucide-react';
+import { Search, Zap, X, Sparkles, ShoppingBag, QrCode, Download, HelpCircle, AlertCircle, Headphones, MessageSquare, Mail, Clock, ShieldCheck, RefreshCw } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -250,6 +250,62 @@ export default function HomeView() {
                 <p className="text-sm text-muted-foreground leading-relaxed">{step.desc}</p>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Risk-Free Guarantee Section */}
+      {!searchTerm && (
+        <div className="mb-20 bg-white rounded-[2.5rem] p-8 md:p-16 border border-slate-100 shadow-sm overflow-hidden relative">
+          <div className="absolute top-0 right-0 w-96 h-96 bg-primary/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl pointer-events-none" />
+          <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+            <div className="lg:col-span-7 space-y-8">
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 rounded-full text-xs font-bold uppercase tracking-widest border border-green-100">
+                <ShieldCheck size={16} /> Risk-Free Guarantee
+              </div>
+              <h2 className="text-4xl md:text-5xl font-bold font-headline leading-[1.1] tracking-tight text-foreground">
+                Belanja Tanpa Ragu, <br />
+                <span className="text-primary">Kualitas Terjamin.</span>
+              </h2>
+              <p className="text-lg text-muted-foreground leading-relaxed max-w-lg">
+                Kami memahami pentingnya setiap aset untuk proyek Anda. Itulah mengapa kami memberikan jaminan penuh untuk setiap produk yang Anda beli di MonoStore.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 pt-4">
+                <Button className="h-14 px-10 rounded-2xl font-bold text-lg shadow-2xl shadow-primary/20 hover:-translate-y-1 transition-transform">
+                  Mulai Belanja Sekarang
+                </Button>
+                <div className="flex items-center gap-4 px-6 py-3 rounded-2xl border border-slate-100 bg-white shadow-sm">
+                   <div className="flex -space-x-3">
+                      {[1,2,3,4].map(i => (
+                        <div key={i} className="w-10 h-10 rounded-full border-4 border-white bg-slate-200 overflow-hidden relative shadow-sm">
+                          <img src={`https://picsum.photos/seed/${i+100}/40/40`} alt="user profile" className="w-full h-full object-cover" />
+                        </div>
+                      ))}
+                   </div>
+                   <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.1em] leading-tight">
+                      Dipercaya oleh <br/><span className="text-foreground">2,000+ Kreator</span>
+                   </div>
+                </div>
+              </div>
+            </div>
+            <div className="lg:col-span-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {[
+                { icon: <ShieldCheck className="text-green-500" size={24} />, title: "File Bergaransi", desc: "Jika file rusak atau korup, kami kirim ulang secara instan." },
+                { icon: <Headphones className="text-blue-500" size={24} />, title: "Bantuan Teknis", desc: "Tim ahli kami siap membantu kendala instalasi Anda." },
+                { icon: <RefreshCw className="text-purple-500" size={24} />, title: "Update Gratis", desc: "Akses selamanya ke setiap update versi terbaru aset." },
+                { icon: <Zap className="text-orange-500" size={24} />, title: "Lisensi Komersial", desc: "Semua aset bebas digunakan untuk proyek klien Anda." },
+              ].map((item, idx) => (
+                <div key={idx} className="p-6 bg-[#F8F9FA] rounded-[2rem] border border-white space-y-4 hover:bg-white hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
+                  <div className="w-12 h-12 bg-white rounded-2xl shadow-sm flex items-center justify-center">
+                    {item.icon}
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-base mb-1">{item.title}</h4>
+                    <p className="text-[11px] text-muted-foreground font-medium leading-relaxed">{item.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}
