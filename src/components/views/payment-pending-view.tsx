@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '@/context/app-context';
 import { useFirestore } from '@/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, updateDoc, increment } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, RefreshCw, Smartphone, CheckCircle2, AlertTriangle, ArrowLeft, Lock } from 'lucide-react';
@@ -89,6 +89,16 @@ export default function PaymentPendingView() {
     try {
       // 1. Simpan ke Firestore dulu
       const docRef = await addDoc(ordersRef, orderRecord);
+      
+      // 1.5 Update jumlah terjual untuk setiap produk
+      for (const item of paymentData.items) {
+        const productRef = doc(db, 'products', item.id);
+        updateDoc(productRef, {
+          sold: increment(item.quantity || 1)
+        }).catch(err => {
+          console.error("Gagal memperbarui jumlah terjual:", err);
+        });
+      }
       
       // 2. Kirim Email Invoice via Zoho (Tunggu sampai selesai)
       await sendOrderConfirmationEmail({
