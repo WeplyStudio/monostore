@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState } from 'react';
@@ -30,9 +31,11 @@ import {
   AlertCircle,
   ShoppingBag,
   Clock,
-  User as UserIcon
+  User as UserIcon,
+  Image as ImageIcon
 } from 'lucide-react';
 import { ProductDialog } from '@/components/admin/product-dialog';
+import { BannerDialog } from '@/components/admin/banner-dialog';
 import { formatRupiah } from '@/lib/utils';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -58,6 +61,9 @@ export default function AdminPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
 
+  const [isBannerDialogOpen, setIsBannerDialogOpen] = useState(false);
+  const [editingBanner, setEditingBanner] = useState<any>(null);
+
   // Queries
   const productsQuery = useMemoFirebase(() => {
     if (!db) return null;
@@ -69,8 +75,14 @@ export default function AdminPage() {
     return query(collection(db, 'orders'), orderBy('createdAt', 'desc'));
   }, [db]);
 
+  const bannersQuery = useMemoFirebase(() => {
+    if (!db) return null;
+    return query(collection(db, 'banners'), orderBy('order', 'asc'));
+  }, [db]);
+
   const { data: products, loading: productsLoading } = useCollection(productsQuery);
   const { data: orders, loading: ordersLoading } = useCollection(ordersQuery);
+  const { data: banners, loading: bannersLoading } = useCollection(bannersQuery);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -140,6 +152,12 @@ export default function AdminPage() {
     deleteDoc(docRef).catch(err => errorEmitter.emit('permission-error', new FirestorePermissionError({ path: docRef.path, operation: 'delete' })));
   };
 
+  const handleDeleteBanner = (id: string) => {
+    if (!db || !window.confirm('Hapus banner ini?')) return;
+    const docRef = doc(db, 'banners', id);
+    deleteDoc(docRef).catch(err => errorEmitter.emit('permission-error', new FirestorePermissionError({ path: docRef.path, operation: 'delete' })));
+  };
+
   return (
     <div className="min-h-screen bg-[#F8F9FA] p-6 md:p-10">
       <div className="max-w-7xl mx-auto">
@@ -152,12 +170,15 @@ export default function AdminPage() {
         </div>
 
         <Tabs defaultValue="products" className="space-y-6">
-          <TabsList className="bg-white p-1 rounded-2xl h-14 w-full md:w-auto shadow-sm">
+          <TabsList className="bg-white p-1 rounded-2xl h-14 w-full md:w-auto shadow-sm flex overflow-x-auto no-scrollbar">
             <TabsTrigger value="products" className="rounded-xl h-12 px-8 font-bold data-[state=active]:bg-primary data-[state=active]:text-white transition-all">
-              Semua Produk
+              Produk
+            </TabsTrigger>
+            <TabsTrigger value="banners" className="rounded-xl h-12 px-8 font-bold data-[state=active]:bg-primary data-[state=active]:text-white transition-all">
+              Banner
             </TabsTrigger>
             <TabsTrigger value="orders" className="rounded-xl h-12 px-8 font-bold data-[state=active]:bg-primary data-[state=active]:text-white transition-all">
-              Daftar Pesanan
+              Pesanan
             </TabsTrigger>
           </TabsList>
 
@@ -179,11 +200,12 @@ export default function AdminPage() {
                     <TableHead className="pl-8">Produk</TableHead>
                     <TableHead>Harga</TableHead>
                     <TableHead>Kategori</TableHead>
+                    <TableHead>Stok</TableHead>
                     <TableHead className="text-right pr-8">Aksi</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {productsLoading ? <TableRow><TableCell colSpan={4} className="text-center h-40"><Loader2 className="animate-spin mx-auto" /></TableCell></TableRow> :
+                  {productsLoading ? <TableRow><TableCell colSpan={5} className="text-center h-40"><Loader2 className="animate-spin mx-auto" /></TableCell></TableRow> :
                     filteredProducts.map(p => (
                       <TableRow key={p.id}>
                         <TableCell className="pl-8">
@@ -191,6 +213,9 @@ export default function AdminPage() {
                         </TableCell>
                         <TableCell>{formatRupiah(p.price)}</TableCell>
                         <TableCell><Badge variant="secondary">{p.category}</Badge></TableCell>
+                        <TableCell>
+                          <Badge variant={p.stock <= 10 ? "destructive" : "secondary"}>{p.stock}</Badge>
+                        </TableCell>
                         <TableCell className="text-right pr-8">
                           <Button variant="ghost" size="icon" onClick={() => { setEditingProduct(p); setIsDialogOpen(true); }}><Pencil size={18} /></Button>
                           <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete(p.id)}><Trash2 size={18} /></Button>
@@ -201,6 +226,45 @@ export default function AdminPage() {
                 </TableBody>
               </Table>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="banners" className="space-y-6">
+            <div className="flex justify-between items-center">
+              <div className="text-sm text-muted-foreground font-medium">Maksimal 10 banner aktif. Urutkan berdasarkan angka (0 terkecil).</div>
+              <Button onClick={() => setIsBannerDialogOpen(true)} className="h-14 px-8 rounded-2xl font-bold" disabled={banners?.length >= 10}>
+                <Plus size={20} className="mr-2" /> Tambah Banner
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {bannersLoading ? (
+                <div className="col-span-full flex justify-center py-20"><Loader2 className="animate-spin" /></div>
+              ) : banners?.map((banner: any) => (
+                <Card key={banner.id} className="rounded-3xl border-none shadow-sm overflow-hidden group">
+                  <div className="relative aspect-[21/9] bg-slate-100">
+                    <Image src={banner.image} alt="Banner" fill className="object-cover" />
+                    <div className="absolute top-2 left-2">
+                      <Badge className="bg-primary text-white font-bold">#{banner.order}</Badge>
+                    </div>
+                  </div>
+                  <CardContent className="p-4 flex justify-between items-center">
+                    <div className="truncate flex-1 mr-4">
+                      <div className="font-bold text-sm truncate">{banner.title || 'Tanpa Judul'}</div>
+                      <div className="text-[10px] text-muted-foreground truncate">{banner.link || 'Tanpa Link'}</div>
+                    </div>
+                    <div className="flex gap-1 shrink-0">
+                      <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingBanner(banner); setIsBannerDialogOpen(true); }}><Pencil size={14} /></Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDeleteBanner(banner.id)}><Trash2 size={14} /></Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+              {!bannersLoading && banners?.length === 0 && (
+                <div className="col-span-full text-center py-20 bg-white rounded-[2rem] border border-dashed text-muted-foreground font-bold">
+                  Belum ada banner promo.
+                </div>
+              )}
+            </div>
           </TabsContent>
 
           <TabsContent value="orders">
@@ -256,6 +320,7 @@ export default function AdminPage() {
       </div>
 
       <ProductDialog isOpen={isDialogOpen} onClose={() => { setIsDialogOpen(false); setEditingProduct(null); }} product={editingProduct} />
+      <BannerDialog isOpen={isBannerDialogOpen} onClose={() => { setIsBannerDialogOpen(false); setEditingBanner(null); }} banner={editingBanner} />
     </div>
   );
 }

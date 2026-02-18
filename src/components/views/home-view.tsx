@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -6,6 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import ProductCard from '@/components/product-card';
+import BannerCarousel from '@/components/banner-carousel';
 import { CATEGORIES } from '@/lib/data';
 import { useApp } from '@/context/app-context';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
@@ -121,6 +123,10 @@ export default function HomeView() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 pb-20">
+      
+      {/* Banner Carousel Section */}
+      {!searchTerm && <BannerCarousel />}
+
       {/* Hero Section */}
       <div className="text-center mb-10 mt-4 animate-fadeIn">
         <h1 className="text-3xl md:text-5xl font-bold text-foreground mb-3 tracking-tight font-headline">Apa yang ingin kamu buat?</h1>

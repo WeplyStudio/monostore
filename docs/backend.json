@@ -23,6 +23,20 @@
       },
       "required": ["name", "price", "category", "description", "image", "stock"]
     },
+    "Banner": {
+      "title": "Banner",
+      "description": "A promotional banner image for the home page carousel.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "image": { "type": "string", "description": "URL of the banner image" },
+        "title": { "type": "string", "description": "Optional title for the banner" },
+        "link": { "type": "string", "description": "Optional URL to redirect when clicked" },
+        "order": { "type": "number", "description": "Display order (0-9)" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["image", "order"]
+    },
     "Order": {
       "title": "Order",
       "description": "A purchase record of digital products.",
@@ -76,6 +90,10 @@
     "/products/{productId}/reviews/{reviewId}": {
       "schema": "Review",
       "description": "Subcollection of reviews for a specific product."
+    },
+    "/banners/{bannerId}": {
+      "schema": "Banner",
+      "description": "Collection of home page promotional banners."
     },
     "/orders/{orderId}": {
       "schema": "Order",
