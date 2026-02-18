@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState } from 'react';
@@ -15,7 +16,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/table';
+} from '@/components/ui/table';
 import { 
   Plus, 
   Pencil, 
