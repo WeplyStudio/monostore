@@ -79,29 +79,35 @@ const personalizedRecommendationsFlow = ai.defineFlow(
     outputSchema: ProductRecommendationOutputSchema,
   },
   async (input) => {
-    const { viewedProductIds, currentProductId, allProducts } = input;
+    try {
+      const { viewedProductIds, currentProductId, allProducts } = input;
 
-    // Call the prompt to get recommended product IDs
-    const { output: promptOutput } = await personalizedRecommendationPrompt({
-      viewedProductIds,
-      currentProductId,
-      allProducts,
-      viewedProductIdsJson: JSON.stringify(viewedProductIds),
-    });
+      // Call the prompt to get recommended product IDs
+      const { output: promptOutput } = await personalizedRecommendationPrompt({
+        viewedProductIds,
+        currentProductId,
+        allProducts,
+        viewedProductIdsJson: JSON.stringify(viewedProductIds),
+      });
 
-    if (!promptOutput || !promptOutput.recommendedProductIds) {
+      if (!promptOutput || !promptOutput.recommendedProductIds) {
+        return { recommendations: [] };
+      }
+
+      const recommendedIds = promptOutput.recommendedProductIds;
+
+      // Filter allProducts to get the full details of the recommended products
+      const recommendations = allProducts.filter(product =>
+        recommendedIds.includes(product.id)
+      );
+
+      // Ensure the output matches the schema, even if some IDs weren't found
+      return { recommendations };
+    } catch (error) {
+      // Gracefully handle API errors (like quota exhaustion) by returning no recommendations
+      // This allows the client side to use its fallback logic without crashing.
       return { recommendations: [] };
     }
-
-    const recommendedIds = promptOutput.recommendedProductIds;
-
-    // Filter allProducts to get the full details of the recommended products
-    const recommendations = allProducts.filter(product =>
-      recommendedIds.includes(product.id)
-    );
-
-    // Ensure the output matches the schema, even if some IDs weren't found
-    return { recommendations };
   }
 );
 
