@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Search, Zap, X, Sparkles } from 'lucide-react';
+import { Search, Zap, X, Sparkles, ShoppingBag, QrCode, Download, HelpCircle } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -15,6 +15,12 @@ import { getPersonalizedRecommendations } from '@/ai/flows/personalized-recommen
 import { formatRupiah, getPlaceholderImageDetails } from '@/lib/utils';
 import Image from 'next/image';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 export default function HomeView() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -75,9 +81,47 @@ export default function HomeView() {
     return matchesSearch && matchesCategory;
   }), [searchTerm, selectedCategory, products]);
 
+  const purchaseSteps = [
+    {
+      icon: <ShoppingBag className="text-primary" size={24} />,
+      title: "Pilih Produk",
+      desc: "Temukan aset digital terbaik yang sesuai dengan kebutuhan proyek kreatifmu."
+    },
+    {
+      icon: <QrCode className="text-primary" size={24} />,
+      title: "Bayar Instan",
+      desc: "Lakukan pembayaran mudah dan aman menggunakan QRIS dari aplikasi apa pun."
+    },
+    {
+      icon: <Download className="text-primary" size={24} />,
+      title: "Akses File",
+      desc: "Dapatkan link unduhan secara instan di layar sukses dan dikirim ke email kamu."
+    }
+  ];
+
+  const faqs = [
+    {
+      q: "Apa itu MonoStore?",
+      a: "MonoStore adalah platform penyedia aset digital premium seperti ikon, template desain, aset 3D, hingga e-book berkualitas tinggi untuk membantu mempercepat alur kerja kreatif Anda."
+    },
+    {
+      q: "Bagaimana cara mendapatkan file setelah membeli?",
+      a: "Setelah pembayaran QRIS berhasil dideteksi otomatis, Anda akan diarahkan ke halaman sukses yang berisi tombol unduh. Selain itu, kami juga mengirimkan invoice beserta link akses ke email yang Anda daftarkan."
+    },
+    {
+      q: "Apakah ada biaya langganan bulanan?",
+      a: "Tidak ada. Semua produk di MonoStore adalah 'One-Time Purchase'. Anda cukup bayar sekali dan aset tersebut menjadi milik Anda selamanya."
+    },
+    {
+      q: "Dapatkah saya menggunakan aset ini untuk proyek klien?",
+      a: "Ya, tentu saja! Lisensi standar kami mengizinkan penggunaan aset untuk proyek pribadi maupun komersial milik klien Anda."
+    }
+  ];
+
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 pb-20">
-      <div className="text-center mb-10 mt-4">
+      {/* Hero Section */}
+      <div className="text-center mb-10 mt-4 animate-fadeIn">
         <h1 className="text-3xl md:text-5xl font-bold text-foreground mb-3 tracking-tight font-headline">Apa yang ingin kamu buat?</h1>
         <p className="text-muted-foreground mb-8 text-sm md:text-base">Temukan aset digital terbaik untuk project kreatifmu.</p>
         <div className="max-w-2xl mx-auto relative">
@@ -92,6 +136,7 @@ export default function HomeView() {
         </div>
       </div>
 
+      {/* Category Tabs */}
       <div className="flex overflow-x-auto gap-2 md:gap-3 pb-4 mb-10 justify-start md:justify-center no-scrollbar">
          {CATEGORIES.map((cat) => (
            <Button
@@ -105,7 +150,8 @@ export default function HomeView() {
          ))}
       </div>
 
-      <div className="mb-16">
+      {/* Products Grid */}
+      <div className="mb-20">
         <div className="flex items-center justify-between mb-8">
            <h2 className="text-xl font-bold flex items-center gap-2">
              <Zap size={22} className="fill-yellow-400 text-yellow-400" /> 
@@ -139,14 +185,15 @@ export default function HomeView() {
         )}
       </div>
 
-      {products.length > 0 && (
-        <div className="bg-primary/5 rounded-[2.5rem] p-6 md:p-12 border border-primary/10">
+      {/* Recommendations Section */}
+      {products.length > 0 && !searchTerm && (
+        <div className="bg-primary/5 rounded-[2.5rem] p-6 md:p-12 border border-primary/10 mb-20">
           <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-10 gap-4">
              <div>
                <div className="flex items-center gap-2 text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-3">
                  <Sparkles size={14} /> Editor's Choice
                </div>
-               <h2 className="text-2xl md:text-3xl font-bold text-foreground">Rekomendasi Untukmu</h2>
+               <h2 className="text-2xl md:text-3xl font-bold text-foreground font-headline">Rekomendasi Untukmu</h2>
                <p className="text-muted-foreground text-sm mt-2">Koleksi pilihan yang mungkin sesuai dengan minatmu.</p>
              </div>
           </div>
@@ -160,6 +207,51 @@ export default function HomeView() {
              ) : (
                recommendations.map((item) => <RecommendationCard key={item.id} item={item} addToCart={addToCart} />)
              )}
+          </div>
+        </div>
+      )}
+
+      {/* Purchase Process Section */}
+      {!searchTerm && (
+        <div className="mb-20">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold font-headline mb-4">Proses Pembelian</h2>
+            <p className="text-muted-foreground max-w-lg mx-auto text-sm">Hanya butuh beberapa detik untuk mendapatkan aset digital impianmu.</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            {purchaseSteps.map((step, idx) => (
+              <div key={idx} className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-50 text-center space-y-4 hover:shadow-xl transition-all duration-300">
+                <div className="w-16 h-16 bg-primary/5 rounded-2xl flex items-center justify-center mx-auto mb-2">
+                  {step.icon}
+                </div>
+                <h3 className="text-lg font-bold">{step.title}</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed">{step.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* FAQ Section */}
+      {!searchTerm && (
+        <div className="max-w-3xl mx-auto mb-10">
+          <div className="flex items-center justify-center gap-3 mb-10">
+            <HelpCircle size={32} className="text-primary" />
+            <h2 className="text-3xl font-bold font-headline">Tanya Jawab</h2>
+          </div>
+          <div className="bg-white rounded-[2.5rem] p-6 md:p-10 shadow-sm border border-gray-50">
+            <Accordion type="single" collapsible className="w-full">
+              {faqs.map((faq, idx) => (
+                <AccordionItem key={idx} value={`item-${idx}`} className="border-b border-gray-50 last:border-0 py-2">
+                  <AccordionTrigger className="text-left font-bold text-base md:text-lg hover:no-underline hover:text-primary transition-colors py-4">
+                    {faq.q}
+                  </AccordionTrigger>
+                  <AccordionContent className="text-muted-foreground text-sm md:text-base leading-relaxed pb-6">
+                    {faq.a}
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
           </div>
         </div>
       )}
