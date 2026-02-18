@@ -102,12 +102,12 @@ export default function PaymentPendingView() {
             stock: increment(-qty)
           };
 
-          // Logika pembatasan stok Flash Sale
+          // Batasi stok Flash Sale dan kembalikan ke harga normal jika habis
           if (productData.flashSaleEnd && productData.flashSaleStock !== undefined) {
-            const newFSStock = (productData.flashSaleStock || 0) - qty;
+            const currentFSStock = productData.flashSaleStock || 0;
+            const newFSStock = currentFSStock - qty;
             
             if (newFSStock <= 0) {
-              // Jika stok promo habis, matikan flash sale dan kembalikan harga ke normal
               updateData.price = productData.originalPrice || productData.price;
               updateData.originalPrice = null;
               updateData.flashSaleEnd = null;

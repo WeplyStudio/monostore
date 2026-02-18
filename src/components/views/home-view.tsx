@@ -44,7 +44,6 @@ export default function HomeView() {
 
   const products = (dbProducts as Product[]) || [];
 
-  // Flash Sale Filter - Sekarang juga memeriksa flashSaleStock
   const flashSaleProducts = useMemo(() => {
     return products.filter(p => 
       p.flashSaleEnd && 
@@ -361,10 +360,14 @@ const FlashSaleSection = ({ products }: { products: Product[] }) => {
 
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
         {products.map(product => {
-          // Progress dihitung berdasarkan terjual vs total stok promo yang tersedia
-          const progressValue = product.flashSaleStock !== undefined 
-            ? Math.min(100, (product.sold / (product.sold + product.flashSaleStock)) * 100)
-            : Math.min(100, (product.sold / (product.sold + product.stock)) * 100);
+          // Progress dihitung sebagai: total transaksi / jumlah stok flash sale
+          const fsStock = product.flashSaleStock || 0;
+          const soldCount = product.sold || 0;
+          // Kami asumsikan 'flashSaleStock' di sini adalah total kuota yang dialokasikan
+          // Jika di checkout ia berkurang, maka (sold / (sold + remaining)) adalah cara untuk mendapatkan total transaksi vs total kuota
+          const progressValue = fsStock > 0 
+            ? Math.min(100, (soldCount / (soldCount + fsStock)) * 100) 
+            : 100;
 
           return (
             <Link key={product.id} href={`/product/${product.id}`} className="group space-y-3">
@@ -389,7 +392,7 @@ const FlashSaleSection = ({ products }: { products: Product[] }) => {
                     style={{ width: `${progressValue}%` }}
                   />
                   <span className="relative z-10 text-[9px] font-black text-white uppercase flex items-center gap-1">
-                    {product.sold} Terjual <Zap size={10} className="fill-yellow-400 text-yellow-400" />
+                    {soldCount} Terjual <Zap size={10} className="fill-yellow-400 text-yellow-400" />
                   </span>
                 </div>
                 <div className="text-lg font-black text-red-600">
