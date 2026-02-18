@@ -20,13 +20,6 @@ export default function SiteFooter() {
             <p className="text-sm text-muted-foreground text-center md:text-left">Premium digital assets for modern creators.</p>
           </div>
 
-          <div className="flex flex-wrap justify-center gap-x-8 gap-y-4 text-sm font-medium text-muted-foreground">
-            <Button variant="link" className="text-muted-foreground" onClick={() => alert("Navigate to About")}>Tentang</Button>
-            <Button variant="link" className="text-muted-foreground" onClick={() => alert("Navigate to License")}>Lisensi</Button>
-            <Button variant="link" className="text-muted-foreground" onClick={() => alert("Navigate to Privacy")}>Privasi</Button>
-            <Button variant="link" className="text-muted-foreground" onClick={() => alert("Navigate to Support")}>Bantuan</Button>
-          </div>
-
           <div className="flex gap-2 text-muted-foreground">
             <Button variant="ghost" size="icon" asChild>
               <a href="#" aria-label="Instagram"><Instagram size={20} /></a>
