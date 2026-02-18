@@ -127,7 +127,7 @@ export default function CheckoutView() {
 
         setLastOrder({ ...orderRecord, id: docRef.id });
         resetCart();
-        toast({ title: "Pesanan Berhasil!", description: "Voucher 100% digunakan. Aset Anda siap diunduh." });
+        toast({ title: "Pesanan Berhasil!", description: "Voucher 100% digunakan. Template Anda siap diunduh." });
         setView('success');
       } catch (error: any) {
         errorEmitter.emit('permission-error', new FirestorePermissionError({

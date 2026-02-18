@@ -7,8 +7,8 @@ import SiteFooter from '@/components/site-footer';
 import './globals.css';
 
 export const metadata: Metadata = {
-  title: 'MonoStore',
-  description: 'Produk digital premium untuk kreator modern.',
+  title: 'MonoStore - Premium Web Templates',
+  description: 'Template website premium untuk bisnis dan kreator modern.',
 };
 
 export default function RootLayout({

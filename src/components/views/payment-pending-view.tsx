@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -131,7 +130,7 @@ export default function PaymentPendingView() {
 
       setLastOrder({ ...orderRecord, id: docRef.id });
       resetCart();
-      toast({ title: "Pembayaran Berhasil!", description: "Aset digital Anda siap diunduh dan telah dikirim ke email." });
+      toast({ title: "Pembayaran Berhasil!", description: "Template website Anda siap diunduh dan telah dikirim ke email." });
       
       setTimeout(() => setView('success'), 1500);
     } catch (error) {

@@ -103,37 +103,37 @@ export default function HomeView() {
   const purchaseSteps = [
     {
       icon: <ShoppingBag className="text-primary" size={24} />,
-      title: "Pilih Produk",
-      desc: "Temukan produk digital terbaik yang sesuai dengan kebutuhan proyek kreatifmu."
+      title: "Pilih Template",
+      desc: "Temukan template website terbaik yang sesuai dengan kebutuhan bisnis atau proyekmu."
     },
     {
       icon: <QrCode className="text-primary" size={24} />,
       title: "Bayar Instan",
-      desc: "Lakukan pembayaran mudah dan aman menggunakan QRIS dari aplikasi apa pun."
+      desc: "Lakukan pembayaran mudah dan aman menggunakan QRIS dari aplikasi e-wallet mana pun."
     },
     {
       icon: <Download className="text-primary" size={24} />,
-      title: "Akses File",
-      desc: "Dapatkan link unduhan secara instan di layar sukses dan dikirim ke email kamu."
+      title: "Akses Source Code",
+      desc: "Dapatkan link unduhan source code secara instan di layar sukses dan dikirim ke email kamu."
     }
   ];
 
   const faqs = [
     {
       q: "Apa itu MonoStore?",
-      a: "MonoStore adalah platform penyedia produk digital premium seperti ikon, template desain, aset 3D, hingga e-book berkualitas tinggi untuk membantu mempercepat alur kerja kreatif Anda."
+      a: "MonoStore adalah platform penyedia template website premium (React, Next.js, Tailwind) berkualitas tinggi untuk membantu developer dan pebisnis membangun web lebih cepat."
     },
     {
-      q: "Bagaimana cara mendapatkan file setelah membeli?",
-      a: "Setelah pembayaran QRIS berhasil dideteksi otomatis, Anda akan diarahkan ke halaman sukses yang berisi tombol unduh. Selain itu, kami juga mengirimkan invoice beserta link akses produk digital ke email yang Anda daftarkan."
+      q: "Bagaimana cara mendapatkan source code setelah membeli?",
+      a: "Setelah pembayaran QRIS terdeteksi otomatis, Anda akan diarahkan ke halaman sukses yang berisi tombol unduh. Selain itu, kami mengirimkan link akses ke email Anda."
     },
     {
-      q: "Apakah ada biaya langganan bulanan?",
-      a: "Tidak ada. Semua produk di MonoStore adalah 'One-Time Purchase'. Anda cukup bayar sekali dan produk tersebut menjadi milik Anda selamanya."
+      q: "Apakah template ini bisa dikustomisasi?",
+      a: "Ya, tentu saja! Anda mendapatkan akses penuh ke source code. Anda bebas mengubah warna, konten, dan fungsionalitas sesuai kebutuhan."
     },
     {
-      q: "Dapatkah saya menggunakan produk ini untuk proyek klien?",
-      a: "Ya, tentu saja! Lisensi standar kami mengizinkan penggunaan produk untuk proyek pribadi maupun komersial milik klien Anda."
+      q: "Dapatkah saya menggunakan template ini untuk proyek klien?",
+      a: "Ya! Lisensi kami mengizinkan penggunaan template untuk proyek pribadi maupun komersial milik klien Anda."
     }
   ];
 
@@ -143,13 +143,13 @@ export default function HomeView() {
       {!searchTerm && <BannerCarousel />}
 
       <div className="text-center mb-10 mt-12 animate-fadeIn">
-        <h1 className="text-3xl md:text-5xl font-bold text-foreground mb-3 tracking-tight font-headline">Apa yang ingin kamu buat?</h1>
-        <p className="text-muted-foreground mb-8 text-sm md:text-base">Temukan produk digital terbaik untuk project kreatifmu.</p>
+        <h1 className="text-3xl md:text-5xl font-bold text-foreground mb-3 tracking-tight font-headline">Pilih Template Website Impianmu</h1>
+        <p className="text-muted-foreground mb-8 text-sm md:text-base">Koleksi template website premium yang siap pakai untuk mempercepat bisnis Anda.</p>
         <div className="max-w-2xl mx-auto relative">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           <input 
             type="text" 
-            placeholder="Cari produk digital..." 
+            placeholder="Cari template (misal: SaaS, E-Commerce)..." 
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-12 pr-4 py-4 bg-white border-none h-14 rounded-2xl shadow-sm focus:ring-2 focus:ring-primary/20 transition-all text-sm md:text-base outline-none"
@@ -174,7 +174,7 @@ export default function HomeView() {
         <div className="flex items-center justify-between mb-8">
            <h2 className="text-xl font-bold flex items-center gap-2">
              <Zap size={22} className="fill-yellow-400 text-yellow-400" /> 
-             {searchTerm ? `Hasil: "${searchTerm}"` : 'Populer Minggu Ini'}
+             {searchTerm ? `Hasil: "${searchTerm}"` : 'Template Terpopuler'}
            </h2>
            {(searchTerm || selectedCategory !== 'Semua') && (
              <Button variant="ghost" size="sm" onClick={() => { setSearchTerm(''); setSelectedCategory('Semua'); }} className="text-destructive hover:text-destructive font-bold text-xs">
@@ -198,7 +198,7 @@ export default function HomeView() {
             <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-6">
               <X size={32} className="text-slate-300" />
             </div>
-            <h3 className="text-xl font-bold text-foreground">Produk Tidak Ditemukan</h3>
+            <h3 className="text-xl font-bold text-foreground">Template Tidak Ditemukan</h3>
             <p className="text-muted-foreground mt-2 max-w-xs mx-auto text-sm">Coba gunakan kata kunci lain atau pilih kategori yang berbeda.</p>
           </div>
         )}
@@ -216,7 +216,7 @@ export default function HomeView() {
                  <SafeIcon name="Sparkles" size={14} /> Editor's Choice
                </div>
                <h2 className="text-2xl md:text-3xl font-bold text-foreground font-headline">Rekomendasi Untukmu</h2>
-               <p className="text-muted-foreground text-sm mt-2">Koleksi pilihan yang mungkin sesuai dengan minatmu.</p>
+               <p className="text-muted-foreground text-sm mt-2">Pilihan template terbaik yang mungkin sesuai dengan minatmu.</p>
              </div>
           </div>
 
@@ -237,7 +237,7 @@ export default function HomeView() {
         <div className="mb-20">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold font-headline mb-4">Proses Pembelian</h2>
-            <p className="text-muted-foreground max-w-lg mx-auto text-sm">Hanya butuh beberapa detik untuk mendapatkan produk digital impianmu.</p>
+            <p className="text-muted-foreground max-w-lg mx-auto text-sm">Hanya butuh beberapa detik untuk mendapatkan source code template impianmu.</p>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             {purchaseSteps.map((step, idx) => (
@@ -263,15 +263,15 @@ export default function HomeView() {
                 <ShieldCheck size={16} /> Risk-Free Guarantee
               </div>
               <h2 className="text-4xl md:text-5xl font-bold font-headline leading-[1.1] tracking-tight text-foreground">
-                Belanja Tanpa Ragu, <br />
-                <span className="text-primary">Kualitas Terjamin.</span>
+                Mulai Proyek Anda, <br />
+                <span className="text-primary">Tanpa Keraguan.</span>
               </h2>
               <p className="text-lg text-muted-foreground leading-relaxed max-w-lg">
-                Kami memahami pentingnya setiap produk digital untuk proyek Anda. Itulah mengapa kami memberikan jaminan penuh untuk setiap produk yang Anda beli di MonoStore.
+                Kami memahami pentingnya source code yang bersih untuk proyek Anda. Itulah mengapa kami memberikan jaminan penuh untuk setiap template yang Anda beli di MonoStore.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 pt-4">
                 <Button className="h-14 px-10 rounded-2xl font-bold text-lg shadow-2xl shadow-primary/20 hover:-translate-y-1 transition-transform">
-                  Mulai Belanja Sekarang
+                  Mulai Sekarang
                 </Button>
                 <div className="flex items-center gap-4 px-6 py-3 rounded-2xl border border-slate-100 bg-white shadow-sm">
                    <div className="flex -space-x-3">
@@ -282,17 +282,17 @@ export default function HomeView() {
                       ))}
                    </div>
                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.1em] leading-tight">
-                      Dipercaya oleh <br/><span className="text-foreground">2,000+ Kreator</span>
+                      Dipercaya oleh <br/><span className="text-foreground">2,000+ Developer</span>
                    </div>
                 </div>
               </div>
             </div>
             <div className="lg:col-span-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
               {[
-                { icon: <ShieldCheck className="text-green-500" size={24} />, title: "Produk Bergaransi", desc: "Jika file rusak atau korup, kami kirim ulang secara instan." },
-                { icon: <Headphones className="text-blue-500" size={24} />, title: "Bantuan Teknis", desc: "Tim ahli kami siap membantu kendala instalasi Anda." },
-                { icon: <RefreshCw className="text-purple-500" size={24} />, title: "Update Gratis", desc: "Akses selamanya ke setiap update versi terbaru produk." },
-                { icon: <Zap className="text-orange-500" size={24} />, title: "Lisensi Komersial", desc: "Semua produk bebas digunakan untuk proyek klien Anda." },
+                { icon: <ShieldCheck className="text-green-500" size={24} />, title: "Garansi Source Code", desc: "Jika file error atau tidak sesuai, kami bantu perbaiki instan." },
+                { icon: <Headphones className="text-blue-500" size={24} />, title: "Support Teknis", desc: "Tim kami siap membantu kendala deployment Anda." },
+                { icon: <RefreshCw className="text-purple-500" size={24} />, title: "Update Lifetime", desc: "Akses selamanya ke setiap update versi terbaru template." },
+                { icon: <Zap className="text-orange-500" size={24} />, title: "Lisensi Komersial", desc: "Template bebas digunakan untuk proyek komersial klien Anda." },
               ].map((item, idx) => (
                 <div key={idx} className="p-6 bg-[#F8F9FA] rounded-[2rem] border border-white space-y-4 hover:bg-white hover:shadow-xl hover:scale-[1.02] transition-all duration-300">
                   <div className="w-12 h-12 bg-white rounded-2xl shadow-sm flex items-center justify-center">
@@ -338,10 +338,10 @@ export default function HomeView() {
             <div className="text-center md:text-left space-y-4">
               <div className="flex items-center justify-center md:justify-start gap-3">
                 <Headphones size={32} />
-                <h2 className="text-3xl font-bold font-headline">Butuh Bantuan?</h2>
+                <h2 className="text-3xl font-bold font-headline">Butuh Bantuan Setup?</h2>
               </div>
               <p className="text-primary-foreground/80 max-w-md text-sm md:text-base">
-                Tim dukungan kami siap membantu Anda. Hubungi kami jika Anda memiliki kendala terkait produk atau pembayaran.
+                Tim dukungan kami siap membantu Anda melakukan deployment template atau menjawab pertanyaan teknis lainnya.
               </p>
             </div>
             <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">

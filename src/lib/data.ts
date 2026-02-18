@@ -3,145 +3,145 @@ import type { Product, Recommendation } from '@/lib/types';
 export const PRODUCTS: Product[] = [
   {
     id: "1",
-    name: "Minimalist Icons v2",
-    price: 150000,
-    category: "Icons",
-    rating: 4.8,
+    name: "Modern Landing Page React",
+    price: 450000,
+    category: "Landing Page",
+    rating: 4.9,
     reviews: 124,
     sold: 1200,
     stock: 50,
     isBestSeller: true,
-    description: "Koleksi 200+ ikon vektor minimalis yang dirancang pixel-perfect. Cocok untuk desain UI aplikasi modern.",
-    features: ["200+ Icons", "SVG & PNG", "File Figma", "Update Gratis"],
+    description: "Template landing page modern menggunakan React dan Tailwind CSS. Sangat cepat, SEO friendly, dan mudah dikustomisasi.",
+    features: ["Responsive Design", "Dark Mode", "Figma File included", "Clean Code"],
     image: "1",
-    imageHint: "minimalist icons"
+    imageHint: "landing page react"
   },
   {
     id: "2",
-    name: "Notion Life OS",
-    price: 249000,
-    category: "Productivity",
+    name: "SaaS Dashboard Next.js",
+    price: 899000,
+    category: "SaaS",
     rating: 5.0,
     reviews: 89,
     sold: 850,
     stock: 100,
     isBestSeller: true,
-    description: "Sistem manajemen hidup lengkap di Notion. Atur tugas, kebiasaan, keuangan, dan tujuan jangka panjang dalam satu tempat.",
-    features: ["Dashboard Utama", "Habit Tracker", "Finance Tracker", "Mobile Friendly"],
+    description: "Template dashboard SaaS lengkap dengan autentikasi, integrasi database, dan chart interaktif.",
+    features: ["Next.js 15", "App Router", "Stripe Ready", "Admin Panel"],
     image: "2",
-    imageHint: "notion template"
+    imageHint: "saas dashboard"
   },
   {
     id: "3",
-    name: "Moody Lightroom",
-    price: 99000,
-    category: "Photography",
-    rating: 4.5,
+    name: "Portfolio Template Tailwind",
+    price: 199000,
+    category: "Portfolio",
+    rating: 4.7,
     reviews: 45,
     sold: 400,
     stock: 200,
     isBestSeller: false,
-    description: "10 preset Lightroom profesional untuk memberikan nuansa cinematic, moody, dan elegan pada foto Anda.",
-    features: ["10 File XMP", "DNG Mobile", "Panduan Instalasi"],
+    description: "Tunjukkan karya terbaik Anda dengan template portfolio yang elegan dan minimalis.",
+    features: ["Easy Setup", "Animated Scroll", "Contact Form", "Mobile First"],
     image: "3",
-    imageHint: "moody photography"
+    imageHint: "portfolio website"
   },
   {
     id: "4",
-    name: "Figma Design Sys",
-    price: 499000,
-    category: "Design",
+    name: "E-Commerce Web Template",
+    price: 1250000,
+    category: "E-Commerce",
     rating: 4.9,
     reviews: 210,
     sold: 2100,
     stock: 30,
     isBestSeller: true,
-    description: "Sistem desain skala besar untuk Figma. Mempercepat alur kerja UI/UX Anda dengan ribuan komponen siap pakai.",
-    features: ["Auto Layout", "Variables", "Dark Mode Ready", "2000+ Komponen"],
+    description: "Solusi toko online profesional dengan fitur keranjang, checkout, dan manajemen produk.",
+    features: ["Shopping Cart", "Product Search", "Inventory Sync", "Payment Ready"],
     image: "4",
-    imageHint: "design system"
+    imageHint: "ecommerce web"
   },
   {
     id: "5",
-    name: "React Starter Pro",
+    name: "Company Profile Template",
     price: 350000,
-    category: "Development",
-    rating: 4.7,
+    category: "Business",
+    rating: 4.8,
     reviews: 32,
     sold: 320,
     stock: 15,
     isBestSeller: false,
-    description: "Boilerplate React.js premium dengan konfigurasi modern. Sudah termasuk Tailwind CSS dan Redux.",
-    features: ["TypeScript", "Vite", "Jest Testing", "SEO Optimized"],
+    description: "Template profil perusahaan yang profesional untuk membangun kepercayaan klien Anda.",
+    features: ["Multi Page", "Service Layout", "Team Section", "Google Maps"],
     image: "5",
-    imageHint: "react code"
+    imageHint: "company profile"
   },
   {
     id: "6",
-    name: "Mastery CSS Book",
-    price: 120000,
-    category: "Education",
+    name: "Personal Blog Template",
+    price: 150000,
+    category: "Blog",
     rating: 4.6,
     reviews: 67,
     sold: 550,
     stock: 500,
     isBestSeller: false,
-    description: "E-book panduan lengkap menguasai CSS dari dasar hingga teknik tingkat lanjut seperti Grid dan Flexbox.",
-    features: ["PDF & EPUB", "Source Code", "Studi Kasus"],
+    description: "Bagikan tulisan Anda dengan template blog yang nyaman dibaca dan dioptimalkan untuk SEO.",
+    features: ["Markdown Support", "Category Filter", "Newsletter Box", "Fast Loading"],
     image: "6",
-    imageHint: "css book"
+    imageHint: "blog website"
   },
   {
     id: "7",
-    name: "3D Blender Assets",
-    price: 299000,
-    category: "3D Model",
+    name: "Real Estate Web Template",
+    price: 750000,
+    category: "Business",
     rating: 4.8,
     reviews: 15,
     sold: 150,
     stock: 40,
     isBestSeller: false,
-    description: "Paket aset 3D low-poly untuk game atau ilustrasi. Berisi berbagai objek lingkungan dan karakter.",
-    features: ["File .blend", "FBX & OBJ", "Termasuk Tekstur"],
+    description: "Template website properti dengan fitur filter lokasi, harga, dan tipe properti.",
+    features: ["Property Listing", "Agent Profile", "Lead Form", "Map View"],
     image: "7",
-    imageHint: "3d assets"
+    imageHint: "real estate web"
   },
   {
     id: "8",
-    name: "Procreate Brushes",
-    price: 85000,
-    category: "Illustration",
+    name: "App Showcase Landing Page",
+    price: 299000,
+    category: "Landing Page",
     rating: 4.9,
     reviews: 156,
     sold: 900,
     stock: 300,
     isBestSeller: true,
-    description: "Set brush Procreate untuk ilustrator digital. Mencakup brush tekstur, inking, sketsa, dan gouache.",
-    features: ["20 Brushes", "High Res", "Pressure Sensitive"],
+    description: "Promosikan aplikasi mobile Anda dengan landing page yang menarik dan konversi tinggi.",
+    features: ["Feature List", "Device Mockups", "Store Links", "Testimonials"],
     image: "8",
-    imageHint: "procreate brushes"
+    imageHint: "app showcase"
   }
 ];
 
 export const INITIAL_RECOMMENDATIONS: Recommendation[] = [
   {
     id: "101",
-    name: "Ultimate Font Bundle",
-    price: 450000,
-    category: "Typography",
-    desc: "Koleksi 50 font sans-serif premium untuk desain profesional.",
+    name: "Course Platform Template",
+    price: 950000,
+    category: "Education",
+    desc: "Bangun platform belajar online Anda sendiri dengan template LMS yang lengkap.",
     image: "9",
-    imageHint: "font typography"
+    imageHint: "education web"
   },
   {
     id: "102",
-    name: "SaaS Dashboard UI",
-    price: 320000,
-    category: "UI Kit",
-    desc: "Template dashboard siap pakai untuk aplikasi SaaS Anda.",
+    name: "Agency Web Template",
+    price: 420000,
+    category: "Business",
+    desc: "Template website agensi kreatif dengan desain yang bold dan berani.",
     image: "10",
-    imageHint: "dashboard ui"
+    imageHint: "agency website"
   }
 ];
 
-export const CATEGORIES = ['Semua', 'Icons', 'Productivity', 'Design', 'Development', 'Photography', '3D Model', 'Education', 'Illustration'];
+export const CATEGORIES = ['Semua', 'Landing Page', 'SaaS', 'Portfolio', 'E-Commerce', 'Business', 'Blog', 'Education'];

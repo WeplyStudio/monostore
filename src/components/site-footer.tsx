@@ -24,7 +24,7 @@ export default function SiteFooter() {
                 mono<span className="text-muted-foreground">store.</span>
               </span>
             </div>
-            <p className="text-sm text-muted-foreground text-center md:text-left">Produk digital premium untuk kreator modern.</p>
+            <p className="text-sm text-muted-foreground text-center md:text-left">Template website premium untuk bisnis dan kreator modern.</p>
           </div>
 
           <div className="flex gap-2 text-muted-foreground">
