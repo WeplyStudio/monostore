@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -15,7 +16,8 @@ import {
   ShoppingCart,
   Loader2,
   Star,
-  MessageSquare
+  MessageSquare,
+  ArrowRight
 } from 'lucide-react';
 import { formatRupiah, getPlaceholderImageDetails, formatCompactNumber } from '@/lib/utils';
 import type { Product } from '@/lib/types';
@@ -25,6 +27,7 @@ import ProductCard from '@/components/product-card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
 import { doc, collection, getDocs, limit, query, orderBy } from 'firebase/firestore';
+import Link from 'next/link';
 
 export default function ProductDetailPage() {
   const { addToCart, addViewedProduct, viewedProducts, setView, setIsCartOpen, formData, handleInputChange } = useApp();
@@ -41,10 +44,10 @@ export default function ProductDetailPage() {
 
   const { data: firestoreProduct, loading: productLoading } = useDoc<any>(productRef);
   
-  // Reviews Query
+  // Reviews Query - Limit to 5 for the main product page
   const reviewsQuery = useMemoFirebase(() => {
     if (!db || !id) return null;
-    return query(collection(db, 'products', id, 'reviews'), orderBy('createdAt', 'desc'), limit(10));
+    return query(collection(db, 'products', id, 'reviews'), orderBy('createdAt', 'desc'), limit(5));
   }, [db, id]);
   
   const { data: reviews, loading: reviewsLoading } = useCollection<any>(reviewsQuery);
@@ -208,6 +211,13 @@ export default function ProductDetailPage() {
                     <MessageSquare size={20} className="text-primary" />
                     <h2 className="text-xl font-bold">Ulasan Pengguna</h2>
                   </div>
+                  {reviews && reviews.length > 0 && (
+                    <Link href={`/product/${id}/reviews`}>
+                      <Button variant="ghost" className="text-xs font-bold text-primary gap-2">
+                        Lihat Semua <ArrowRight size={14} />
+                      </Button>
+                    </Link>
+                  )}
                 </div>
 
                 {reviewsLoading ? (
@@ -215,30 +225,42 @@ export default function ProductDetailPage() {
                     {[1, 2].map(i => <Skeleton key={i} className="h-24 w-full rounded-2xl" />)}
                   </div>
                 ) : reviews && reviews.length > 0 ? (
-                  <div className="grid grid-cols-1 gap-4">
-                    {reviews.map((rev: any) => (
-                      <div key={rev.id} className="bg-white p-6 rounded-[2rem] border border-gray-50 shadow-sm space-y-3">
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <Avatar className="h-10 w-10 border-2 border-primary/10">
-                              <AvatarFallback className="bg-primary/5 text-primary font-bold">{rev.userName?.charAt(0) || 'U'}</AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <div className="text-sm font-bold">{rev.userName}</div>
-                              <div className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
-                                {rev.createdAt?.toDate ? rev.createdAt.toDate().toLocaleDateString('id-ID') : 'Baru saja'}
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 gap-4">
+                      {reviews.map((rev: any) => (
+                        <div key={rev.id} className="bg-white p-6 rounded-[2rem] border border-gray-50 shadow-sm space-y-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <Avatar className="h-10 w-10 border-2 border-primary/10">
+                                <AvatarFallback className="bg-primary/5 text-primary font-bold">{rev.userName?.charAt(0) || 'U'}</AvatarFallback>
+                              </Avatar>
+                              <div>
+                                <div className="text-sm font-bold">{rev.userName}</div>
+                                <div className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">
+                                  {rev.createdAt?.toDate ? rev.createdAt.toDate().toLocaleDateString('id-ID') : 'Baru saja'}
+                                </div>
                               </div>
                             </div>
+                            <div className="flex gap-0.5">
+                              {[1, 2, 3, 4, 5].map(s => (
+                                <Star key={s} size={12} className={s <= rev.rating ? "fill-yellow-400 text-yellow-400" : "text-gray-200"} />
+                              ))}
+                            </div>
                           </div>
-                          <div className="flex gap-0.5">
-                            {[1, 2, 3, 4, 5].map(s => (
-                              <Star key={s} size={12} className={s <= rev.rating ? "fill-yellow-400 text-yellow-400" : "text-gray-200"} />
-                            ))}
-                          </div>
+                          <p className="text-sm text-gray-600 leading-relaxed italic">"{rev.comment}"</p>
                         </div>
-                        <p className="text-sm text-gray-600 leading-relaxed italic">"{rev.comment}"</p>
+                      ))}
+                    </div>
+                    
+                    {product.reviews > 5 && (
+                      <div className="text-center pt-2">
+                         <Link href={`/product/${id}/reviews`}>
+                           <Button variant="outline" className="rounded-2xl px-10 h-12 font-bold text-sm">
+                             Lihat Semua {product.reviews} Ulasan
+                           </Button>
+                         </Link>
                       </div>
-                    ))}
+                    )}
                   </div>
                 ) : (
                   <div className="text-center py-10 bg-white rounded-[2rem] border border-dashed border-gray-200">
