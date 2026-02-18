@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Search, Zap, X, Sparkles, ShoppingBag, QrCode, Download, HelpCircle, AlertCircle } from 'lucide-react';
+import { Search, Zap, X, Sparkles, ShoppingBag, QrCode, Download, HelpCircle, AlertCircle, Headphones, MessageSquare, Mail } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -235,7 +235,7 @@ export default function HomeView() {
 
       {/* FAQ Section */}
       {!searchTerm && (
-        <div className="max-w-3xl mx-auto mb-10">
+        <div className="max-w-3xl mx-auto mb-20">
           <div className="flex items-center justify-center gap-3 mb-10">
             <HelpCircle size={32} className="text-primary" />
             <h2 className="text-3xl font-bold font-headline">Tanya Jawab</h2>
@@ -253,6 +253,41 @@ export default function HomeView() {
                 </AccordionItem>
               ))}
             </Accordion>
+          </div>
+        </div>
+      )}
+
+      {/* Customer Support Section */}
+      {!searchTerm && (
+        <div className="mb-20">
+          <div className="bg-primary text-primary-foreground rounded-[2.5rem] p-8 md:p-12 shadow-2xl shadow-primary/20 flex flex-col md:flex-row items-center justify-between gap-8">
+            <div className="text-center md:text-left space-y-4">
+              <div className="flex items-center justify-center md:justify-start gap-3">
+                <Headphones size={32} />
+                <h2 className="text-3xl font-bold font-headline">Butuh Bantuan?</h2>
+              </div>
+              <p className="text-primary-foreground/80 max-w-md text-sm md:text-base">
+                Tim dukungan kami siap membantu Anda. Hubungi kami jika Anda memiliki kendala terkait produk atau pembayaran.
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-4 w-full md:w-auto">
+              <Button 
+                variant="secondary" 
+                className="h-14 px-8 rounded-2xl font-bold text-primary hover:bg-white"
+                onClick={() => window.open('https://wa.me/628123456789', '_blank')}
+              >
+                <MessageSquare size={20} className="mr-2" />
+                WhatsApp Admin
+              </Button>
+              <Button 
+                variant="outline" 
+                className="h-14 px-8 rounded-2xl font-bold border-white/20 hover:bg-white/10 text-white"
+                onClick={() => window.location.href = 'mailto:hello@itsjason.my.id'}
+              >
+                <Mail size={20} className="mr-2" />
+                Kirim Email
+              </Button>
+            </div>
           </div>
         </div>
       )}
