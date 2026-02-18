@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import ProductCard from '@/components/product-card';
-import { INITIAL_RECOMMENDATIONS, CATEGORIES } from '@/lib/data';
+import { CATEGORIES } from '@/lib/data';
 import { useApp } from '@/context/app-context';
 import { useFirestore, useCollection } from '@/firebase';
 import { collection, query, orderBy } from 'firebase/firestore';
@@ -31,7 +31,7 @@ export default function HomeView() {
   const productsQuery = productsRef ? query(productsRef, orderBy('createdAt', 'desc')) : null;
   const { data: dbProducts, loading: isProductsLoading } = useCollection(productsQuery);
 
-  // Use DB products if available, otherwise fallback to initial data (for migration phase)
+  // Use DB products if available
   const products = (dbProducts as Product[]) || [];
 
   useEffect(() => {
@@ -122,12 +122,12 @@ export default function HomeView() {
             ))}
           </div>
         ) : (
-          <div className="text-center py-20 bg-secondary/50 rounded-3xl border border-dashed">
-            <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto mb-4 text-muted-foreground">
-              <Search size={32} />
+          <div className="text-center py-24 bg-secondary/30 rounded-3xl border-2 border-dashed border-border">
+            <div className="w-20 h-20 bg-background rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm">
+              <X size={32} className="text-muted-foreground" />
             </div>
-            <h3 className="text-lg font-bold text-foreground">Produk tidak ditemukan</h3>
-            <p className="text-muted-foreground text-sm mt-1">Coba kata kunci lain atau ganti kategori.</p>
+            <h3 className="text-2xl font-bold text-foreground uppercase tracking-tight">Produk Tidak Tersedia</h3>
+            <p className="text-muted-foreground mt-2 max-w-xs mx-auto">Coba cari dengan kata kunci lain atau periksa kembali kategori yang dipilih.</p>
           </div>
         )}
       </div>
@@ -164,22 +164,22 @@ const RecommendationCard = ({ item, addToCart }: { item: Product; addToCart: (pr
     const imageSrc = isUrl ? item.image : getPlaceholderImageDetails(item.image).src;
 
     return (
-        <div className="bg-background p-5 rounded-2xl shadow-sm border flex gap-5 hover:border-primary/50 transition-colors">
+        <div className="bg-background p-5 rounded-2xl shadow-sm border flex gap-5 hover:border-primary/50 transition-colors group">
             <div className="w-24 h-24 bg-secondary rounded-xl shrink-0 overflow-hidden relative">
-                <Image src={imageSrc} alt={item.name} fill className="object-cover" />
+                <Image src={imageSrc} alt={item.name} fill className="object-cover group-hover:scale-110 transition-transform duration-300" />
             </div>
             <div className="flex flex-col justify-between flex-1 py-1">
                 <div>
                     <div className="flex justify-between items-start">
                         <Badge variant="outline" className="border-blue-200 bg-blue-50 text-blue-700 mb-2">{item.category}</Badge>
-                        <span className="text-xs text-muted-foreground">AI Pick</span>
+                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">AI Pick</span>
                     </div>
                     <h3 className="font-bold text-foreground text-lg line-clamp-1">{item.name}</h3>
                     <p className="text-xs text-muted-foreground line-clamp-1 mt-1">{item.description}</p>
                 </div>
                 <div className="flex items-center justify-between mt-3">
                     <span className="font-bold text-foreground">{formatRupiah(item.price).replace(",00", "")}</span>
-                    <Button variant="link" className="p-0 h-auto text-sm" onClick={() => addToCart(item)}>
+                    <Button variant="link" className="p-0 h-auto text-sm font-bold text-primary" onClick={() => addToCart(item)}>
                         + Keranjang
                     </Button>
                 </div>
