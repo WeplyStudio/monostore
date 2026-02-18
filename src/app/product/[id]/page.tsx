@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -28,8 +27,8 @@ import { useRouter, useParams } from 'next/navigation';
 import { getPersonalizedRecommendations } from '@/ai/flows/personalized-recommendations-flow';
 import ProductCard from '@/components/product-card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useFirestore, useDoc, useCollection } from '@/firebase';
-import { doc, collection, query, limit } from 'firebase/firestore';
+import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
 
 export default function ProductDetailPage() {
   const { addToCart, addViewedProduct, viewedProducts, setView, setIsCartOpen } = useApp();
@@ -39,8 +38,12 @@ export default function ProductDetailPage() {
   
   const id = params?.id as string;
   
-  // Ambil data produk dari Firestore
-  const productRef = db && id ? doc(db, 'products', id) : null;
+  // Memoize document reference to avoid infinite loops
+  const productRef = useMemoFirebase(() => {
+    if (!db || !id) return null;
+    return doc(db, 'products', id);
+  }, [db, id]);
+
   const { data: firestoreProduct, loading: productLoading } = useDoc<any>(productRef);
   
   const [recommendations, setRecommendations] = useState<Product[]>([]);

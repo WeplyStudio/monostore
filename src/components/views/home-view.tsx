@@ -1,5 +1,4 @@
-
-"use client";
+'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { Search, Zap, X } from 'lucide-react';
@@ -9,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import ProductCard from '@/components/product-card';
 import { CATEGORIES } from '@/lib/data';
 import { useApp } from '@/context/app-context';
-import { useFirestore, useCollection } from '@/firebase';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy } from 'firebase/firestore';
 import type { Product } from '@/lib/types';
 import { getPersonalizedRecommendations } from '@/ai/flows/personalized-recommendations-flow';
@@ -26,9 +25,12 @@ export default function HomeView() {
   const { addToCart, viewedProducts } = useApp();
   const db = useFirestore();
 
-  // Fetch dynamic products from Firestore
-  const productsRef = db ? collection(db, 'products') : null;
-  const productsQuery = productsRef ? query(productsRef, orderBy('createdAt', 'desc')) : null;
+  // Memoize products query to prevent infinite render loops
+  const productsQuery = useMemoFirebase(() => {
+    if (!db) return null;
+    return query(collection(db, 'products'), orderBy('createdAt', 'desc'));
+  }, [db]);
+
   const { data: dbProducts, loading: isProductsLoading } = useCollection(productsQuery);
 
   // Use DB products if available

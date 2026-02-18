@@ -1,8 +1,7 @@
-
 'use client';
 
 import React, { useState } from 'react';
-import { useFirestore, useCollection, useUser, useAuth } from '@/firebase';
+import { useFirestore, useCollection, useUser, useAuth, useMemoFirebase } from '@/firebase';
 import { collection, deleteDoc, doc, query, orderBy } from 'firebase/firestore';
 import { signInWithEmailAndPassword, signOut, createUserWithEmailAndPassword } from 'firebase/auth';
 import { Button } from '@/components/ui/button';
@@ -55,8 +54,11 @@ export default function AdminPage() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
 
-  const productsRef = db ? collection(db, 'products') : null;
-  const productsQuery = productsRef ? query(productsRef, orderBy('name', 'asc')) : null;
+  const productsQuery = useMemoFirebase(() => {
+    if (!db) return null;
+    return query(collection(db, 'products'), orderBy('name', 'asc'));
+  }, [db]);
+
   const { data: products, loading: productsLoading } = useCollection(productsQuery);
 
   const handleLogin = async (e: React.FormEvent) => {
