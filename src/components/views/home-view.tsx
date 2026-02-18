@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -55,11 +54,19 @@ export default function HomeView() {
     const fetchRecommendations = async () => {
       setIsRecsLoading(true);
       try {
+        // Sanitize data to plain objects before passing to Server Action
         const sanitizedProducts = products.map(p => ({
-          ...p,
           id: String(p.id),
-          createdAt: p.createdAt?.toDate ? p.createdAt.toDate().toISOString() : (p.createdAt || null),
-          updatedAt: p.updatedAt?.toDate ? p.updatedAt.toDate().toISOString() : (p.updatedAt || null),
+          name: p.name || '',
+          price: p.price || 0,
+          category: p.category || '',
+          description: p.description || '',
+          image: p.image || '',
+          rating: p.rating || 5,
+          reviews: p.reviews || 0,
+          sold: p.sold || 0,
+          isBestSeller: p.isBestSeller || false,
+          features: p.features || [],
         }));
 
         const viewedProductIds = viewedProducts.map(p => String(p.id));
@@ -75,6 +82,7 @@ export default function HomeView() {
             setRecommendations(products.slice(0, 4));
         }
       } catch (error) {
+        console.error("AI Recommendation Error:", error);
         setRecommendations(products.slice(0, 4));
       } finally {
         setIsRecsLoading(false);

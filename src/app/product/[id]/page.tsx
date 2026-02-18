@@ -95,23 +95,37 @@ export default function ProductDetailPage() {
       setIsRecsLoading(true);
       try {
         const productsSnap = await getDocs(query(collection(db, 'products'), limit(20)));
-        const allProducts = productsSnap.docs.map(doc => ({
-          ...doc.data(),
-          id: doc.id,
-        }));
+        // Sanitize data to plain objects before passing to Server Action
+        const sanitizedAllProducts = productsSnap.docs.map(doc => {
+          const d = doc.data();
+          return {
+            id: doc.id,
+            name: d.name || '',
+            price: d.price || 0,
+            category: d.category || '',
+            description: d.description || '',
+            image: d.image || '',
+            rating: d.rating || 5,
+            reviews: d.reviews || 0,
+            sold: d.sold || 0,
+            isBestSeller: d.isBestSeller || false,
+            features: d.features || [],
+          };
+        });
 
         const result = await getPersonalizedRecommendations({
-          viewedProductIds: viewedProducts.map(p => p.id),
-          currentProductId: product.id,
-          allProducts: allProducts as any,
+          viewedProductIds: viewedProducts.map(p => String(p.id)),
+          currentProductId: String(product.id),
+          allProducts: sanitizedAllProducts as any,
         });
 
         if (result?.recommendations?.length > 0) {
           setRecommendations(result.recommendations as Product[]);
         } else {
-          setRecommendations(allProducts.filter(p => p.id !== id).slice(0, 4) as Product[]);
+          setRecommendations(sanitizedAllProducts.filter(p => p.id !== id).slice(0, 4) as any);
         }
       } catch (error) {
+        console.error("Failed to fetch recommendations:", error);
         setRecommendations([]);
       } finally {
         setIsRecsLoading(false);
