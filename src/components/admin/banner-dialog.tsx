@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -16,7 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { uploadToImgBB } from '@/lib/imgbb';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Upload, X, Link as LinkIcon } from 'lucide-react';
+import { Loader2, Upload, X, Link as LinkIcon, Info } from 'lucide-react';
 import Image from 'next/image';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
@@ -126,8 +125,13 @@ export function BannerDialog({ isOpen, onClose, banner }: BannerDialogProps) {
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-6 py-4">
-          <div className="space-y-1.5">
-            <Label className="text-xs font-bold uppercase text-gray-400">Gambar Banner (Rekomendasi 21:9)</Label>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label className="text-xs font-bold uppercase text-gray-400">Gambar Banner</Label>
+              <div className="flex items-center gap-1 text-[10px] text-blue-500 font-bold bg-blue-50 px-2 py-0.5 rounded-full">
+                <Info size={10} /> Rekomendasi: 1920 x 822 px (21:9)
+              </div>
+            </div>
             <div className="border-2 border-dashed border-slate-200 rounded-2xl p-4 text-center hover:bg-slate-50 transition-colors relative">
               {imagePreview ? (
                 <div className="relative aspect-[21/9] w-full overflow-hidden rounded-xl border border-slate-100 shadow-sm">
