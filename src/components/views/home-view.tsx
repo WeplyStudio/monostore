@@ -151,7 +151,7 @@ export default function HomeView() {
              </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-8">
              {isRecsLoading ? (
               <>
                 <RecommendationSkeleton />
@@ -172,24 +172,24 @@ const RecommendationCard = ({ item, addToCart }: { item: Product; addToCart: (pr
     const imageSrc = isUrl ? item.image : getPlaceholderImageDetails(item.image).src;
 
     return (
-        <div className="bg-white p-4 rounded-[2rem] shadow-sm border border-slate-100 flex gap-4 hover:shadow-xl hover:border-primary/20 transition-all duration-300 group">
-            <div className="w-24 h-24 sm:w-32 sm:h-32 bg-slate-50 rounded-2xl shrink-0 overflow-hidden relative border border-slate-50">
+        <div className="bg-white p-4 rounded-[2rem] shadow-sm border border-slate-100 flex flex-col sm:flex-row gap-4 hover:shadow-xl hover:border-primary/20 transition-all duration-300 group overflow-hidden">
+            <div className="w-full sm:w-32 aspect-square sm:h-32 bg-slate-50 rounded-2xl shrink-0 overflow-hidden relative border border-slate-50">
                 <Image src={imageSrc} alt={item.name} fill className="object-cover group-hover:scale-110 transition-transform duration-500" />
             </div>
-            <div className="flex flex-col justify-between flex-1 py-1 min-w-0">
+            <div className="flex flex-col justify-between flex-1 min-w-0">
                 <div className="space-y-1">
-                    <div className="flex items-center justify-between gap-2">
-                        <Badge variant="secondary" className="bg-blue-50 text-blue-600 border-none text-[9px] h-5 px-2 font-bold uppercase">{item.category}</Badge>
-                        <span className="text-[8px] font-black text-slate-300 uppercase tracking-widest shrink-0">AI Recommendation</span>
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                        <Badge variant="secondary" className="bg-blue-50 text-blue-600 border-none text-[9px] h-5 px-2 font-bold uppercase shrink-0">{item.category}</Badge>
+                        <span className="text-[8px] font-black text-slate-300 uppercase tracking-widest truncate">AI Recommendation</span>
                     </div>
-                    <h3 className="font-bold text-foreground text-base sm:text-xl line-clamp-1 leading-tight">{item.name}</h3>
-                    <p className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed">{item.description}</p>
+                    <h3 className="font-bold text-foreground text-base sm:text-lg line-clamp-1 leading-tight">{item.name}</h3>
+                    <p className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed h-8 sm:h-auto">{item.description}</p>
                 </div>
-                <div className="flex items-center justify-between gap-2 mt-4">
-                    <span className="font-bold text-primary text-sm sm:text-lg">{formatRupiah(item.price).replace(",00", "")}</span>
+                <div className="flex flex-row sm:flex-row items-center justify-between gap-2 mt-4 pt-2 border-t border-slate-50 sm:border-none">
+                    <span className="font-bold text-primary text-sm sm:text-base whitespace-nowrap">{formatRupiah(item.price).replace(",00", "")}</span>
                     <Button 
                       variant="ghost" 
-                      className="p-0 h-auto text-[11px] sm:text-sm font-black text-primary hover:bg-transparent hover:text-primary/70" 
+                      className="p-0 h-auto text-[11px] sm:text-xs font-black text-primary hover:bg-transparent hover:text-primary/70 shrink-0" 
                       onClick={() => addToCart(item)}
                     >
                         + Keranjang
@@ -201,8 +201,8 @@ const RecommendationCard = ({ item, addToCart }: { item: Product; addToCart: (pr
 }
 
 const RecommendationSkeleton = () => (
-  <div className="bg-white p-4 rounded-[2rem] border border-slate-100 flex gap-4">
-      <Skeleton className="w-24 h-24 sm:w-32 sm:h-32 rounded-2xl shrink-0" />
+  <div className="bg-white p-4 rounded-[2rem] border border-slate-100 flex flex-col sm:flex-row gap-4">
+      <Skeleton className="w-full sm:w-32 aspect-square sm:h-32 rounded-2xl shrink-0" />
       <div className="flex flex-col justify-between flex-1 py-1">
           <div className="space-y-3">
               <div className="flex justify-between">
