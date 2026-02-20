@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { useFirestore, useCollection, useUser, useAuth, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, deleteDoc, doc, query, orderBy, setDoc, serverTimestamp, onSnapshot, limit } from 'firebase/firestore';
+import { collection, deleteDoc, doc, query, orderBy, setDoc, serverTimestamp, onSnapshot, limit, addDoc, getDocs } from 'firebase/firestore';
 import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -46,7 +46,9 @@ import {
   Mail,
   BarChart3,
   TrendingUp,
-  Layers
+  Layers,
+  Bell,
+  BellRing
 } from 'lucide-react';
 import { ProductDialog } from '@/components/admin/product-dialog';
 import { BannerDialog } from '@/components/admin/banner-dialog';
@@ -69,11 +71,10 @@ import {
   CartesianGrid, 
   Tooltip as RechartsTooltip, 
   ResponsiveContainer, 
-  LineChart, 
-  Line, 
   AreaChart, 
   Area 
 } from 'recharts';
+import { getVapidPublicKey } from '@/lib/push-notifications';
 
 const ADMIN_EMAIL = 'matchboxdevelopment@gmail.com';
 
@@ -93,6 +94,7 @@ export default function AdminPage() {
   const [authError, setAuthError] = useState<string | null>(null);
 
   const [searchTerm, setSearchTerm] = useState('');
+  const [isPushSubscribed, setIsPushSubscribed] = useState(false);
   
   // Dialog States
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -111,14 +113,6 @@ export default function AdminPage() {
   const [whatsapp, setWhatsapp] = useState('');
   const [supportEmail, setSupportEmail] = useState('');
   const [isSavingSettings, setIsSavingSettings] = useState(false);
-
-  // Real-time Notification Audio (optional, if available in browser)
-  const playNotificationSound = () => {
-    try {
-      const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
-      audio.play();
-    } catch (e) {}
-  };
 
   // Queries
   const productsQuery = useMemoFirebase(() => {
@@ -158,27 +152,46 @@ export default function AdminPage() {
   const { data: bundles, loading: bundlesLoading } = useCollection(bundlesQuery);
   const { data: settings, loading: settingsLoading } = useDoc<any>(settingsRef);
 
-  // Real-time Order Listener for Notifications
+  // Push Notification Subscription Check
   useEffect(() => {
-    if (!db || !user || user.email !== ADMIN_EMAIL) return;
-
-    const q = query(collection(db, 'orders'), orderBy('createdAt', 'desc'), limit(1));
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      snapshot.docChanges().forEach((change) => {
-        if (change.type === "added" && !snapshot.metadata.hasPendingWrites) {
-          const order = change.doc.data();
-          toast({
-            title: "PESANAN BARU!",
-            description: `Pesanan dari ${order.customerName} senilai ${formatRupiah(order.totalAmount)}`,
-            variant: "default",
+    if ('serviceWorker' in navigator && user?.email === ADMIN_EMAIL) {
+      navigator.serviceWorker.getRegistration().then(reg => {
+        if (reg) {
+          reg.pushManager.getSubscription().then(sub => {
+            setIsPushSubscribed(!!sub);
           });
-          playNotificationSound();
         }
       });
-    });
+    }
+  }, [user]);
 
-    return () => unsubscribe();
-  }, [db, user, toast]);
+  const subscribeToPush = async () => {
+    if (!('serviceWorker' in navigator) || !db || !user) return;
+
+    try {
+      const registration = await navigator.serviceWorker.register('/sw.js');
+      const publicKey = await getVapidPublicKey();
+      
+      const subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: publicKey
+      });
+
+      // Save to Firestore
+      const subsRef = collection(db, 'admin_subscriptions');
+      await addDoc(subsRef, {
+        subscription: subscription.toJSON(),
+        userId: user.uid,
+        createdAt: serverTimestamp()
+      });
+
+      setIsPushSubscribed(true);
+      toast({ title: 'Notifikasi Aktif', description: 'Anda akan menerima notifikasi di HP/Browser ini.' });
+    } catch (err) {
+      console.error('Failed to subscribe', err);
+      toast({ variant: 'destructive', title: 'Gagal', description: 'Tidak dapat mengaktifkan notifikasi.' });
+    }
+  };
 
   useEffect(() => {
     if (settings) {
@@ -202,7 +215,6 @@ export default function AdminPage() {
 
   const revenueData = useMemo(() => {
     if (!orders) return [];
-    // Last 7 days chart data
     const last7Days = Array.from({ length: 7 }, (_, i) => {
       const d = new Date();
       d.setDate(d.getDate() - i);
@@ -215,7 +227,7 @@ export default function AdminPage() {
         .reduce((acc, o) => acc + (o.totalAmount || 0), 0);
       return { 
         name: new Date(date).toLocaleDateString('id-ID', { weekday: 'short' }), 
-        revenue: dayTotal / 1000 // In thousands for cleaner chart
+        revenue: dayTotal / 1000 
       };
     });
   }, [orders]);
@@ -335,7 +347,7 @@ export default function AdminPage() {
 
   return (
     <div className="flex flex-col md:flex-row min-h-screen bg-[#F8F9FA] overflow-hidden">
-      {/* Sidebar Navigasi */}
+      {/* Sidebar */}
       <aside className={cn(
         "bg-white border-r border-slate-200 transition-all duration-300 ease-in-out flex flex-col z-40 fixed md:sticky md:top-0 md:h-screen h-full shrink-0",
         isSidebarOpen ? "w-72 left-0" : "-left-72 md:left-0 md:w-0 overflow-hidden border-none"
@@ -350,12 +362,7 @@ export default function AdminPage() {
               <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">{settings?.shopName || 'MonoStore'}</p>
             </div>
           </div>
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="md:hidden rounded-full" 
-            onClick={() => setIsSidebarOpen(false)}
-          >
+          <Button variant="ghost" size="icon" className="md:hidden rounded-full" onClick={() => setIsSidebarOpen(false)}>
             <X size={20} />
           </Button>
         </div>
@@ -385,18 +392,14 @@ export default function AdminPage() {
         </nav>
 
         <div className="p-4 border-t border-slate-50 mt-auto">
-          <Button 
-            variant="ghost" 
-            onClick={handleLogout} 
-            className="w-full justify-start text-destructive hover:text-destructive hover:bg-red-50 rounded-xl font-bold gap-3 px-4 h-12"
-          >
+          <Button variant="ghost" onClick={handleLogout} className="w-full justify-start text-destructive hover:text-destructive hover:bg-red-50 rounded-xl font-bold gap-3 px-4 h-12">
             <LogOut size={18} />
             Logout
           </Button>
         </div>
       </aside>
 
-      {/* Main Content Area */}
+      {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0">
         <header className="h-16 border-b border-slate-200 bg-white sticky top-0 z-30 px-6 flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -408,12 +411,21 @@ export default function AdminPage() {
               <span className="text-primary">{activeSection.replace('-', ' ')}</span>
             </div>
           </div>
+          
+          <Button 
+            onClick={subscribeToPush} 
+            variant={isPushSubscribed ? "outline" : "default"} 
+            className="rounded-full h-9 px-4 font-bold text-xs gap-2"
+            disabled={isPushSubscribed}
+          >
+            {isPushSubscribed ? <BellRing size={14} className="text-green-500" /> : <Bell size={14} />}
+            {isPushSubscribed ? "Notifikasi Aktif" : "Aktifkan Notifikasi HP"}
+          </Button>
         </header>
 
         <div className="flex-1 p-6 md:p-10 overflow-y-auto">
           <div className="max-w-6xl mx-auto space-y-8">
             
-            {/* Section: Analytics Dashboard */}
             {activeSection === 'analytics' && (
               <div className="space-y-8 animate-fadeIn">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -495,7 +507,6 @@ export default function AdminPage() {
               </div>
             )}
 
-            {/* Section: Products */}
             {activeSection === 'products' && (
               <div className="space-y-6 animate-fadeIn">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -559,7 +570,6 @@ export default function AdminPage() {
               </div>
             )}
 
-            {/* Section: Bundles */}
             {activeSection === 'bundles' && (
               <div className="space-y-6 animate-fadeIn">
                 <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -598,20 +608,6 @@ export default function AdminPage() {
                     ))
                   }
                 </div>
-              </div>
-            )}
-
-            {/* Section: Banners, Vouchers, Orders, Settings (Remains same but fits in sidebar flow) */}
-            {activeSection === 'vouchers' && (
-              <div className="space-y-6 animate-fadeIn">
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                  <div>
-                    <h2 className="text-2xl font-bold tracking-tight">Kupon & Voucher</h2>
-                    <p className="text-sm text-muted-foreground">Buat kode promo spesial untuk pelanggan Anda.</p>
-                  </div>
-                  <Button onClick={() => setIsVoucherDialogOpen(true)} className="h-12 px-6 rounded-xl font-bold shadow-lg shadow-primary/20"><Plus size={18} className="mr-2" /> Tambah Voucher</Button>
-                </div>
-                {/* Vouchers Grid... */}
               </div>
             )}
 
@@ -687,7 +683,6 @@ export default function AdminPage() {
         </div>
       </main>
 
-      {/* Dialogs */}
       <ProductDialog isOpen={isDialogOpen} onClose={() => { setIsDialogOpen(false); setEditingProduct(null); }} product={editingProduct} />
       <BannerDialog isOpen={isBannerDialogOpen} onClose={() => { setIsBannerDialogOpen(false); setEditingBanner(null); }} banner={editingBanner} />
       <VoucherDialog isOpen={isVoucherDialogOpen} onClose={() => { setIsVoucherDialogOpen(false); setEditingVoucher(null); }} voucher={editingVoucher} />
