@@ -103,7 +103,9 @@
       "description": "General application settings.",
       "type": "object",
       "properties": {
-        "shopName": { "type": "string" }
+        "shopName": { "type": "string" },
+        "whatsapp": { "type": "string", "description": "WhatsApp number (format: 628xxx)" },
+        "supportEmail": { "type": "string", "format": "email" }
       },
       "required": ["shopName"]
     }

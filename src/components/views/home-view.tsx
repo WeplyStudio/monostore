@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -31,16 +32,12 @@ export default function HomeView() {
   const [recommendations, setRecommendations] = useState<Product[]>([]);
   const [isRecsLoading, setIsRecsLoading] = useState(true);
 
-  const { addToCart, viewedProducts } = useApp();
+  const { addToCart, viewedProducts, settings } = useApp();
   const db = useFirestore();
 
-  const settingsRef = useMemoFirebase(() => {
-    if (!db) return null;
-    return doc(db, 'settings', 'shop');
-  }, [db]);
-
-  const { data: settings } = useDoc<any>(settingsRef);
   const shopName = settings?.shopName || 'MonoStore';
+  const whatsappNumber = settings?.whatsapp || '6288808943176';
+  const supportEmail = settings?.supportEmail || 'hello@itsjason.my.id';
 
   const productsQuery = useMemoFirebase(() => {
     if (!db) return null;
@@ -360,7 +357,7 @@ export default function HomeView() {
               <Button 
                 variant="secondary" 
                 className="h-14 px-8 rounded-2xl font-bold text-primary hover:bg-white"
-                onClick={() => window.open('https://wa.me/6288808943176', '_blank')}
+                onClick={() => window.open(`https://wa.me/${whatsappNumber}`, '_blank')}
               >
                 <MessageSquare size={20} className="mr-2" />
                 WhatsApp Admin
@@ -368,7 +365,7 @@ export default function HomeView() {
               <Button 
                 variant="outline" 
                 className="h-14 px-8 rounded-2xl font-bold bg-transparent border-white/20 hover:bg-white/10 text-white"
-                onClick={() => window.location.href = 'mailto:hello@itsjason.my.id'}
+                onClick={() => window.location.href = `mailto:${supportEmail}`}
               >
                 <Mail size={20} className="mr-2" />
                 Kirim Email

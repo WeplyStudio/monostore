@@ -41,7 +41,9 @@ import {
   Menu,
   X,
   Settings as SettingsIcon,
-  Store
+  Store,
+  Phone,
+  Mail
 } from 'lucide-react';
 import { ProductDialog } from '@/components/admin/product-dialog';
 import { BannerDialog } from '@/components/admin/banner-dialog';
@@ -87,6 +89,8 @@ export default function AdminPage() {
 
   // Settings State
   const [shopName, setShopName] = useState('');
+  const [whatsapp, setWhatsapp] = useState('');
+  const [supportEmail, setSupportEmail] = useState('');
   const [isSavingSettings, setIsSavingSettings] = useState(false);
 
   // Queries
@@ -122,8 +126,10 @@ export default function AdminPage() {
   const { data: settings, loading: settingsLoading } = useDoc<any>(settingsRef);
 
   useEffect(() => {
-    if (settings?.shopName) {
-      setShopName(settings.shopName);
+    if (settings) {
+      setShopName(settings.shopName || '');
+      setWhatsapp(settings.whatsapp || '');
+      setSupportEmail(settings.supportEmail || '');
     }
   }, [settings]);
 
@@ -156,11 +162,16 @@ export default function AdminPage() {
     if (!db || !shopName.trim()) return;
     setIsSavingSettings(true);
     const docRef = doc(db, 'settings', 'shop');
-    const data = { shopName: shopName.trim(), updatedAt: serverTimestamp() };
+    const data = { 
+      shopName: shopName.trim(), 
+      whatsapp: whatsapp.trim(),
+      supportEmail: supportEmail.trim(),
+      updatedAt: serverTimestamp() 
+    };
     
     setDoc(docRef, data, { merge: true })
       .then(() => {
-        toast({ title: 'Pengaturan Disimpan', description: 'Nama toko Anda telah diperbarui.' });
+        toast({ title: 'Pengaturan Disimpan', description: 'Pengaturan toko Anda telah diperbarui.' });
       })
       .catch((error) => {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
@@ -601,7 +612,7 @@ export default function AdminPage() {
               <div className="space-y-6 animate-fadeIn max-w-2xl">
                 <div>
                   <h2 className="text-2xl font-bold tracking-tight">Pengaturan Toko</h2>
-                  <p className="text-sm text-muted-foreground">Sesuaikan identitas toko Anda di sini.</p>
+                  <p className="text-sm text-muted-foreground">Sesuaikan identitas dan kontak toko Anda di sini.</p>
                 </div>
 
                 <Card className="rounded-[2rem] border-none shadow-sm bg-white overflow-hidden">
@@ -611,8 +622,8 @@ export default function AdminPage() {
                         <Store size={24} />
                       </div>
                       <div>
-                        <CardTitle className="text-xl">Identitas Visual</CardTitle>
-                        <CardDescription>Nama toko akan muncul di header, footer, dan invoice.</CardDescription>
+                        <CardTitle className="text-xl">Profil Toko</CardTitle>
+                        <CardDescription>Informasi dasar dan kontak dukungan.</CardDescription>
                       </div>
                     </div>
                   </CardHeader>
@@ -630,10 +641,40 @@ export default function AdminPage() {
                         />
                       </div>
 
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-2">
+                          <Label htmlFor="whatsapp" className="text-xs font-bold uppercase text-gray-400 flex items-center gap-2">
+                            <Phone size={14} /> WhatsApp Support
+                          </Label>
+                          <Input 
+                            id="whatsapp"
+                            placeholder="628123456789"
+                            value={whatsapp}
+                            onChange={(e) => setWhatsapp(e.target.value)}
+                            className="h-12 rounded-xl bg-slate-50 border-none font-bold"
+                          />
+                          <p className="text-[9px] text-muted-foreground">*Gunakan format angka saja (628xxx)</p>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="supportEmail" className="text-xs font-bold uppercase text-gray-400 flex items-center gap-2">
+                            <Mail size={14} /> Email Support
+                          </Label>
+                          <Input 
+                            id="supportEmail"
+                            type="email"
+                            placeholder="support@toko.com"
+                            value={supportEmail}
+                            onChange={(e) => setSupportEmail(e.target.value)}
+                            className="h-12 rounded-xl bg-slate-50 border-none font-bold"
+                          />
+                        </div>
+                      </div>
+
                       <div className="p-4 bg-blue-50 rounded-2xl border border-blue-100 flex gap-3">
                         <AlertCircle className="text-blue-500 shrink-0" size={20} />
                         <p className="text-xs text-blue-600 leading-relaxed font-medium">
-                          Mengubah nama toko akan secara otomatis memperbarui logo teks di seluruh halaman situs (Header & Footer). Pastikan nama tidak terlalu panjang agar tampilan tetap rapi.
+                          Informasi ini akan ditampilkan di Header, Footer, dan bagian Bantuan di halaman utama. Pastikan data yang dimasukkan valid agar pelanggan dapat menghubungi Anda.
                         </p>
                       </div>
 
@@ -657,7 +698,7 @@ export default function AdminPage() {
       {/* Dialogs */}
       <ProductDialog isOpen={isDialogOpen} onClose={() => { setIsDialogOpen(false); setEditingProduct(null); }} product={editingProduct} />
       <BannerDialog isOpen={isBannerDialogOpen} onClose={() => { setIsBannerDialogOpen(false); setEditingBanner(null); }} banner={editingBanner} />
-      <VoucherDialog isOpen={isVoucherDialogOpen} onClose={() => { setIsVoucherDialogOpen(false); setEditingVoucher(null); }} voucher={editingVoucher} />
+      < VoucherDialog isOpen={isVoucherDialogOpen} onClose={() => { setIsVoucherDialogOpen(false); setEditingVoucher(null); }} voucher={editingVoucher} />
       <FlashSaleDialog isOpen={isFlashSaleDialogOpen} onClose={() => { setIsFlashSaleDialogOpen(false); setSelectedFlashSaleProduct(null); }} product={selectedFlashSaleProduct} />
     </div>
   );
