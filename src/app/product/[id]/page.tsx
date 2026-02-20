@@ -21,7 +21,9 @@ import {
   AlertTriangle,
   Package,
   Zap,
-  Clock
+  Clock,
+  Plus,
+  Minus
 } from 'lucide-react';
 import { formatRupiah, getPlaceholderImageDetails, formatCompactNumber, parseDescriptionToHtml } from '@/lib/utils';
 import type { Product } from '@/lib/types';
@@ -58,6 +60,7 @@ export default function ProductDetailPage() {
   const [recommendations, setRecommendations] = useState<Product[]>([]);
   const [isRecsLoading, setIsRecsLoading] = useState(true);
   const [timeLeft, setTimeLeft] = useState<string>('');
+  const [quantity, setQuantity] = useState(1);
 
   useEffect(() => {
     if (product) {
@@ -160,9 +163,17 @@ export default function ProductDetailPage() {
 
   const handleBuyNow = () => {
     if (isOutOfStock) return;
-    addToCart(product, 1);
+    addToCart(product, quantity);
     setView('checkout');
     router.push('/');
+  };
+
+  const incrementQty = () => {
+    if (quantity < stock) setQuantity(q => q + 1);
+  };
+
+  const decrementQty = () => {
+    if (quantity > 1) setQuantity(q => q - 1);
   };
 
   return (
@@ -299,8 +310,36 @@ export default function ProductDetailPage() {
 
                   <Separator className="opacity-50" />
 
+                  {/* Quantity Selector */}
                   <div className="space-y-4">
-                    <Button onClick={() => addToCart(product, 1)} variant="secondary" disabled={isOutOfStock} className="w-full h-12 rounded-xl font-bold">
+                    <div className="flex items-center gap-4">
+                      <div className="flex items-center border border-slate-200 rounded-xl p-1 bg-slate-50">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-10 w-10 rounded-lg hover:bg-white" 
+                          onClick={decrementQty}
+                          disabled={isOutOfStock || quantity <= 1}
+                        >
+                          <Minus size={16} />
+                        </Button>
+                        <div className="w-12 text-center font-bold text-lg">{quantity}</div>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-10 w-10 rounded-lg hover:bg-white" 
+                          onClick={incrementQty}
+                          disabled={isOutOfStock || quantity >= stock}
+                        >
+                          <Plus size={16} />
+                        </Button>
+                      </div>
+                      <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                        Stok: {stock}
+                      </div>
+                    </div>
+
+                    <Button onClick={() => addToCart(product, quantity)} variant="secondary" disabled={isOutOfStock} className="w-full h-12 rounded-xl font-bold">
                       <ShoppingCart size={18} className="mr-2" /> + Keranjang
                     </Button>
                     <Button onClick={handleBuyNow} disabled={isOutOfStock} className="w-full h-12 rounded-xl font-bold bg-primary text-white">
