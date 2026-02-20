@@ -1,11 +1,10 @@
-
 "use client";
 
 import React, { createContext, useContext, useState, ReactNode, useCallback, useMemo, useEffect } from 'react';
-import type { Product, CartItem, Voucher } from '@/lib/types';
+import type { Product, CartItem, Voucher, Bundle } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast"
 import { useFirestore, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, doc } from 'firebase/firestore';
+import { collection, query, orderBy, doc, where } from 'firebase/firestore';
 
 type AppContextType = {
   view: string;
@@ -16,6 +15,7 @@ type AppContextType = {
   cartTotal: number;
   cartSubtotal: number;
   discountTotal: number;
+  bundleDiscountTotal: number;
   totalItems: number;
   isCartOpen: boolean;
   setIsCartOpen: (isOpen: boolean) => void;
@@ -72,25 +72,28 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     return query(collection(db, 'products'), orderBy('createdAt', 'desc'));
   }, [db]);
 
+  const bundlesQuery = useMemoFirebase(() => {
+    if (!db) return null;
+    return query(collection(db, 'bundles'), where('isActive', '==', true));
+  }, [db]);
+
   const { data: settings, loading: settingsLoading } = useDoc<any>(settingsRef);
   const { data: dbProducts, loading: productsLoading } = useCollection<Product>(productsQuery);
+  const { data: bundles, loading: bundlesLoading } = useCollection<Bundle>(bundlesQuery);
 
-  const isDataLoading = settingsLoading || productsLoading;
+  const isDataLoading = settingsLoading || productsLoading || bundlesLoading;
 
-  // Real progress logic synced with data loading
   useEffect(() => {
     let progressInterval: NodeJS.Timeout;
     
     if (isInitialLoading) {
       progressInterval = setInterval(() => {
         setLoadingProgress(prev => {
-          // Slowly climb to 95% if data is still loading
           if (isDataLoading) {
             if (prev < 90) return prev + 1;
             if (prev < 95) return prev + 0.5;
             return prev;
           }
-          // Quickly finish to 100% when data is ready
           if (prev < 100) return prev + 5;
           return 100;
         });
@@ -100,7 +103,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     return () => clearInterval(progressInterval);
   }, [isDataLoading, isInitialLoading]);
 
-  // Hide splash screen only when progress is 100 and data is ready
   useEffect(() => {
     if (loadingProgress >= 100 && !isDataLoading) {
       const timeout = setTimeout(() => {
@@ -162,8 +164,34 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const cartSubtotal = useMemo(() => cart.reduce((total, item) => total + (item.price * item.quantity), 0), [cart]);
   
-  const discountTotal = useMemo(() => {
+  // Logical Bundling Check
+  const bundleDiscountTotal = useMemo(() => {
+    if (!bundles || bundles.length === 0) return 0;
+    
+    let totalDiscount = 0;
+    const cartProductIds = cart.map(item => item.id);
+
+    bundles.forEach(bundle => {
+      // Cek apakah semua produk dalam bundle ada di keranjang
+      const hasAllProducts = bundle.productIds.every(pid => cartProductIds.includes(pid));
+      
+      if (hasAllProducts) {
+        // Hitung total harga item-item yang masuk dalam bundle ini (minimal 1 set)
+        const bundleItems = cart.filter(item => bundle.productIds.includes(item.id));
+        const bundleItemsPrice = bundleItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
+        
+        // Diskon diterapkan pada total harga item tersebut
+        totalDiscount += (bundleItemsPrice * (bundle.discountPercentage / 100));
+      }
+    });
+
+    return totalDiscount;
+  }, [cart, bundles]);
+
+  const voucherDiscountTotal = useMemo(() => {
     if (!activeVoucher) return 0;
+    // Voucher dihitung dari subtotal setelah dipotong bundle discount (optional logic)
+    // Di sini kita hitung dari subtotal asli saja
     if (cartSubtotal < activeVoucher.minPurchase) return 0;
 
     if (activeVoucher.type === 'percentage') {
@@ -173,7 +201,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [activeVoucher, cartSubtotal]);
 
-  const cartTotal = Math.max(0, cartSubtotal - discountTotal);
+  const discountTotal = voucherDiscountTotal;
+  const cartTotal = Math.max(0, cartSubtotal - bundleDiscountTotal - voucherDiscountTotal);
   const totalItems = cart.reduce((acc, item) => acc + item.quantity, 0);
 
   const value = {
@@ -185,6 +214,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     cartTotal,
     cartSubtotal,
     discountTotal,
+    bundleDiscountTotal,
     totalItems,
     isCartOpen,
     setIsCartOpen,

@@ -5,7 +5,7 @@ import { useApp } from '@/context/app-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Lock, ShieldCheck, Loader2, QrCode, Ticket, Tag, X } from 'lucide-react';
+import { ArrowLeft, Lock, ShieldCheck, Loader2, QrCode, Ticket, Tag, X, Layers } from 'lucide-react';
 import { formatRupiah, getPlaceholderImageDetails } from '@/lib/utils';
 import Image from 'next/image';
 import { useToast } from '@/hooks/use-toast';
@@ -17,7 +17,11 @@ import { FirestorePermissionError } from '@/firebase/errors';
 import { sendOrderConfirmationEmail } from '@/lib/email-actions';
 
 export default function CheckoutView() {
-  const { setView, cart, cartTotal, cartSubtotal, discountTotal, totalItems, formData, handleInputChange, setPaymentData, activeVoucher, applyVoucher, removeVoucher, resetCart, setLastOrder } = useApp();
+  const { 
+    setView, cart, cartTotal, cartSubtotal, discountTotal, bundleDiscountTotal, 
+    totalItems, formData, handleInputChange, setPaymentData, activeVoucher, 
+    applyVoucher, removeVoucher, resetCart, setLastOrder 
+  } = useApp();
   const [loading, setLoading] = useState(false);
   const [voucherCode, setVoucherCode] = useState('');
   const [checkingVoucher, setCheckingVoucher] = useState(false);
@@ -60,7 +64,6 @@ export default function CheckoutView() {
     setLoading(true);
     const orderId = "INV" + Date.now().toString().slice(-10);
 
-    // Kasus 1: Transaksi Gratis (Total Rp 0)
     if (cartTotal === 0) {
       try {
         const orderRecord = {
@@ -71,10 +74,11 @@ export default function CheckoutView() {
             productId: item.id,
             name: item.name,
             price: item.price,
-            deliveryContent: item.deliveryContent || ''
+            deliveryContent: item.deliveryContent || '',
+            quantity: item.quantity
           })),
           totalAmount: 0,
-          discountAmount: discountTotal,
+          discountAmount: discountTotal + bundleDiscountTotal,
           voucherCode: activeVoucher?.code || null,
           status: 'completed',
           order_id: orderId,
@@ -84,7 +88,6 @@ export default function CheckoutView() {
         const ordersRef = collection(db, 'orders');
         const docRef = await addDoc(ordersRef, orderRecord);
         
-        // Update Stok dan Sold
         for (const item of cart) {
           const productRef = doc(db, 'products', item.id);
           const productSnap = await getDoc(productRef);
@@ -116,7 +119,6 @@ export default function CheckoutView() {
           }
         }
 
-        // Kirim Email
         await sendOrderConfirmationEmail({
           customerName: orderRecord.customerName,
           customerEmail: orderRecord.customerEmail,
@@ -127,7 +129,7 @@ export default function CheckoutView() {
 
         setLastOrder({ ...orderRecord, id: docRef.id });
         resetCart();
-        toast({ title: "Pesanan Berhasil!", description: "Voucher 100% digunakan. Template Anda siap diunduh." });
+        toast({ title: "Pesanan Berhasil!", description: "Template Anda siap diunduh." });
         setView('success');
       } catch (error: any) {
         errorEmitter.emit('permission-error', new FirestorePermissionError({
@@ -141,9 +143,7 @@ export default function CheckoutView() {
       return;
     }
 
-    // Kasus 2: Transaksi Berbayar (Via Pakasir)
     try {
-      // 1. Catat ke Firestore sebagai 'pending' dulu agar bisa dilacak di admin
       const orderRecord = {
         customerName: formData.name,
         customerEmail: formData.email,
@@ -156,7 +156,7 @@ export default function CheckoutView() {
           quantity: item.quantity
         })),
         totalAmount: cartTotal,
-        discountAmount: discountTotal,
+        discountAmount: discountTotal + bundleDiscountTotal,
         voucherCode: activeVoucher?.code || null,
         status: 'pending',
         order_id: orderId,
@@ -166,15 +166,14 @@ export default function CheckoutView() {
       const ordersRef = collection(db, 'orders');
       const docRef = await addDoc(ordersRef, orderRecord);
 
-      // 2. Buat transaksi QRIS
       const result = await createPakasirTransaction(orderId, cartTotal);
       if (result && result.payment) {
         setPaymentData({
           ...result.payment,
-          firestoreId: docRef.id, // Simpan ID firestore untuk diupdate nanti
+          firestoreId: docRef.id,
           order_id: orderId,
           amount: cartTotal,
-          discountAmount: discountTotal,
+          discountAmount: discountTotal + bundleDiscountTotal,
           voucherCode: activeVoucher?.code || null,
           customerName: formData.name,
           customerEmail: formData.email,
@@ -284,12 +283,21 @@ export default function CheckoutView() {
                     <span>Subtotal</span>
                     <span>{formatRupiah(cartSubtotal)}</span>
                   </div>
+                  
+                  {bundleDiscountTotal > 0 && (
+                    <div className="flex justify-between text-xs font-bold text-primary uppercase tracking-widest animate-fadeIn">
+                      <span className="flex items-center gap-1"><Layers size={12} /> Bundling Hemat</span>
+                      <span>-{formatRupiah(bundleDiscountTotal)}</span>
+                    </div>
+                  )}
+
                   {discountTotal > 0 && (
                     <div className="flex justify-between text-xs font-bold text-green-600 uppercase tracking-widest animate-fadeIn">
-                      <span>Potongan Voucher</span>
+                      <span className="flex items-center gap-1"><Ticket size={12} /> Potongan Voucher</span>
                       <span>-{formatRupiah(discountTotal)}</span>
                     </div>
                   )}
+
                   <div className="flex justify-between items-center pt-2">
                     <span className="text-sm font-bold">Total Bayar</span>
                     <span className="text-xl font-bold text-primary">{formatRupiah(cartTotal)}</span>
