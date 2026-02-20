@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { createContext, useContext, useState, ReactNode, useCallback, useMemo, useEffect } from 'react';
@@ -32,6 +31,7 @@ type AppContextType = {
   removeVoucher: () => void;
   isInitialLoading: boolean;
   setIsInitialLoading: (loading: boolean) => void;
+  loadingProgress: number;
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -45,6 +45,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [paymentData, setPaymentData] = useState<any>(null);
   const [activeVoucher, setActiveVoucher] = useState<Voucher | null>(null);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [loadingProgress, setLoadingProgress] = useState(0);
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -53,12 +54,26 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     whatsapp: '',
   });
 
-  // Set a minimum loading time for the splash screen
+  // Handle loading progress and splash screen timeout
   useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsInitialLoading(false);
-    }, 2000);
-    return () => clearTimeout(timer);
+    const duration = 2000; // 2 seconds
+    const interval = 20; // update every 20ms
+    const steps = duration / interval;
+    const increment = 100 / steps;
+    
+    let currentProgress = 0;
+    const timer = setInterval(() => {
+      currentProgress += increment;
+      if (currentProgress >= 100) {
+        setLoadingProgress(100);
+        clearInterval(timer);
+        setTimeout(() => setIsInitialLoading(false), 200);
+      } else {
+        setLoadingProgress(Math.floor(currentProgress));
+      }
+    }, interval);
+
+    return () => clearInterval(timer);
   }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -153,7 +168,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     applyVoucher,
     removeVoucher,
     isInitialLoading,
-    setIsInitialLoading
+    setIsInitialLoading,
+    loadingProgress
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
