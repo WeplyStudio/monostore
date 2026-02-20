@@ -52,12 +52,15 @@ export default function CartSheet() {
   );
 }
 
-function CartItemCard({ item, onRemove }: { item: CartItem, onRemove: (id: number) => void }) {
-  const imageDetails = getPlaceholderImageDetails(item.image);
+function CartItemCard({ item, onRemove }: { item: CartItem, onRemove: (id: string | number) => void }) {
+  const isUrl = typeof item.image === 'string' && item.image.startsWith('http');
+  const imageSrc = isUrl ? item.image : getPlaceholderImageDetails(item.image).src;
+  const imageHint = !isUrl ? getPlaceholderImageDetails(item.image).hint : '';
+
   return (
     <div className="flex gap-4 p-3 rounded-xl hover:bg-secondary/50 transition-colors border border-transparent hover:border-border group">
       <div className="w-16 h-16 bg-secondary rounded-lg shrink-0 relative overflow-hidden">
-        <Image src={imageDetails.src} alt={item.name} data-ai-hint={imageDetails.hint} fill className="object-cover" />
+        <Image src={imageSrc} alt={item.name} data-ai-hint={imageHint} fill className="object-cover" />
         {item.quantity > 1 && (
           <span className="absolute -top-2 -right-2 bg-primary text-primary-foreground text-[10px] w-5 h-5 flex items-center justify-center rounded-full font-bold shadow-sm ring-2 ring-background">
             {item.quantity}

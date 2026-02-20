@@ -236,18 +236,22 @@ export default function CheckoutView() {
               </CardHeader>
               <CardContent className="px-8 pb-8 space-y-6">
                 <div className="space-y-4 max-h-[250px] overflow-y-auto no-scrollbar pr-2">
-                  {cart.map((item) => (
-                    <div key={item.id} className="flex gap-4 items-center">
-                      <div className="w-12 h-12 bg-slate-50 rounded-xl shrink-0 relative overflow-hidden border border-slate-100">
-                        <Image src={getPlaceholderImageDetails(item.image).src} alt={item.name} fill className="object-cover" />
+                  {cart.map((item) => {
+                    const isUrl = typeof item.image === 'string' && item.image.startsWith('http');
+                    const imageSrc = isUrl ? item.image : getPlaceholderImageDetails(item.image).src;
+                    return (
+                      <div key={item.id} className="flex gap-4 items-center">
+                        <div className="w-12 h-12 bg-slate-50 rounded-xl shrink-0 relative overflow-hidden border border-slate-100">
+                          <Image src={imageSrc} alt={item.name} fill className="object-cover" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-bold text-xs truncate">{item.name}</div>
+                          <div className="text-[10px] text-gray-400 font-bold uppercase">{formatRupiah(item.price)}</div>
+                        </div>
+                        <div className="font-bold text-xs">x{item.quantity}</div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="font-bold text-xs truncate">{item.name}</div>
-                        <div className="text-[10px] text-gray-400 font-bold uppercase">{formatRupiah(item.price)}</div>
-                      </div>
-                      <div className="font-bold text-xs">x{item.quantity}</div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 <div className="space-y-3 pt-4 border-t border-slate-50">
