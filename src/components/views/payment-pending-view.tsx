@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -12,7 +11,6 @@ import { formatRupiah } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { checkPakasirStatus } from '@/lib/pakasir-actions';
 import { sendOrderConfirmationEmail } from '@/lib/email-actions';
-import { sendAdminNotification } from '@/lib/push-notifications';
 
 export default function PaymentPendingView() {
   const { paymentData, setView, resetCart, setLastOrder } = useApp();
@@ -93,16 +91,6 @@ export default function PaymentPendingView() {
         totalAmount: paymentData.amount,
         items: paymentData.items.map((i: any) => ({ name: i.name, deliveryContent: i.deliveryContent || '' }))
       });
-
-      // Notify Admin via Web Push
-      const subsSnap = await getDocs(collection(db, 'admin_subscriptions'));
-      const subscriptions = subsSnap.docs.map(doc => doc.data());
-      if (subscriptions.length > 0) {
-        await sendAdminNotification(subscriptions, {
-          title: '🔥 Pesanan Baru Masuk!',
-          body: `${paymentData.customerName} baru saja membeli template senilai ${formatRupiah(paymentData.amount)}`
-        });
-      }
 
       const updatedSnap = await getDoc(orderRef);
       setLastOrder({ ...updatedSnap.data(), id: firestoreId });

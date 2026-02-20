@@ -1,7 +1,6 @@
-
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useFirestore, useCollection, useUser, useAuth, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, deleteDoc, doc, query, orderBy, setDoc, serverTimestamp, onSnapshot, limit, addDoc, getDocs } from 'firebase/firestore';
 import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
@@ -48,7 +47,8 @@ import {
   TrendingUp,
   Layers,
   Bell,
-  BellRing
+  BellRing,
+  Volume2
 } from 'lucide-react';
 import { ProductDialog } from '@/components/admin/product-dialog';
 import { BannerDialog } from '@/components/admin/banner-dialog';
@@ -74,7 +74,6 @@ import {
   AreaChart, 
   Area 
 } from 'recharts';
-import { getVapidPublicKey } from '@/lib/push-notifications';
 
 const ADMIN_EMAIL = 'matchboxdevelopment@gmail.com';
 
@@ -94,7 +93,6 @@ export default function AdminPage() {
   const [authError, setAuthError] = useState<string | null>(null);
 
   const [searchTerm, setSearchTerm] = useState('');
-  const [isPushSubscribed, setIsPushSubscribed] = useState(false);
   
   // Dialog States
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -152,46 +150,28 @@ export default function AdminPage() {
   const { data: bundles, loading: bundlesLoading } = useCollection(bundlesQuery);
   const { data: settings, loading: settingsLoading } = useDoc<any>(settingsRef);
 
-  // Push Notification Subscription Check
+  const prevOrdersCount = useRef<number>(0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Real-time Notification for New Orders
   useEffect(() => {
-    if ('serviceWorker' in navigator && user?.email === ADMIN_EMAIL) {
-      navigator.serviceWorker.getRegistration().then(reg => {
-        if (reg) {
-          reg.pushManager.getSubscription().then(sub => {
-            setIsPushSubscribed(!!sub);
+    if (orders && orders.length > prevOrdersCount.current) {
+      if (prevOrdersCount.current !== 0) {
+        const newOrder = orders[0];
+        if (newOrder.status === 'completed') {
+          toast({
+            title: "Pesanan Baru Masuk! 🔥",
+            description: `${newOrder.customerName} baru saja membeli template.`,
           });
+          // Play notification sound
+          if (audioRef.current) {
+            audioRef.current.play().catch(() => {});
+          }
         }
-      });
+      }
+      prevOrdersCount.current = orders.length;
     }
-  }, [user]);
-
-  const subscribeToPush = async () => {
-    if (!('serviceWorker' in navigator) || !db || !user) return;
-
-    try {
-      const registration = await navigator.serviceWorker.register('/sw.js');
-      const publicKey = await getVapidPublicKey();
-      
-      const subscription = await registration.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: publicKey
-      });
-
-      // Save to Firestore
-      const subsRef = collection(db, 'admin_subscriptions');
-      await addDoc(subsRef, {
-        subscription: subscription.toJSON(),
-        userId: user.uid,
-        createdAt: serverTimestamp()
-      });
-
-      setIsPushSubscribed(true);
-      toast({ title: 'Notifikasi Aktif', description: 'Anda akan menerima notifikasi di HP/Browser ini.' });
-    } catch (err) {
-      console.error('Failed to subscribe', err);
-      toast({ variant: 'destructive', title: 'Gagal', description: 'Tidak dapat mengaktifkan notifikasi.' });
-    }
-  };
+  }, [orders, toast]);
 
   useEffect(() => {
     if (settings) {
@@ -347,6 +327,9 @@ export default function AdminPage() {
 
   return (
     <div className="flex flex-col md:flex-row min-h-screen bg-[#F8F9FA] overflow-hidden">
+      {/* Sound for notifications */}
+      <audio ref={audioRef} src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto" />
+
       {/* Sidebar */}
       <aside className={cn(
         "bg-white border-r border-slate-200 transition-all duration-300 ease-in-out flex flex-col z-40 fixed md:sticky md:top-0 md:h-screen h-full shrink-0",
@@ -412,15 +395,10 @@ export default function AdminPage() {
             </div>
           </div>
           
-          <Button 
-            onClick={subscribeToPush} 
-            variant={isPushSubscribed ? "outline" : "default"} 
-            className="rounded-full h-9 px-4 font-bold text-xs gap-2"
-            disabled={isPushSubscribed}
-          >
-            {isPushSubscribed ? <BellRing size={14} className="text-green-500" /> : <Bell size={14} />}
-            {isPushSubscribed ? "Notifikasi Aktif" : "Aktifkan Notifikasi HP"}
-          </Button>
+          <div className="flex items-center gap-2 text-green-500 bg-green-50 px-3 py-1.5 rounded-full border border-green-100">
+            <Bell size={14} className="animate-bounce" />
+            <span className="text-[10px] font-bold uppercase tracking-wider">Monitor Aktif</span>
+          </div>
         </header>
 
         <div className="flex-1 p-6 md:p-10 overflow-y-auto">
