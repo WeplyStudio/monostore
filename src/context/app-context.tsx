@@ -1,6 +1,7 @@
+
 "use client";
 
-import React, { createContext, useContext, useState, ReactNode, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useCallback, useMemo, useEffect } from 'react';
 import type { Product, CartItem, Voucher } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast"
 
@@ -29,6 +30,8 @@ type AppContextType = {
   activeVoucher: Voucher | null;
   applyVoucher: (voucher: Voucher) => void;
   removeVoucher: () => void;
+  isInitialLoading: boolean;
+  setIsInitialLoading: (loading: boolean) => void;
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -41,6 +44,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [lastOrder, setLastOrder] = useState<any>(null);
   const [paymentData, setPaymentData] = useState<any>(null);
   const [activeVoucher, setActiveVoucher] = useState<Voucher | null>(null);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -48,6 +52,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     name: '',
     whatsapp: '',
   });
+
+  // Set a minimum loading time for the splash screen
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsInitialLoading(false);
+    }, 2000);
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -139,7 +151,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setPaymentData,
     activeVoucher,
     applyVoucher,
-    removeVoucher
+    removeVoucher,
+    isInitialLoading,
+    setIsInitialLoading
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
