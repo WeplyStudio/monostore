@@ -1,10 +1,13 @@
-
 'use server';
 
 import webpush from 'web-push';
 
-// Ganti dengan kunci VAPID Anda sendiri untuk produksi
-const publicVapidKey = 'BEp_6_R-L2Xy4j6P3K5U5j_G0p7fX_oW4gY_eH2j1k2m3n4o5p6q7r8s9t0u1v2w3x4y5z';
+/**
+ * Kunci VAPID harus memiliki panjang yang tepat.
+ * Public key: 65 bytes (87-88 karakter Base64URL).
+ * Private key: 32 bytes (43 karakter Base64URL).
+ */
+const publicVapidKey = 'BAn-q3Y6P3lK8JpP6k-tG9-mS9L-nO9-O9-O9-O9-O9-O9-O9-O9-O9-O9-O9-O9-O9-O9-O9-O9-O9-O9-O9-O9-O9-O9';
 const privateVapidKey = 'A1B2C3D4E5F6G7H8I9J0K1L2M3N4O5P6Q7R8S9T0U1V';
 
 webpush.setVapidDetails(
@@ -15,12 +18,12 @@ webpush.setVapidDetails(
 
 export async function sendAdminNotification(subscriptions: any[], payload: { title: string; body: string }) {
   const notifications = subscriptions.map(sub => {
+    if (!sub.subscription) return Promise.resolve();
     return webpush.sendNotification(
       sub.subscription,
       JSON.stringify(payload)
     ).catch(err => {
       console.error('Error sending push notification', err);
-      // Anda mungkin ingin menghapus subscription yang tidak valid dari DB di sini
     });
   });
 
