@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -24,7 +23,6 @@ export default function SiteFooter() {
 
   const currentYear = new Date().getFullYear();
   const shopName = settings?.shopName || 'MonoStore';
-  const firstLetter = shopName.charAt(0).toUpperCase();
 
   return (
     <footer className="border-t border-border/50 bg-background pt-12 pb-8 mt-auto">
@@ -32,12 +30,13 @@ export default function SiteFooter() {
         <div className="flex flex-col md:flex-row justify-between items-center gap-8 mb-8">
           <div className="flex flex-col items-center md:items-start gap-2">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-primary-foreground font-bold font-headline">
-                {loading ? <Loader2 size={12} className="animate-spin" /> : firstLetter}
-              </div>
-              <span className="font-bold text-lg tracking-tight">
-                {shopName.toLowerCase()}<span className="text-muted-foreground">.</span>
-              </span>
+              {loading ? (
+                <Loader2 size={16} className="animate-spin text-muted-foreground" />
+              ) : (
+                <span className="font-bold text-xl tracking-tight">
+                  {shopName.toLowerCase()}<span className="text-primary">.</span>
+                </span>
+              )}
             </div>
             <p className="text-sm text-muted-foreground text-center md:text-left">Template website premium untuk bisnis dan kreator modern.</p>
           </div>
