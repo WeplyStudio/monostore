@@ -4,23 +4,15 @@
 import { useState, useEffect } from 'react';
 import { Instagram, Twitter, Globe, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { useApp } from '@/context/app-context';
 
 export default function SiteFooter() {
   const [mounted, setMounted] = useState(false);
-  const db = useFirestore();
+  const { settings, isDataLoading } = useApp();
 
   useEffect(() => {
     setMounted(true);
   }, []);
-
-  const settingsRef = useMemoFirebase(() => {
-    if (!db) return null;
-    return doc(db, 'settings', 'shop');
-  }, [db]);
-
-  const { data: settings, loading } = useDoc<any>(settingsRef);
 
   const currentYear = new Date().getFullYear();
   const shopName = settings?.shopName || 'MonoStore';
@@ -31,7 +23,7 @@ export default function SiteFooter() {
         <div className="flex flex-col md:flex-row justify-between items-center gap-8 mb-8">
           <div className="flex flex-col items-center md:items-start gap-2">
             <div className="flex items-center gap-2">
-              {!mounted || loading ? (
+              {!mounted || isDataLoading ? (
                 <Loader2 size={16} className="animate-spin text-muted-foreground" />
               ) : (
                 <span className="font-bold text-xl tracking-tight">

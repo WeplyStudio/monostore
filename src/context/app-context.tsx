@@ -1,8 +1,11 @@
+
 "use client";
 
 import React, { createContext, useContext, useState, ReactNode, useCallback, useMemo, useEffect } from 'react';
 import type { Product, CartItem, Voucher } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast"
+import { useFirestore, useCollection, useDoc, useMemoFirebase } from '@/firebase';
+import { collection, query, orderBy, doc } from 'firebase/firestore';
 
 type AppContextType = {
   view: string;
@@ -32,6 +35,9 @@ type AppContextType = {
   isInitialLoading: boolean;
   setIsInitialLoading: (loading: boolean) => void;
   loadingProgress: number;
+  settings: any;
+  dbProducts: Product[];
+  isDataLoading: boolean;
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -47,6 +53,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [loadingProgress, setLoadingProgress] = useState(0);
   const { toast } = useToast();
+  const db = useFirestore();
 
   const [formData, setFormData] = useState({
     email: '',
@@ -54,27 +61,54 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     whatsapp: '',
   });
 
-  // Handle loading progress and splash screen timeout
-  useEffect(() => {
-    const duration = 2000; // 2 seconds
-    const interval = 20; // update every 20ms
-    const steps = duration / interval;
-    const increment = 100 / steps;
-    
-    let currentProgress = 0;
-    const timer = setInterval(() => {
-      currentProgress += increment;
-      if (currentProgress >= 100) {
-        setLoadingProgress(100);
-        clearInterval(timer);
-        setTimeout(() => setIsInitialLoading(false), 200);
-      } else {
-        setLoadingProgress(Math.floor(currentProgress));
-      }
-    }, interval);
+  // Fetch critical data globally
+  const settingsRef = useMemoFirebase(() => {
+    if (!db) return null;
+    return doc(db, 'settings', 'shop');
+  }, [db]);
 
-    return () => clearInterval(timer);
-  }, []);
+  const productsQuery = useMemoFirebase(() => {
+    if (!db) return null;
+    return query(collection(db, 'products'), orderBy('createdAt', 'desc'));
+  }, [db]);
+
+  const { data: settings, loading: settingsLoading } = useDoc<any>(settingsRef);
+  const { data: dbProducts, loading: productsLoading } = useCollection<Product>(productsQuery);
+
+  const isDataLoading = settingsLoading || productsLoading;
+
+  // Real progress logic synced with data loading
+  useEffect(() => {
+    let progressInterval: NodeJS.Timeout;
+    
+    if (isInitialLoading) {
+      progressInterval = setInterval(() => {
+        setLoadingProgress(prev => {
+          // Slowly climb to 95% if data is still loading
+          if (isDataLoading) {
+            if (prev < 90) return prev + 1;
+            if (prev < 95) return prev + 0.5;
+            return prev;
+          }
+          // Quickly finish to 100% when data is ready
+          if (prev < 100) return prev + 5;
+          return 100;
+        });
+      }, 50);
+    }
+
+    return () => clearInterval(progressInterval);
+  }, [isDataLoading, isInitialLoading]);
+
+  // Hide splash screen only when progress is 100 and data is ready
+  useEffect(() => {
+    if (loadingProgress >= 100 && !isDataLoading) {
+      const timeout = setTimeout(() => {
+        setIsInitialLoading(false);
+      }, 400);
+      return () => clearTimeout(timeout);
+    }
+  }, [loadingProgress, isDataLoading]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({
@@ -169,7 +203,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     removeVoucher,
     isInitialLoading,
     setIsInitialLoading,
-    loadingProgress
+    loadingProgress,
+    settings,
+    dbProducts,
+    isDataLoading
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
