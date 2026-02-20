@@ -1,17 +1,30 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Instagram, Twitter, Globe } from 'lucide-react';
+import { Instagram, Twitter, Globe, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useFirestore, useDoc, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
 
 export default function SiteFooter() {
   const [mounted, setMounted] = useState(false);
+  const db = useFirestore();
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
+  const settingsRef = useMemoFirebase(() => {
+    if (!db) return null;
+    return doc(db, 'settings', 'shop');
+  }, [db]);
+
+  const { data: settings, loading } = useDoc<any>(settingsRef);
+
   const currentYear = new Date().getFullYear();
+  const shopName = settings?.shopName || 'MonoStore';
+  const firstLetter = shopName.charAt(0).toUpperCase();
 
   return (
     <footer className="border-t border-border/50 bg-background pt-12 pb-8 mt-auto">
@@ -19,9 +32,11 @@ export default function SiteFooter() {
         <div className="flex flex-col md:flex-row justify-between items-center gap-8 mb-8">
           <div className="flex flex-col items-center md:items-start gap-2">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-primary-foreground font-bold font-headline">M</div>
+              <div className="w-8 h-8 bg-primary rounded-lg flex items-center justify-center text-primary-foreground font-bold font-headline">
+                {loading ? <Loader2 size={12} className="animate-spin" /> : firstLetter}
+              </div>
               <span className="font-bold text-lg tracking-tight">
-                mono<span className="text-muted-foreground">store.</span>
+                {shopName.toLowerCase()}<span className="text-muted-foreground">.</span>
               </span>
             </div>
             <p className="text-sm text-muted-foreground text-center md:text-left">Template website premium untuk bisnis dan kreator modern.</p>
@@ -41,7 +56,7 @@ export default function SiteFooter() {
         </div>
 
         <div className="pt-8 border-t border-border/50 text-center text-xs text-muted-foreground">
-          <p>&copy; <span suppressHydrationWarning>{mounted ? currentYear : '2025'}</span> MonoStore Digital Inc. All rights reserved.</p>
+          <p>&copy; <span suppressHydrationWarning>{mounted ? currentYear : '2025'}</span> {shopName} Digital Inc. All rights reserved.</p>
         </div>
       </div>
     </footer>

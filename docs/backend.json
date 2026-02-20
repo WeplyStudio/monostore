@@ -97,6 +97,15 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["userName", "rating", "comment"]
+    },
+    "Settings": {
+      "title": "Settings",
+      "description": "General application settings.",
+      "type": "object",
+      "properties": {
+        "shopName": { "type": "string" }
+      },
+      "required": ["shopName"]
     }
   },
   "auth": {
@@ -122,6 +131,10 @@
     "/orders/{orderId}": {
       "schema": "Order",
       "description": "Successful transactions."
+    },
+    "/settings/{settingId}": {
+      "schema": "Settings",
+      "description": "Store-wide configuration settings."
     }
   }
 }

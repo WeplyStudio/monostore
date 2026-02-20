@@ -1,12 +1,13 @@
+
 'use client';
 
-import React, { useState } from 'react';
-import { useFirestore, useCollection, useUser, useAuth, useMemoFirebase } from '@/firebase';
-import { collection, deleteDoc, doc, query, orderBy } from 'firebase/firestore';
+import React, { useState, useEffect } from 'react';
+import { useFirestore, useCollection, useUser, useAuth, useMemoFirebase, useDoc } from '@/firebase';
+import { collection, deleteDoc, doc, query, orderBy, setDoc, serverTimestamp } from 'firebase/firestore';
 import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
   Table,
@@ -38,7 +39,9 @@ import {
   LogOut,
   ChevronRight,
   Menu,
-  X
+  X,
+  Settings as SettingsIcon,
+  Store
 } from 'lucide-react';
 import { ProductDialog } from '@/components/admin/product-dialog';
 import { BannerDialog } from '@/components/admin/banner-dialog';
@@ -51,10 +54,11 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { cn } from '@/lib/utils';
+import { Label } from '@/components/ui/label';
 
 const ADMIN_EMAIL = 'matchboxdevelopment@gmail.com';
 
-type AdminSection = 'products' | 'flash-sale' | 'vouchers' | 'banners' | 'orders';
+type AdminSection = 'products' | 'flash-sale' | 'vouchers' | 'banners' | 'orders' | 'settings';
 
 export default function AdminPage() {
   const { user, loading: authLoading } = useUser();
@@ -81,6 +85,10 @@ export default function AdminPage() {
   const [isFlashSaleDialogOpen, setIsFlashSaleDialogOpen] = useState(false);
   const [selectedFlashSaleProduct, setSelectedFlashSaleProduct] = useState<any>(null);
 
+  // Settings State
+  const [shopName, setShopName] = useState('');
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
+
   // Queries
   const productsQuery = useMemoFirebase(() => {
     if (!db) return null;
@@ -102,10 +110,22 @@ export default function AdminPage() {
     return query(collection(db, 'vouchers'), orderBy('code', 'asc'));
   }, [db]);
 
+  const settingsRef = useMemoFirebase(() => {
+    if (!db) return null;
+    return doc(db, 'settings', 'shop');
+  }, [db]);
+
   const { data: products, loading: productsLoading } = useCollection(productsQuery);
   const { data: orders, loading: ordersLoading } = useCollection(ordersQuery);
   const { data: banners, loading: bannersLoading } = useCollection(bannersQuery);
   const { data: vouchers, loading: vouchersLoading } = useCollection(vouchersQuery);
+  const { data: settings, loading: settingsLoading } = useDoc<any>(settingsRef);
+
+  useEffect(() => {
+    if (settings?.shopName) {
+      setShopName(settings.shopName);
+    }
+  }, [settings]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -129,6 +149,29 @@ export default function AdminPage() {
   const handleLogout = async () => {
     await signOut(auth);
     setAuthError(null);
+  };
+
+  const handleSaveSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!db || !shopName.trim()) return;
+    setIsSavingSettings(true);
+    const docRef = doc(db, 'settings', 'shop');
+    const data = { shopName: shopName.trim(), updatedAt: serverTimestamp() };
+    
+    setDoc(docRef, data, { merge: true })
+      .then(() => {
+        toast({ title: 'Pengaturan Disimpan', description: 'Nama toko Anda telah diperbarui.' });
+      })
+      .catch((error) => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: docRef.path,
+          operation: 'write',
+          requestResourceData: data
+        }));
+      })
+      .finally(() => {
+        setIsSavingSettings(false);
+      });
   };
 
   if (authLoading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin" /></div>;
@@ -181,6 +224,7 @@ export default function AdminPage() {
     { id: 'vouchers', label: 'Voucher', icon: Ticket },
     { id: 'banners', label: 'Banner', icon: ImageIcon },
     { id: 'orders', label: 'Pesanan', icon: ShoppingCart },
+    { id: 'settings', label: 'Pengaturan', icon: SettingsIcon },
   ];
 
   return (
@@ -197,7 +241,7 @@ export default function AdminPage() {
             </div>
             <div>
               <h1 className="text-lg font-bold tracking-tight">Admin Panel</h1>
-              <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">MonoStore Digital</p>
+              <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">{settings?.shopName || 'MonoStore'}</p>
             </div>
           </div>
           <Button 
@@ -548,6 +592,60 @@ export default function AdminPage() {
                       }
                     </TableBody>
                   </Table>
+                </Card>
+              </div>
+            )}
+
+            {/* Section: Settings */}
+            {activeSection === 'settings' && (
+              <div className="space-y-6 animate-fadeIn max-w-2xl">
+                <div>
+                  <h2 className="text-2xl font-bold tracking-tight">Pengaturan Toko</h2>
+                  <p className="text-sm text-muted-foreground">Sesuaikan identitas toko Anda di sini.</p>
+                </div>
+
+                <Card className="rounded-[2rem] border-none shadow-sm bg-white overflow-hidden">
+                  <CardHeader className="p-8 pb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 bg-primary/10 rounded-2xl flex items-center justify-center text-primary">
+                        <Store size={24} />
+                      </div>
+                      <div>
+                        <CardTitle className="text-xl">Identitas Visual</CardTitle>
+                        <CardDescription>Nama toko akan muncul di header, footer, dan invoice.</CardDescription>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-8 space-y-6">
+                    <form onSubmit={handleSaveSettings} className="space-y-6">
+                      <div className="space-y-2">
+                        <Label htmlFor="shopName" className="text-xs font-bold uppercase text-gray-400">Nama Toko</Label>
+                        <Input 
+                          id="shopName"
+                          placeholder="Masukkan nama toko Anda..."
+                          value={shopName}
+                          onChange={(e) => setShopName(e.target.value)}
+                          className="h-12 rounded-xl bg-slate-50 border-none font-bold text-lg"
+                          required
+                        />
+                      </div>
+
+                      <div className="p-4 bg-blue-50 rounded-2xl border border-blue-100 flex gap-3">
+                        <AlertCircle className="text-blue-500 shrink-0" size={20} />
+                        <p className="text-xs text-blue-600 leading-relaxed font-medium">
+                          Mengubah nama toko akan secara otomatis memperbarui logo teks di seluruh halaman situs (Header & Footer). Pastikan nama tidak terlalu panjang agar tampilan tetap rapi.
+                        </p>
+                      </div>
+
+                      <Button 
+                        type="submit" 
+                        disabled={isSavingSettings || settingsLoading} 
+                        className="w-full h-12 rounded-xl font-bold shadow-lg shadow-primary/20"
+                      >
+                        {isSavingSettings ? <Loader2 className="animate-spin mr-2" /> : 'Simpan Perubahan'}
+                      </Button>
+                    </form>
+                  </CardContent>
                 </Card>
               </div>
             )}
