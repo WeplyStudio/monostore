@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { useApp } from '@/context/app-context';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
@@ -32,11 +31,11 @@ import { getPersonalizedRecommendations } from '@/ai/flows/personalized-recommen
 import ProductCard from '@/components/product-card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useFirestore, useDoc, useMemoFirebase, useCollection } from '@/firebase';
-import { doc, collection, getDocs, limit, query, orderBy, where } from 'firebase/firestore';
+import { doc, collection, getDocs, limit, query, orderBy } from 'firebase/firestore';
 import Link from 'next/link';
 
 export default function ProductDetailPage() {
-  const { addToCart, addViewedProduct, viewedProducts, setView, setIsCartOpen, formData, handleInputChange } = useApp();
+  const { addToCart, addViewedProduct, viewedProducts, setView, router: appRouter } = useApp();
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const db = useFirestore();
@@ -98,7 +97,6 @@ export default function ProductDetailPage() {
       setIsRecsLoading(true);
       try {
         const productsSnap = await getDocs(query(collection(db, 'products'), limit(30)));
-        // Sanitize data to plain objects before passing to Server Action
         const sanitizedAllProducts = productsSnap.docs.map(doc => {
           const d = doc.data();
           return {
@@ -129,7 +127,6 @@ export default function ProductDetailPage() {
         if (result?.recommendations?.length > 0) {
           setRecommendations(result.recommendations as Product[]);
         } else {
-          // Fallback logic: same category products
           const fallback = sanitizedAllProducts
             .filter(p => p.id !== id && p.category === product.category)
             .slice(0, 4);
@@ -152,7 +149,7 @@ export default function ProductDetailPage() {
   }, [product, viewedProducts, db, id]);
 
   if (productLoading) return <div className="flex items-center justify-center min-h-screen"><Loader2 className="animate-spin text-primary" size={40} /></div>;
-  if (!product) return <div className="flex flex-col items-center justify-center min-h-screen"><h2 className="text-xl font-bold mb-4">Produk tidak ditemukan</h2><Button onClick={() => router.push('/')}>Beranda</Button></div>;
+  if (!product) return <div className="flex flex-col items-center justify-center min-h-screen"><h2 className="text-xl font-bold mb-4">Template tidak ditemukan</h2><Button onClick={() => router.push('/')}>Beranda</Button></div>;
 
   const isUrl = typeof product.image === 'string' && product.image.startsWith('http');
   const imageSrc = isUrl ? product.image : getPlaceholderImageDetails(product.image).src;
@@ -317,21 +314,21 @@ export default function ProductDetailPage() {
                         <Button 
                           variant="ghost" 
                           size="icon" 
-                          className="h-10 w-10 rounded-lg hover:bg-white" 
+                          className="h-10 w-10 rounded-lg hover:bg-slate-200 text-slate-600 transition-colors" 
                           onClick={decrementQty}
                           disabled={isOutOfStock || quantity <= 1}
                         >
-                          <Minus size={16} />
+                          <Minus size={18} strokeWidth={2.5} />
                         </Button>
-                        <div className="w-12 text-center font-bold text-lg">{quantity}</div>
+                        <div className="w-12 text-center font-bold text-lg text-slate-900">{quantity}</div>
                         <Button 
                           variant="ghost" 
                           size="icon" 
-                          className="h-10 w-10 rounded-lg hover:bg-white" 
+                          className="h-10 w-10 rounded-lg hover:bg-slate-200 text-slate-600 transition-colors" 
                           onClick={incrementQty}
                           disabled={isOutOfStock || quantity >= stock}
                         >
-                          <Plus size={16} />
+                          <Plus size={18} strokeWidth={2.5} />
                         </Button>
                       </div>
                       <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
