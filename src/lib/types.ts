@@ -21,6 +21,15 @@ export type Product = {
   updatedAt?: any;
 };
 
+export type Bundle = {
+  id: string;
+  name: string;
+  productIds: string[];
+  discountPercentage: number;
+  isActive: boolean;
+  createdAt?: any;
+};
+
 export type Voucher = {
   id: string;
   code: string;

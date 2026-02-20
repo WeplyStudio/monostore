@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -24,10 +25,11 @@ import {
 import { CATEGORIES } from '@/lib/data';
 import { uploadToImgBB } from '@/lib/imgbb';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Upload, X, Link as LinkIcon, Package, Zap, Tag, Info, ListChecks } from 'lucide-react';
+import { Loader2, Upload, X, Link as LinkIcon, Package, Zap, Tag, Info, ListChecks, Sparkles } from 'lucide-react';
 import Image from 'next/image';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
+import { generateProductDescription } from '@/ai/flows/product-description-flow';
 
 interface ProductDialogProps {
   isOpen: boolean;
@@ -39,6 +41,7 @@ export function ProductDialog({ isOpen, onClose, product }: ProductDialogProps) 
   const db = useFirestore();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [isAiGenerating, setIsAiGenerating] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>('');
   
@@ -87,6 +90,26 @@ export function ProductDialog({ isOpen, onClose, product }: ProductDialogProps) 
     if (file) {
       setImageFile(file);
       setImagePreview(URL.createObjectURL(file));
+    }
+  };
+
+  const handleAiGenerate = async () => {
+    if (!formData.name || !formData.category) {
+      toast({ variant: 'destructive', title: 'Input Kurang', description: 'Isi Nama dan Kategori produk terlebih dahulu.' });
+      return;
+    }
+    setIsAiGenerating(true);
+    try {
+      const result = await generateProductDescription({
+        productName: formData.name,
+        productCategory: formData.category
+      });
+      setFormData(prev => ({ ...prev, description: result.description }));
+      toast({ title: 'AI Berhasil', description: 'Deskripsi produk telah dihasilkan oleh AI.' });
+    } catch (error) {
+      toast({ variant: 'destructive', title: 'AI Gagal', description: 'Gagal menghubungi AI.' });
+    } finally {
+      setIsAiGenerating(false);
     }
   };
 
@@ -187,14 +210,13 @@ export function ProductDialog({ isOpen, onClose, product }: ProductDialogProps) 
                   <Zap size={14} className="fill-red-600" /> Flash Sale End Time (Opsional)
                 </Label>
                 <Input type="datetime-local" value={formData.flashSaleEnd} onChange={e => setFormData({...formData, flashSaleEnd: e.target.value})} className="rounded-xl bg-white border-red-200" />
-                <p className="text-[10px] text-red-400 mt-1 italic">*Biarkan kosong jika bukan Flash Sale</p>
               </div>
             </div>
 
             <div className="space-y-4">
               <div className="space-y-1.5">
                 <Label className="text-xs font-bold uppercase text-gray-400">Gambar Preview</Label>
-                <div className="border-2 border-dashed border-slate-200 rounded-2xl p-4 text-center relative aspect-square max-w-[200px] mx-auto overflow-hidden">
+                <div className="border-2 border-dashed border-slate-200 rounded-2xl p-4 text-center relative aspect-square max-w-[140px] mx-auto overflow-hidden">
                   {imagePreview ? (
                     <>
                       <Image src={imagePreview} alt="Preview" fill className="object-cover" />
@@ -203,30 +225,33 @@ export function ProductDialog({ isOpen, onClose, product }: ProductDialogProps) 
                   ) : (
                     <label className="cursor-pointer flex flex-col items-center justify-center h-full gap-2">
                       <Upload size={24} className="text-slate-400" />
-                      <span className="text-[10px] font-bold text-slate-400">UPLOAD</span>
                       <input type="file" className="hidden" accept="image/*" onChange={handleImageChange} />
                     </label>
                   )}
                 </div>
               </div>
+
               <div className="space-y-1.5">
-                <Label className="text-xs font-bold uppercase text-gray-400">Link Source Code (Drive/GitHub)</Label>
-                <Input value={formData.deliveryContent} onChange={e => setFormData({...formData, deliveryContent: e.target.value})} placeholder="https://..." className="rounded-xl bg-slate-50 border-none" />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs font-bold uppercase text-gray-400">Deskripsi Template</Label>
-                <Textarea rows={4} value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} required className="rounded-xl bg-slate-50 border-none mb-2" />
-                <div className="p-3 bg-blue-50 rounded-lg border border-blue-100">
-                  <div className="flex items-center gap-1 text-[10px] font-bold text-blue-600 uppercase mb-1">
-                    <Info size={10} /> Tips Format Teks:
-                  </div>
-                  <div className="grid grid-cols-2 gap-y-1 text-[9px] text-blue-500 font-medium">
-                    <span>*teks* = <strong>Tebal</strong></span>
-                    <span>_teks_ = <em>Miring</em></span>
-                    <span>*_teks_* = <strong><em>Tebal Miring</em></strong></span>
-                    <span>&lt;b&gt;teks&lt;b&gt; = <span className="font-bold">JUDUL BESAR</span></span>
-                  </div>
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-bold uppercase text-gray-400">Deskripsi Template</Label>
+                  <Button 
+                    type="button" 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={handleAiGenerate}
+                    disabled={isAiGenerating}
+                    className="h-7 text-[10px] font-bold text-primary gap-1 px-2 rounded-lg hover:bg-primary/10"
+                  >
+                    {isAiGenerating ? <Loader2 className="animate-spin h-3 w-3" /> : <Sparkles size={12} className="fill-primary/20" />}
+                    AI GENERATE
+                  </Button>
                 </div>
+                <Textarea rows={6} value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} required className="rounded-xl bg-slate-50 border-none mb-2" />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold uppercase text-gray-400">Link Source Code</Label>
+                <Input value={formData.deliveryContent} onChange={e => setFormData({...formData, deliveryContent: e.target.value})} placeholder="https://..." className="rounded-xl bg-slate-50 border-none" />
               </div>
             </div>
           </div>

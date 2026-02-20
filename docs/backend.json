@@ -26,6 +26,20 @@
       },
       "required": ["name", "price", "category", "description", "image", "stock"]
     },
+    "Bundle": {
+      "title": "Bundle",
+      "description": "A package of multiple products with a special discount.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "productIds": { "type": "array", "items": { "type": "string" } },
+        "discountPercentage": { "type": "number" },
+        "isActive": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "productIds", "discountPercentage", "isActive"]
+    },
     "Voucher": {
       "title": "Voucher",
       "description": "Discount coupon for checkout.",
@@ -133,6 +147,10 @@
     "/orders/{orderId}": {
       "schema": "Order",
       "description": "Successful transactions."
+    },
+    "/bundles/{bundleId}": {
+      "schema": "Bundle",
+      "description": "Product bundle definitions."
     },
     "/settings/{settingId}": {
       "schema": "Settings",
