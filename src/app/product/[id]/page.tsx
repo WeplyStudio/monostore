@@ -106,10 +106,10 @@ export default function ProductDetailPage() {
             category: d.category || '',
             description: d.description || '',
             image: d.image || '',
-            rating: d.rating || 5,
+            rating: d.rating ?? 0,
             reviews: d.reviews || 0,
             sold: d.sold || 0,
-            stock: d.stock || 0,
+            stock: d.stock ?? 0,
             flashSaleStock: d.flashSaleStock || 0,
             flashSaleEnd: d.flashSaleEnd || null,
             isBestSeller: d.isBestSeller || false,
@@ -153,7 +153,7 @@ export default function ProductDetailPage() {
 
   const isUrl = typeof product.image === 'string' && product.image.startsWith('http');
   const imageSrc = isUrl ? product.image : getPlaceholderImageDetails(product.image).src;
-  const stock = product.stock || 0;
+  const stock = product.stock ?? 0;
   const isOutOfStock = stock <= 0;
   const hasDiscount = product.originalPrice && product.originalPrice > product.price;
   const isFlashSale = product.flashSaleEnd && new Date(product.flashSaleEnd).getTime() > Date.now();

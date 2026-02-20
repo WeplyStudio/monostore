@@ -111,7 +111,7 @@ export function ProductDialog({ isOpen, onClose, product }: ProductDialogProps) 
         deliveryContent: formData.deliveryContent,
         flashSaleEnd: formData.flashSaleEnd || null,
         updatedAt: serverTimestamp(),
-        rating: product?.rating || 5.0,
+        rating: product?.rating ?? 0,
         reviews: product?.reviews || 0,
         sold: product?.sold || 0,
       };
