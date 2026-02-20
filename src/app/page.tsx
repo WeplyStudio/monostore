@@ -25,7 +25,7 @@ export default function Home() {
   if (isInitialLoading) {
     return (
       <div className="fixed inset-0 z-[100] bg-background flex flex-col items-center justify-center animate-fadeIn">
-        <div className="flex flex-col items-center gap-8">
+        <div className="flex flex-col items-center">
           {/* Custom Loading SVG from Uiverse.io */}
           <div className="relative">
             <svg className="pl" viewBox="0 0 128 128" width="128px" height="128px" xmlns="http://www.w3.org/2000/svg">
@@ -39,19 +39,6 @@ export default function Home() {
                 <path className="pl__worm" d="M92,15.492S78.194,4.967,66.743,16.887c-17.231,17.938-28.26,96.974-28.26,96.974L119.85,59.892l-99-31.588,57.528,89.832L97.8,19.349,13.636,88.51l89.012,16.015S81.908,38.332,66.1,22.337C50.114,6.156,36,15.492,36,15.492a56,56,0,1,0,56,0Z" fill="none" stroke="url(#pl-grad)" strokeWidth="16" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="44 1111" strokeDashoffset="10"></path>
             </svg>
           </div>
-          
-          <div className="flex flex-col items-center gap-2">
-            <div className="font-headline font-bold text-4xl tracking-tighter animate-pulse">
-              {shopName.toLowerCase()}<span className="text-primary">.</span>
-            </div>
-            <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.3em] mt-2">
-              Memuat Template Terbaik
-            </div>
-          </div>
-        </div>
-        
-        <div className="absolute bottom-12 text-[10px] font-bold uppercase tracking-[0.4em] text-slate-300">
-          {shopName} Digital Inc.
         </div>
       </div>
     );
