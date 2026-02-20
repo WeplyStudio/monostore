@@ -56,6 +56,26 @@ export function parseDescriptionToHtml(text: string) {
     .replace(/\n/g, '<br/>');
 }
 
+/**
+ * Strips custom markdown-like formatting for product descriptions.
+ * Used for short previews in cards to keep font weight normal.
+ */
+export function stripDescriptionFormatting(text: string) {
+  if (!text) return "";
+  
+  return text
+    // Strip Big Title: <b>text<b>
+    .replace(/<b>(.*?)<b>/g, '$1')
+    // Strip Bold Italic: *_text_*
+    .replace(/\*_(.*?)\_\*/g, '$1')
+    // Strip Bold: *text*
+    .replace(/\*(.*?)\*/g, '$1')
+    // Strip Italic: _text_
+    .replace(/\_(.*?)\_/g, '$1')
+    // Replace line breaks with space for preview
+    .replace(/\n/g, ' ');
+}
+
 export function getPlaceholderImage(id: string) {
   const image = PlaceHolderImages.find((img) => img.id === id);
   return image ? image.imageUrl : 'https://picsum.photos/seed/placeholder/400/400';

@@ -13,7 +13,7 @@ import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy } from 'firebase/firestore';
 import type { Product } from '@/lib/types';
 import { getPersonalizedRecommendations } from '@/ai/flows/personalized-recommendations-flow';
-import { formatRupiah, getPlaceholderImageDetails, parseDescriptionToHtml } from '@/lib/utils';
+import { formatRupiah, getPlaceholderImageDetails, parseDescriptionToHtml, stripDescriptionFormatting } from '@/lib/utils';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -314,7 +314,7 @@ export default function HomeView() {
       )}
 
       {!searchTerm && (
-        <div className="max-w-3xl mx-auto mb-20">
+        <div className="max-w-3xl auto mb-20">
           <div className="flex items-center justify-center gap-3 mb-10">
             <HelpCircle size={32} className="text-primary" />
             <h2 className="text-3xl font-bold font-headline">Tanya Jawab</h2>
@@ -484,10 +484,9 @@ const RecommendationCard = ({ item, addToCart }: { item: Product; addToCart: (pr
                         <span className="text-[8px] font-black text-slate-300 uppercase tracking-widest truncate">AI Recommendation</span>
                     </div>
                     <h3 className="font-bold text-foreground text-base sm:text-lg line-clamp-1 leading-tight">{item.name}</h3>
-                    <div 
-                      className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed h-8 sm:h-auto overflow-hidden"
-                      dangerouslySetInnerHTML={{ __html: parseDescriptionToHtml(item.description) }}
-                    />
+                    <p className="text-[11px] text-muted-foreground line-clamp-2 leading-relaxed h-8 sm:h-auto overflow-hidden font-normal">
+                      {stripDescriptionFormatting(item.description)}
+                    </p>
                 </div>
                 <div className="flex flex-row sm:flex-row items-center justify-between gap-2 mt-4 pt-2 border-t border-slate-50 sm:border-none">
                     <span className={`font-bold text-sm sm:text-base whitespace-nowrap ${isOutOfStock ? 'text-muted-foreground line-through' : 'text-primary'}`}>
