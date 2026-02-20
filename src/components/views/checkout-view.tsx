@@ -143,10 +143,35 @@ export default function CheckoutView() {
 
     // Kasus 2: Transaksi Berbayar (Via Pakasir)
     try {
+      // 1. Catat ke Firestore sebagai 'pending' dulu agar bisa dilacak di admin
+      const orderRecord = {
+        customerName: formData.name,
+        customerEmail: formData.email,
+        whatsapp: formData.whatsapp,
+        items: cart.map((item: any) => ({
+          productId: item.id,
+          name: item.name,
+          price: item.price,
+          deliveryContent: item.deliveryContent || '',
+          quantity: item.quantity
+        })),
+        totalAmount: cartTotal,
+        discountAmount: discountTotal,
+        voucherCode: activeVoucher?.code || null,
+        status: 'pending',
+        order_id: orderId,
+        createdAt: serverTimestamp()
+      };
+
+      const ordersRef = collection(db, 'orders');
+      const docRef = await addDoc(ordersRef, orderRecord);
+
+      // 2. Buat transaksi QRIS
       const result = await createPakasirTransaction(orderId, cartTotal);
       if (result && result.payment) {
         setPaymentData({
           ...result.payment,
+          firestoreId: docRef.id, // Simpan ID firestore untuk diupdate nanti
           order_id: orderId,
           amount: cartTotal,
           discountAmount: discountTotal,

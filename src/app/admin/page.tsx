@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState } from 'react';
@@ -31,7 +30,9 @@ import {
   Zap,
   Tag,
   Clock,
-  Timer
+  Timer,
+  CheckCircle2,
+  AlertTriangle
 } from 'lucide-react';
 import { ProductDialog } from '@/components/admin/product-dialog';
 import { BannerDialog } from '@/components/admin/banner-dialog';
@@ -59,19 +60,13 @@ export default function AdminPage() {
 
   const [searchTerm, setSearchTerm] = useState('');
   
-  // Product Dialog
+  // Dialog States
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
-
-  // Banner Dialog
   const [isBannerDialogOpen, setIsBannerDialogOpen] = useState(false);
   const [editingBanner, setEditingBanner] = useState<any>(null);
-
-  // Voucher Dialog
   const [isVoucherDialogOpen, setIsVoucherDialogOpen] = useState(false);
   const [editingVoucher, setEditingVoucher] = useState<any>(null);
-
-  // Flash Sale Dialog
   const [isFlashSaleDialogOpen, setIsFlashSaleDialogOpen] = useState(false);
   const [selectedFlashSaleProduct, setSelectedFlashSaleProduct] = useState<any>(null);
 
@@ -154,6 +149,19 @@ export default function AdminPage() {
     if (!db || !window.confirm(`Hapus item ini dari ${collectionName}?`)) return;
     const docRef = doc(db, collectionName, id);
     deleteDoc(docRef).catch(err => errorEmitter.emit('permission-error', new FirestorePermissionError({ path: docRef.path, operation: 'delete' })));
+  };
+
+  const getOrderStatusBadge = (status: string) => {
+    switch (status) {
+      case 'completed':
+        return <Badge className="bg-green-500 text-white gap-1"><CheckCircle2 size={10} /> BERHASIL</Badge>;
+      case 'pending':
+        return <Badge className="bg-orange-500 text-white gap-1"><Clock size={10} /> PENDING</Badge>;
+      case 'failed':
+        return <Badge variant="destructive" className="gap-1"><AlertTriangle size={10} /> GAGAL</Badge>;
+      default:
+        return <Badge variant="secondary">{status}</Badge>;
+    }
   };
 
   return (
@@ -376,7 +384,7 @@ export default function AdminPage() {
                         <TableCell className="font-bold text-primary">{formatRupiah(o.totalAmount)}</TableCell>
                         <TableCell>{o.voucherCode ? <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">{o.voucherCode}</Badge> : '-'}</TableCell>
                         <TableCell className="text-xs text-muted-foreground">{o.createdAt?.toDate ? o.createdAt.toDate().toLocaleString('id-ID') : '...'}</TableCell>
-                        <TableCell className="pr-8"><Badge className="bg-green-500 text-white">BERHASIL</Badge></TableCell>
+                        <TableCell className="pr-8">{getOrderStatusBadge(o.status)}</TableCell>
                       </TableRow>
                     ))
                   }

@@ -3,14 +3,12 @@
 import React, { useState, useEffect } from 'react';
 import { useApp } from '@/context/app-context';
 import { useFirestore } from '@/firebase';
-import { collection, addDoc, serverTimestamp, doc, updateDoc, increment, getDoc } from 'firebase/firestore';
+import { doc, updateDoc, increment, getDoc, serverTimestamp } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Loader2, RefreshCw, Smartphone, CheckCircle2, AlertTriangle, ArrowLeft, Lock } from 'lucide-react';
 import { formatRupiah } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
 import { checkPakasirStatus } from '@/lib/pakasir-actions';
 import { sendOrderConfirmationEmail } from '@/lib/email-actions';
 
@@ -25,6 +23,7 @@ export default function PaymentPendingView() {
   const orderId = paymentData?.order_id;
   const amount = paymentData?.amount;
   const qrData = paymentData?.payment_number;
+  const firestoreId = paymentData?.firestoreId;
 
   useEffect(() => {
     if (timeLeft <= 0 || status === 'success') return;
@@ -43,7 +42,7 @@ export default function PaymentPendingView() {
   };
 
   const handleCheckStatus = async (auto = false) => {
-    if (!orderId || !db || !amount) return;
+    if (!orderId || !db || !amount || !firestoreId) return;
     
     if (!auto) setIsChecking(true);
     
@@ -63,31 +62,20 @@ export default function PaymentPendingView() {
   };
 
   const handlePaymentSuccess = async () => {
-    if (status === 'success') return;
+    if (status === 'success' || !firestoreId || !db) return;
     
     setStatus('success');
     
-    const orderRecord = {
-      customerName: paymentData.customerName,
-      customerEmail: paymentData.customerEmail,
-      whatsapp: paymentData.whatsapp,
-      items: paymentData.items.map((item: any) => ({
-        productId: item.id,
-        name: item.name,
-        price: item.price,
-        deliveryContent: item.deliveryContent || ''
-      })),
-      totalAmount: amount,
-      status: 'completed',
-      order_id: orderId,
-      createdAt: serverTimestamp()
-    };
-
-    const ordersRef = collection(db, 'orders');
-    
     try {
-      const docRef = await addDoc(ordersRef, orderRecord);
+      const orderRef = doc(db, 'orders', firestoreId);
+
+      // 1. Update Status Pesanan di Firestore
+      await updateDoc(orderRef, {
+        status: 'completed',
+        paidAt: serverTimestamp()
+      });
       
+      // 2. Update Stok dan Sold Produk
       for (const item of paymentData.items) {
         const productRef = doc(db, 'products', item.id);
         const productSnap = await getDoc(productRef);
@@ -101,7 +89,6 @@ export default function PaymentPendingView() {
             stock: increment(-qty)
           };
 
-          // Batasi stok Flash Sale dan kembalikan ke harga normal jika habis
           if (productData.flashSaleEnd && productData.flashSaleStock !== undefined) {
             const currentFSStock = productData.flashSaleStock || 0;
             const newFSStock = currentFSStock - qty;
@@ -116,29 +103,30 @@ export default function PaymentPendingView() {
             }
           }
 
-          updateDoc(productRef, updateData).catch(err => console.error(err));
+          await updateDoc(productRef, updateData);
         }
       }
       
+      // 3. Kirim Email Konfirmasi
       await sendOrderConfirmationEmail({
-        customerName: orderRecord.customerName,
-        customerEmail: orderRecord.customerEmail,
-        orderId: orderRecord.order_id,
-        totalAmount: orderRecord.totalAmount,
-        items: orderRecord.items.map(i => ({ name: i.name, deliveryContent: i.deliveryContent }))
+        customerName: paymentData.customerName,
+        customerEmail: paymentData.customerEmail,
+        orderId: paymentData.order_id,
+        totalAmount: paymentData.amount,
+        items: paymentData.items.map((i: any) => ({ name: i.name, deliveryContent: i.deliveryContent || '' }))
       });
 
-      setLastOrder({ ...orderRecord, id: docRef.id });
+      // 4. Set Last Order untuk Success View
+      const updatedSnap = await getDoc(orderRef);
+      setLastOrder({ ...updatedSnap.data(), id: firestoreId });
+      
       resetCart();
       toast({ title: "Pembayaran Berhasil!", description: "Template website Anda siap diunduh dan telah dikirim ke email." });
       
       setTimeout(() => setView('success'), 1500);
     } catch (error) {
-        errorEmitter.emit('permission-error', new FirestorePermissionError({
-          path: ordersRef.path,
-          operation: 'create',
-          requestResourceData: orderRecord
-        }));
+        console.error("Payment Success Handler Error:", error);
+        toast({ variant: "destructive", title: "Error", description: "Terjadi kesalahan saat memproses sukses pembayaran." });
     }
   };
 
