@@ -18,7 +18,9 @@ import { Switch } from '@/components/ui/switch';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Package } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 interface BundleDialogProps {
   isOpen: boolean;
@@ -67,34 +69,55 @@ export function BundleDialog({ isOpen, onClose, bundle, products }: BundleDialog
     });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!db || formData.productIds.length < 2) {
+    if (!db) return;
+    
+    if (formData.productIds.length < 2) {
       toast({ variant: 'destructive', title: 'Error', description: 'Pilih minimal 2 produk untuk bundling' });
       return;
     }
-    setLoading(true);
-    try {
-      const payload = {
-        name: formData.name,
-        discountPercentage: parseFloat(formData.discountPercentage),
-        productIds: formData.productIds,
-        isActive: formData.isActive,
-        updatedAt: serverTimestamp(),
-      };
 
-      if (bundle) {
-        await updateDoc(doc(db, 'bundles', bundle.id), payload);
-        toast({ title: 'Berhasil', description: 'Bundle diperbarui' });
-      } else {
-        await addDoc(collection(db, 'bundles'), { ...payload, createdAt: serverTimestamp() });
-        toast({ title: 'Berhasil', description: 'Bundle baru ditambahkan' });
-      }
-      onClose();
-    } catch (error: any) {
-      toast({ variant: 'destructive', title: 'Error', description: error.message });
-    } finally {
-      setLoading(false);
+    setLoading(true);
+    const payload = {
+      name: formData.name,
+      discountPercentage: parseFloat(formData.discountPercentage),
+      productIds: formData.productIds,
+      isActive: formData.isActive,
+      updatedAt: serverTimestamp(),
+    };
+
+    if (bundle) {
+      const docRef = doc(db, 'bundles', bundle.id);
+      updateDoc(docRef, payload)
+        .then(() => {
+          toast({ title: 'Berhasil', description: 'Bundle diperbarui' });
+          onClose();
+        })
+        .catch(async (err) => {
+          errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: docRef.path,
+            operation: 'update',
+            requestResourceData: payload
+          }));
+        })
+        .finally(() => setLoading(false));
+    } else {
+      const collectionRef = collection(db, 'bundles');
+      const finalPayload = { ...payload, createdAt: serverTimestamp() };
+      addDoc(collectionRef, finalPayload)
+        .then(() => {
+          toast({ title: 'Berhasil', description: 'Bundle baru ditambahkan' });
+          onClose();
+        })
+        .catch(async (err) => {
+          errorEmitter.emit('permission-error', new FirestorePermissionError({
+            path: collectionRef.path,
+            operation: 'create',
+            requestResourceData: finalPayload
+          }));
+        })
+        .finally(() => setLoading(false));
     }
   };
 
