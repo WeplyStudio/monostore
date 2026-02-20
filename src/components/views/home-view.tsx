@@ -9,8 +9,8 @@ import ProductCard from '@/components/product-card';
 import BannerCarousel from '@/components/banner-carousel';
 import { CATEGORIES } from '@/lib/data';
 import { useApp } from '@/context/app-context';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy } from 'firebase/firestore';
+import { useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
+import { collection, query, orderBy, doc } from 'firebase/firestore';
 import type { Product } from '@/lib/types';
 import { getPersonalizedRecommendations } from '@/ai/flows/personalized-recommendations-flow';
 import { formatRupiah, getPlaceholderImageDetails, parseDescriptionToHtml, stripDescriptionFormatting } from '@/lib/utils';
@@ -33,6 +33,14 @@ export default function HomeView() {
 
   const { addToCart, viewedProducts } = useApp();
   const db = useFirestore();
+
+  const settingsRef = useMemoFirebase(() => {
+    if (!db) return null;
+    return doc(db, 'settings', 'shop');
+  }, [db]);
+
+  const { data: settings } = useDoc<any>(settingsRef);
+  const shopName = settings?.shopName || 'MonoStore';
 
   const productsQuery = useMemoFirebase(() => {
     if (!db) return null;
@@ -124,8 +132,8 @@ export default function HomeView() {
 
   const faqs = [
     {
-      q: "Apa itu MonoStore?",
-      a: "MonoStore adalah platform penyedia template website premium (React, Next.js, Tailwind) berkualitas tinggi untuk membantu developer dan pebisnis membangun web lebih cepat."
+      q: `Apa itu ${shopName}?`,
+      a: `${shopName} adalah platform penyedia template website premium (React, Next.js, Tailwind) berkualitas tinggi untuk membantu developer dan pebisnis membangun web lebih cepat.`
     },
     {
       q: "Bagaimana cara mendapatkan source code setelah membeli?",
@@ -271,7 +279,7 @@ export default function HomeView() {
                 <span className="text-primary">Tanpa Keraguan.</span>
               </h2>
               <p className="text-lg text-muted-foreground leading-relaxed max-w-lg">
-                Kami memahami pentingnya source code yang bersih untuk proyek Anda. Itulah mengapa kami memberikan jaminan penuh untuk setiap template yang Anda beli di MonoStore.
+                Kami memahami pentingnya source code yang bersih untuk proyek Anda. Itulah mengapa kami memberikan jaminan penuh untuk setiap template yang Anda beli di {shopName}.
               </p>
               <div className="flex flex-col sm:flex-row gap-4 pt-4">
                 <Button className="h-14 px-10 rounded-2xl font-bold text-lg shadow-2xl shadow-primary/20 hover:-translate-y-1 transition-transform">
@@ -314,7 +322,7 @@ export default function HomeView() {
       )}
 
       {!searchTerm && (
-        <div className="max-w-3xl auto mb-20">
+        <div className="max-w-3xl mx-auto mb-20">
           <div className="flex items-center justify-center gap-3 mb-10">
             <HelpCircle size={32} className="text-primary" />
             <h2 className="text-3xl font-bold font-headline">Tanya Jawab</h2>
