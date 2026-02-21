@@ -6,7 +6,7 @@ import { useApp } from '@/context/app-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
-import { ArrowLeft, Lock, ShieldCheck, Loader2, QrCode, Wallet, Mail, CheckCircle2, Star, Info, Send, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Lock, ShieldCheck, Loader2, QrCode, Wallet, Mail, CheckCircle2, Star, Info, Send, RefreshCw, User } from 'lucide-react';
 import { formatRupiah, getPlaceholderImageDetails } from '@/lib/utils';
 import Image from 'next/image';
 import { useToast } from '@/hooks/use-toast';
@@ -56,7 +56,7 @@ export default function CheckoutView() {
         setActivePaymentKey(keyData);
         if (keyData.is2SVEnabled) {
           setRequires2SV(true);
-          setIsOtpSent(false); // Reset OTP state when linking a new key
+          setIsOtpSent(false);
           toast({ title: "2-Step Verification Aktif", description: "Klik tombol 'Kirim Kode' untuk mendapatkan OTP." });
         } else {
           setRequires2SV(false);
@@ -92,9 +92,18 @@ export default function CheckoutView() {
 
   const handleCheckoutSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.email || !formData.name || !formData.whatsapp) {
-        toast({ variant: "destructive", title: "Data tidak lengkap", description: "Harap isi Nama, Email, dan WhatsApp." });
+    
+    // Validasi kondisional berdasarkan metode
+    if (paymentMethod === 'qris') {
+      if (!formData.email || !formData.name || !formData.whatsapp) {
+          toast({ variant: "destructive", title: "Data tidak lengkap", description: "Harap isi Nama, Email, dan WhatsApp." });
+          return;
+      }
+    } else {
+      if (!activePaymentKey) {
+        toast({ variant: "destructive", title: "Wallet Belum Terhubung", description: "Gunakan Payment Key Anda." });
         return;
+      }
     }
     
     if (!db) return;
@@ -130,10 +139,7 @@ export default function CheckoutView() {
       }
 
       try {
-        // 1. Update Balance & Create Order
         const keyRef = doc(db, 'payment_keys', activePaymentKey.id);
-        
-        // Final points update: deduct redeemed, add earned
         const pointsUpdate = pointsToRedeem > 0 ? -pointsToRedeem : pointsEarned;
         
         await updateDoc(keyRef, { 
@@ -149,10 +155,15 @@ export default function CheckoutView() {
           createdAt: serverTimestamp()
         });
 
+        // Gunakan email dari Payment Key, dan fallback nama/wa jika kosong
+        const finalEmail = activePaymentKey.email;
+        const finalName = formData.name || `User (${activePaymentKey.key})`;
+        const finalWhatsapp = formData.whatsapp || '-';
+
         const orderRecord = {
-          customerName: formData.name,
-          customerEmail: formData.email,
-          whatsapp: formData.whatsapp,
+          customerName: finalName,
+          customerEmail: finalEmail,
+          whatsapp: finalWhatsapp,
           paymentKey: activePaymentKey.key,
           items: cart.map(item => ({
             productId: item.id,
@@ -186,7 +197,6 @@ export default function CheckoutView() {
           items: orderRecord.items.map(i => ({ name: i.name, deliveryContent: i.deliveryContent }))
         });
 
-        // Update local active key state
         setActivePaymentKey({
           ...activePaymentKey,
           balance: activePaymentKey.balance - cartTotal,
@@ -303,15 +313,13 @@ export default function CheckoutView() {
                     <div className="p-6 bg-blue-50 rounded-2xl border border-blue-100 space-y-4 mt-4 animate-fadeIn">
                       <div className="flex items-center gap-2">
                         <Lock size={16} className="text-blue-600" />
-                        <span className="text-xs font-bold text-blue-600 uppercase tracking-widest">2-Step Verification</span>
+                        <span className="text-xs font-bold uppercase tracking-widest">2-Step Verification</span>
                       </div>
                       
                       {!isOtpSent ? (
-                        <div className="space-y-3">
-                          <p className="text-[10px] text-blue-500 font-medium leading-relaxed">
-                            Keamanan akun aktif. Klik tombol di bawah untuk mengirimkan kode OTP ke email <strong>{activePaymentKey.email}</strong>.
-                          </p>
-                        </div>
+                        <p className="text-[10px] text-blue-500 font-medium leading-relaxed">
+                          Klik tombol di bawah untuk mendapatkan kode OTP ke email <strong>{activePaymentKey.email}</strong>.
+                        </p>
                       ) : (
                         <div className="space-y-4 animate-fadeIn">
                           <div className="flex justify-between items-center">
@@ -341,7 +349,7 @@ export default function CheckoutView() {
                   {activePaymentKey && (
                     <div className="mt-6 space-y-4">
                       <div className="flex items-center justify-between p-6 bg-gradient-to-r from-yellow-50 to-amber-50 border border-yellow-100 rounded-[2rem] shadow-sm relative overflow-hidden group">
-                        <div className="absolute -right-4 -bottom-4 opacity-5 group-hover:scale-110 transition-transform duration-500 pointer-events-none">
+                        <div className="absolute -right-4 -bottom-4 opacity-5 pointer-events-none">
                           <Star size={80} className="fill-yellow-600 text-yellow-600" />
                         </div>
                         <div className="flex items-center gap-4 relative z-10">
@@ -349,13 +357,12 @@ export default function CheckoutView() {
                             <Star size={24} className="fill-white" />
                           </div>
                           <div>
-                            <div className="text-[10px] font-black text-yellow-600 uppercase tracking-widest mb-0.5">Loyalty MonoPoints</div>
+                            <div className="text-[10px] font-black text-yellow-600 uppercase tracking-widest mb-0.5">MonoPoints</div>
                             <div className="text-xl font-black text-yellow-700">{activePaymentKey.points || 0} Poin</div>
                           </div>
                         </div>
-                        {activePaymentKey.points && activePaymentKey.points > 0 ? (
+                        {activePaymentKey.points && activePaymentKey.points > 0 && (
                           <div className="flex flex-col items-end gap-2 relative z-10">
-                            <span className="text-[9px] font-bold text-yellow-600 uppercase tracking-wider">Tukarkan Poin</span>
                             <Slider 
                               className="w-32" 
                               max={Math.min(activePaymentKey.points, cartSubtotal)} 
@@ -367,45 +374,49 @@ export default function CheckoutView() {
                               -{formatRupiah(pointsToRedeem)}
                             </div>
                           </div>
-                        ) : (
-                          <div className="text-[9px] font-bold text-yellow-600 uppercase italic bg-white/50 px-3 py-1 rounded-full border border-yellow-100">Kumpulkan poin tiap belanja</div>
                         )}
                       </div>
-                      
-                      {pointsToRedeem > 0 ? (
-                        <div className="flex items-center gap-2 p-3 bg-red-50 text-red-600 rounded-xl text-[9px] font-bold uppercase tracking-widest border border-red-100">
-                          <Info size={14} /> Poin digunakan: Kamu tidak akan mendapatkan poin baru untuk transaksi ini.
-                        </div>
-                      ) : pointsEarned > 0 && (
-                        <div className="flex items-center gap-2 p-3 bg-green-50 text-green-600 rounded-xl text-[9px] font-bold uppercase tracking-widest border border-green-100">
-                          <CheckCircle2 size={14} /> Kamu akan mendapatkan +{pointsEarned} MonoPoints!
-                        </div>
-                      )}
                     </div>
                   )}
                 </div>
               </div>
             </Card>
 
-            <Card className="rounded-[2rem] border-none shadow-sm bg-white p-8 space-y-6">
-              <h3 className="text-xl font-black">Informasi Pengiriman</h3>
-              <form id="checkoutForm" onSubmit={handleCheckoutSubmit} className="space-y-6">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-1.5">
-                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">WhatsApp</label>
-                    <Input name="whatsapp" placeholder="08..." value={formData.whatsapp} onChange={handleInputChange} required className="h-12 rounded-xl bg-slate-50 border-none" />
+            {/* Sembunyikan form pengiriman jika menggunakan wallet */}
+            {paymentMethod === 'qris' ? (
+              <Card className="rounded-[2rem] border-none shadow-sm bg-white p-8 space-y-6">
+                <h3 className="text-xl font-black">Informasi Pengiriman</h3>
+                <form id="checkoutForm" onSubmit={handleCheckoutSubmit} className="space-y-6">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">WhatsApp</label>
+                      <Input name="whatsapp" placeholder="08..." value={formData.whatsapp} onChange={handleInputChange} required className="h-12 rounded-xl bg-slate-50 border-none" />
+                    </div>
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Email</label>
+                      <Input name="email" type="email" placeholder="email@anda.com" value={formData.email} onChange={handleInputChange} required className="h-12 rounded-xl bg-slate-50 border-none" />
+                    </div>
                   </div>
                   <div className="space-y-1.5">
-                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Email</label>
-                    <Input name="email" type="email" placeholder="email@anda.com" value={formData.email} onChange={handleInputChange} required className="h-12 rounded-xl bg-slate-50 border-none" />
+                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Nama Lengkap</label>
+                    <Input name="name" placeholder="Nama Anda" value={formData.name} onChange={handleInputChange} required className="h-12 rounded-xl bg-slate-50 border-none" />
+                  </div>
+                </form>
+              </Card>
+            ) : activePaymentKey && (
+              <Card className="rounded-[2rem] border-none shadow-sm bg-blue-600 text-white p-8 animate-fadeIn">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center">
+                    <User size={24} />
+                  </div>
+                  <div>
+                    <h3 className="font-black text-lg">Informasi Akun</h3>
+                    <p className="text-blue-100 text-xs">Email otomatis digunakan dari Wallet Anda:</p>
+                    <p className="font-bold text-sm mt-1">{activePaymentKey.email}</p>
                   </div>
                 </div>
-                <div className="space-y-1.5">
-                  <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Nama Lengkap</label>
-                  <Input name="name" placeholder="Nama Anda" value={formData.name} onChange={handleInputChange} required className="h-12 rounded-xl bg-slate-50 border-none" />
-                </div>
-              </form>
-            </Card>
+              </Card>
+            )}
           </div>
 
           <div className="lg:col-span-5">
@@ -451,8 +462,7 @@ export default function CheckoutView() {
                 </Button>
               ) : (
                 <Button 
-                  type="submit" 
-                  form="checkoutForm" 
+                  onClick={handleCheckoutSubmit}
                   className="w-full h-14 rounded-2xl font-black text-lg shadow-xl shadow-primary/20" 
                   disabled={loading}
                 >
