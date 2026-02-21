@@ -18,12 +18,13 @@ service cloud.firestore {
     }
 
     match /payment_keys/{keyId} {
-      // Allow searching by the key itself (security via obscurity/secret key)
-      allow read, create: if true;
-      allow update: if true; // Needs careful update logic in code
+      // Allow searching by the key itself and listing for verification
+      allow get, list, create: if true;
+      allow update: if true;
     }
 
     match /wallet_transactions/{txId} {
+      // Allow user to see their own transactions by paymentKeyId filtering
       allow read, create: if true; 
     }
 

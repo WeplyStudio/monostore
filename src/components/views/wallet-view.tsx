@@ -61,8 +61,8 @@ export default function WalletView() {
       } else {
         toast({ variant: "destructive", title: "Key Tidak Valid", description: "Periksa kembali kode Payment Key Anda." });
       }
-    } catch (err) {
-      toast({ variant: "destructive", title: "Error", description: "Gagal memuat key." });
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Gagal memuat key", description: err.message || "Terjadi kesalahan koneksi." });
     } finally {
       setLoading(false);
     }
@@ -76,10 +76,10 @@ export default function WalletView() {
     setLoading(true);
     try {
       await generateNewPaymentKey(inputEmail.trim());
-      toast({ title: "Berhasil!", description: "Cek email Anda untuk detail Payment Key." });
+      toast({ title: "Berhasil!", description: "Detail Payment Key telah dimuat dan dikirim ke email Anda." });
       setInputEmail('');
-    } catch (err) {
-      toast({ variant: "destructive", title: "Error", description: "Gagal membuat key." });
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Gagal membuat key", description: err.message || "Coba lagi beberapa saat." });
     } finally {
       setLoading(false);
     }

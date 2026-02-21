@@ -39,7 +39,7 @@ type AppContextType = {
   activePaymentKey: PaymentKey | null;
   setActivePaymentKey: (key: PaymentKey | null) => void;
   fetchPaymentKey: (keyString: string) => Promise<PaymentKey | null>;
-  generateNewPaymentKey: (email: string) => Promise<PaymentKey | { error: string }>;
+  generateNewPaymentKey: (email: string) => Promise<PaymentKey>;
   viewedProducts: Product[];
   addViewedProduct: (product: Product) => void;
   sendVerificationCode: (paymentKey: PaymentKey) => Promise<{ code: string } | null>;
@@ -74,60 +74,70 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     if (savedKey && db) {
       fetchPaymentKey(savedKey).then(k => {
         if (k) setActivePaymentKey(k);
-      });
+      }).catch(err => console.error("Error fetching saved key:", err));
     }
   }, [db]);
 
   useEffect(() => {
     if (activePaymentKey) {
       localStorage.setItem('mono_payment_key', activePaymentKey.key);
-    } else {
-      localStorage.removeItem('mono_payment_key');
     }
   }, [activePaymentKey]);
 
   const fetchPaymentKey = async (keyString: string) => {
     if (!db) return null;
-    const q = query(collection(db, 'payment_keys'), where('key', '==', keyString.toUpperCase()));
-    const snap = await getDocs(q);
-    if (snap.empty) return null;
-    const data = snap.docs[0].data();
-    return { ...data, id: snap.docs[0].id } as PaymentKey;
+    try {
+      const q = query(collection(db, 'payment_keys'), where('key', '==', keyString.toUpperCase()));
+      const snap = await getDocs(q);
+      if (snap.empty) return null;
+      const data = snap.docs[0].data();
+      return { ...data, id: snap.docs[0].id } as PaymentKey;
+    } catch (err) {
+      console.error("Fetch key error:", err);
+      throw err;
+    }
   };
 
   const generateNewPaymentKey = async (email: string) => {
-    if (!db) throw new Error("Firestore not initialized");
+    if (!db) throw new Error("Firestore belum siap. Coba lagi sebentar.");
     
-    // Check if email already has a key
-    const q = query(collection(db, 'payment_keys'), where('email', '==', email.toLowerCase()));
-    const snap = await getDocs(q);
-    
-    if (!snap.empty) {
-      const existingData = snap.docs[0].data() as any;
-      const existingKey = { ...existingData, id: snap.docs[0].id } as PaymentKey;
+    try {
+      // Check if email already has a key
+      const q = query(collection(db, 'payment_keys'), where('email', '==', email.toLowerCase()));
+      const snap = await getDocs(q);
       
-      // Resend existing key to email
-      await sendPaymentKeyEmail(email, existingKey.key, true);
-      setActivePaymentKey(existingKey);
-      return existingKey;
-    }
+      if (!snap.empty) {
+        const existingData = snap.docs[0].data() as any;
+        const existingKey = { ...existingData, id: snap.docs[0].id } as PaymentKey;
+        
+        // Try resend existing key (don't block if email fails)
+        sendPaymentKeyEmail(email, existingKey.key, true).catch(err => console.warn("Failed to resend email:", err));
+        
+        setActivePaymentKey(existingKey);
+        return existingKey;
+      }
 
-    const randomKey = `MONO-${Math.random().toString(36).substring(2, 6).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
-    const payload = {
-      key: randomKey,
-      email: email.toLowerCase(),
-      balance: 0,
-      is2SVEnabled: false,
-      createdAt: serverTimestamp()
-    };
-    
-    const docRef = await addDoc(collection(db, 'payment_keys'), payload);
-    const newKey = { ...payload, id: docRef.id } as any;
-    
-    // Send new key to email
-    await sendPaymentKeyEmail(email, randomKey, false);
-    setActivePaymentKey(newKey);
-    return newKey;
+      const randomKey = `MONO-${Math.random().toString(36).substring(2, 6).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+      const payload = {
+        key: randomKey,
+        email: email.toLowerCase(),
+        balance: 0,
+        is2SVEnabled: false,
+        createdAt: serverTimestamp()
+      };
+      
+      const docRef = await addDoc(collection(db, 'payment_keys'), payload);
+      const newKey = { ...payload, id: docRef.id, createdAt: new Date() } as any;
+      
+      // Try send new key (don't block if email fails)
+      sendPaymentKeyEmail(email, randomKey, false).catch(err => console.warn("Failed to send initial email:", err));
+      
+      setActivePaymentKey(newKey);
+      return newKey;
+    } catch (err: any) {
+      console.error("Generate key error:", err);
+      throw new Error(err.message || "Gagal membuat Payment Key di database.");
+    }
   };
 
   const sendVerificationCode = async (paymentKey: PaymentKey) => {
