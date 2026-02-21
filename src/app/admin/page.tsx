@@ -90,7 +90,7 @@ export default function AdminPage() {
   const { toast } = useToast();
   
   const [activeSection, setActiveSection] = useState<AdminSection>('analytics');
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
@@ -260,56 +260,115 @@ export default function AdminPage() {
   ];
 
   return (
-    <div className="flex flex-col md:flex-row min-h-screen bg-[#F8F9FA]">
+    <div className="relative min-h-screen bg-[#F8F9FA] flex flex-col">
       <audio ref={audioRef} src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto" />
       
-      <aside className={cn("bg-white border-r border-slate-200 w-72 flex flex-col transition-all", !isSidebarOpen && "w-0 overflow-hidden border-none")}>
-        <div className="p-8 border-b flex items-center gap-3">
-          <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white"><LayoutDashboard size={20} /></div>
-          <h1 className="text-lg font-bold">Mono Admin</h1>
+      {/* Overlay Backdrop */}
+      {isSidebarOpen && (
+        <div 
+          className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-[60] transition-opacity duration-300"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
+
+      {/* Side Menu (Above Layer) */}
+      <aside className={cn(
+        "fixed inset-y-0 left-0 bg-white border-r border-slate-200 w-72 flex flex-col z-[70] transition-transform duration-300 ease-in-out shadow-2xl",
+        isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+      )}>
+        <div className="p-8 border-b flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center text-white"><LayoutDashboard size={20} /></div>
+            <h1 className="text-lg font-bold">Mono Admin</h1>
+          </div>
+          <Button variant="ghost" size="icon" onClick={() => setIsSidebarOpen(false)} className="lg:hidden">
+            <X size={20} />
+          </Button>
         </div>
         <nav className="flex-1 p-4 space-y-1">
           {navItems.map(item => (
-            <button key={item.id} onClick={() => setActiveSection(item.id as AdminSection)} className={cn("w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all", activeSection === item.id ? "bg-primary text-white" : "text-slate-500 hover:bg-slate-50")}>
+            <button 
+              key={item.id} 
+              onClick={() => {
+                setActiveSection(item.id as AdminSection);
+                setIsSidebarOpen(false);
+              }} 
+              className={cn(
+                "w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all", 
+                activeSection === item.id ? "bg-primary text-white" : "text-slate-500 hover:bg-slate-50"
+              )}
+            >
               <item.icon size={18} />
               <span className="text-sm font-bold">{item.label}</span>
             </button>
           ))}
         </nav>
-        <div className="p-4 border-t"><Button variant="ghost" onClick={handleLogout} className="w-full text-destructive font-bold gap-3"><LogOut size={18} /> Logout</Button></div>
+        <div className="p-4 border-t">
+          <Button variant="ghost" onClick={handleLogout} className="w-full text-destructive font-bold gap-3">
+            <LogOut size={18} /> Logout
+          </Button>
+        </div>
       </aside>
 
-      <main className="flex-1 overflow-y-auto">
-        <header className="h-16 border-b bg-white px-6 flex items-center justify-between sticky top-0 z-30">
-          <Button variant="ghost" size="icon" onClick={() => setIsSidebarOpen(!isSidebarOpen)}><Menu size={20} /></Button>
-          <div className="text-xs font-black uppercase tracking-widest text-primary">{activeSection.replace('-', ' ')}</div>
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col min-w-0">
+        <header className="h-16 border-b bg-white px-6 flex items-center justify-between sticky top-0 z-30 shadow-sm">
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => setIsSidebarOpen(true)} className="rounded-xl hover:bg-slate-100">
+              <Menu size={20} />
+            </Button>
+            <div className="text-xs font-black uppercase tracking-widest text-primary hidden sm:block">
+              {activeSection.replace('-', ' ')}
+            </div>
+          </div>
+          <div className="flex items-center gap-4">
+             <div className="hidden md:flex flex-col items-end">
+                <span className="text-[10px] font-bold text-slate-400 uppercase">Administrator</span>
+                <span className="text-xs font-bold text-slate-900">{ADMIN_EMAIL}</span>
+             </div>
+             <div className="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-primary font-bold">
+                M
+             </div>
+          </div>
         </header>
 
-        <div className="p-6 md:p-10">
+        <main className="flex-1 p-6 md:p-10 overflow-y-auto">
           <div className="max-w-6xl mx-auto space-y-8">
             {activeSection === 'analytics' && (
               <div className="space-y-8 animate-fadeIn">
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                  <Card className="p-6 space-y-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
+                  <Card className="p-6 space-y-4 border-none shadow-sm rounded-2xl">
                     <div className="w-12 h-12 bg-green-50 text-green-600 rounded-2xl flex items-center justify-center"><TrendingUp size={24} /></div>
                     <div><p className="text-[10px] font-bold text-muted-foreground uppercase">Revenue</p><h3 className="text-2xl font-black">{formatRupiah(stats.revenue)}</h3></div>
                   </Card>
-                  <Card className="p-6 space-y-4">
+                  <Card className="p-6 space-y-4 border-none shadow-sm rounded-2xl">
                     <div className="w-12 h-12 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center"><ShoppingCart size={24} /></div>
                     <div><p className="text-[10px] font-bold text-muted-foreground uppercase">Orders</p><h3 className="text-2xl font-black">{stats.count}</h3></div>
                   </Card>
+                  <Card className="p-6 space-y-4 border-none shadow-sm rounded-2xl">
+                    <div className="w-12 h-12 bg-orange-50 text-orange-600 rounded-2xl flex items-center justify-center"><Wallet size={24} /></div>
+                    <div><p className="text-[10px] font-bold text-muted-foreground uppercase">Payment Keys</p><h3 className="text-2xl font-black">{paymentKeys?.length || 0}</h3></div>
+                  </Card>
+                  <Card className="p-6 space-y-4 border-none shadow-sm rounded-2xl">
+                    <div className="w-12 h-12 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center"><Package size={24} /></div>
+                    <div><p className="text-[10px] font-bold text-muted-foreground uppercase">Active Products</p><h3 className="text-2xl font-black">{products?.length || 0}</h3></div>
+                  </Card>
                 </div>
-                <Card className="p-8">
-                  <CardTitle className="text-lg font-bold mb-6">Revenue 7 Days</CardTitle>
-                  <div className="h-[300px] w-full">
+
+                <Card className="p-8 border-none shadow-sm rounded-3xl">
+                  <div className="flex items-center justify-between mb-8">
+                    <CardTitle className="text-lg font-bold">Revenue 7 Days (IDR in K)</CardTitle>
+                    <Badge variant="secondary" className="bg-primary/5 text-primary">Live Data</Badge>
+                  </div>
+                  <div className="h-[350px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={revenueData}>
                         <defs><linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#2563eb" stopOpacity={0.1}/><stop offset="95%" stopColor="#2563eb" stopOpacity={0}/></linearGradient></defs>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                        <XAxis dataKey="name" axisLine={false} tickLine={false} />
-                        <YAxis axisLine={false} tickLine={false} />
-                        <RechartsTooltip />
-                        <Area type="monotone" dataKey="revenue" stroke="#2563eb" fill="url(#colorRev)" strokeWidth={3} />
+                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 12, fontWeight: 700, fill: '#64748b'}} />
+                        <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12, fontWeight: 700, fill: '#64748b'}} />
+                        <RechartsTooltip contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)'}} />
+                        <Area type="monotone" dataKey="revenue" stroke="#2563eb" fill="url(#colorRev)" strokeWidth={4} />
                       </AreaChart>
                     </ResponsiveContainer>
                   </div>
@@ -322,7 +381,7 @@ export default function AdminPage() {
                 <div className="flex justify-between items-center">
                   <h2 className="text-2xl font-bold">Payment Keys</h2>
                 </div>
-                <Card className="rounded-2xl overflow-hidden border-none shadow-sm">
+                <Card className="rounded-[2.5rem] overflow-hidden border-none shadow-sm bg-white">
                   <Table>
                     <TableHeader className="bg-slate-50"><TableRow><TableHead>KEY</TableHead><TableHead>SALDO</TableHead><TableHead>DIBUAT PADA</TableHead><TableHead className="text-right">AKSI</TableHead></TableRow></TableHeader>
                     <TableBody>
@@ -331,9 +390,9 @@ export default function AdminPage() {
                           <TableRow key={k.id}>
                             <TableCell className="font-black font-mono tracking-widest">{k.key}</TableCell>
                             <TableCell className="font-bold text-primary">{formatRupiah(k.balance)}</TableCell>
-                            <TableCell className="text-xs text-muted-foreground">{k.createdAt?.toDate().toLocaleDateString('id-ID')}</TableCell>
+                            <TableCell className="text-xs text-muted-foreground">{k.createdAt?.toDate ? k.createdAt.toDate().toLocaleDateString('id-ID') : 'Baru saja'}</TableCell>
                             <TableCell className="text-right">
-                              <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete(k.id, 'payment_keys')}><Trash2 size={16} /></Button>
+                              <Button variant="ghost" size="icon" className="text-destructive rounded-xl" onClick={() => handleDelete(k.id, 'payment_keys')}><Trash2 size={16} /></Button>
                             </TableCell>
                           </TableRow>
                         ))
@@ -344,14 +403,13 @@ export default function AdminPage() {
               </div>
             )}
 
-            {/* Other sections reuse from previous version... */}
             {activeSection === 'products' && (
               <div className="space-y-6 animate-fadeIn">
                 <div className="flex justify-between items-center">
                   <h2 className="text-2xl font-bold">Produk</h2>
-                  <Button onClick={() => setIsDialogOpen(true)}><Plus size={20} className="mr-2" /> Tambah Produk</Button>
+                  <Button onClick={() => setIsDialogOpen(true)} className="rounded-xl font-bold h-11 shadow-lg shadow-primary/20"><Plus size={20} className="mr-2" /> Tambah Produk</Button>
                 </div>
-                <Card className="rounded-2xl overflow-hidden border-none shadow-sm">
+                <Card className="rounded-[2.5rem] overflow-hidden border-none shadow-sm bg-white">
                   <Table>
                     <TableHeader className="bg-slate-50"><TableRow><TableHead>PRODUK</TableHead><TableHead>HARGA</TableHead><TableHead>STOK</TableHead><TableHead className="text-right">AKSI</TableHead></TableRow></TableHeader>
                     <TableBody>
@@ -359,10 +417,10 @@ export default function AdminPage() {
                         <TableRow key={p.id}>
                           <TableCell className="font-bold">{p.name}</TableCell>
                           <TableCell>{formatRupiah(p.price)}</TableCell>
-                          <TableCell><Badge variant="outline">{p.stock}</Badge></TableCell>
+                          <TableCell><Badge variant="outline" className="rounded-lg">{p.stock}</Badge></TableCell>
                           <TableCell className="text-right">
-                            <Button variant="ghost" size="icon" onClick={() => { setEditingProduct(p); setIsDialogOpen(true); }}><Pencil size={16} /></Button>
-                            <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete(p.id, 'products')}><Trash2 size={16} /></Button>
+                            <Button variant="ghost" size="icon" className="rounded-xl mr-1" onClick={() => { setEditingProduct(p); setIsDialogOpen(true); }}><Pencil size={16} /></Button>
+                            <Button variant="ghost" size="icon" className="text-destructive rounded-xl" onClick={() => handleDelete(p.id, 'products')}><Trash2 size={16} /></Button>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -375,7 +433,7 @@ export default function AdminPage() {
             {activeSection === 'orders' && (
               <div className="space-y-6 animate-fadeIn">
                 <h2 className="text-2xl font-bold">Pesanan</h2>
-                <Card className="rounded-2xl overflow-hidden border-none shadow-sm">
+                <Card className="rounded-[2.5rem] overflow-hidden border-none shadow-sm bg-white">
                   <Table>
                     <TableHeader className="bg-slate-50"><TableRow><TableHead>PELANGGAN</TableHead><TableHead>TOTAL</TableHead><TableHead>KEY</TableHead><TableHead>STATUS</TableHead></TableRow></TableHeader>
                     <TableBody>
@@ -383,8 +441,8 @@ export default function AdminPage() {
                         <TableRow key={o.id}>
                           <TableCell><div><div className="font-bold">{o.customerName}</div><div className="text-[10px] text-muted-foreground">{o.customerEmail}</div></div></TableCell>
                           <TableCell className="font-bold text-primary">{formatRupiah(o.totalAmount)}</TableCell>
-                          <TableCell className="font-mono text-[10px]">{o.paymentKey || '-'}</TableCell>
-                          <TableCell><Badge className={o.status === 'completed' ? 'bg-green-500' : 'bg-orange-500'}>{o.status.toUpperCase()}</Badge></TableCell>
+                          <TableCell className="font-mono text-[10px] tracking-widest">{o.paymentKey || '-'}</TableCell>
+                          <TableCell><Badge className={cn("rounded-lg", o.status === 'completed' ? 'bg-green-500 hover:bg-green-600' : 'bg-orange-500 hover:bg-orange-600')}>{o.status.toUpperCase()}</Badge></TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
@@ -392,10 +450,36 @@ export default function AdminPage() {
                 </Card>
               </div>
             )}
-          </div>
-        </div>
-      </main>
 
+            {activeSection === 'settings' && (
+              <div className="space-y-6 animate-fadeIn max-w-2xl">
+                <h2 className="text-2xl font-bold">Pengaturan Toko</h2>
+                <Card className="rounded-[2.5rem] border-none shadow-sm bg-white p-8">
+                  <form onSubmit={handleSaveSettings} className="space-y-6">
+                    <div className="space-y-2">
+                      <Label className="text-xs font-bold text-slate-400 uppercase">Nama Toko</Label>
+                      <Input value={shopName} onChange={e => setShopName(e.target.value)} required className="h-12 rounded-xl bg-slate-50 border-none" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-bold text-slate-400 uppercase">WhatsApp (Contoh: 62888...)</Label>
+                      <Input value={whatsapp} onChange={e => setWhatsapp(e.target.value)} required className="h-12 rounded-xl bg-slate-50 border-none" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-bold text-slate-400 uppercase">Email Dukungan</Label>
+                      <Input type="email" value={supportEmail} onChange={e => setSupportEmail(e.target.value)} required className="h-12 rounded-xl bg-slate-50 border-none" />
+                    </div>
+                    <Button type="submit" disabled={isSavingSettings} className="w-full h-12 rounded-xl font-bold">
+                      {isSavingSettings ? <Loader2 className="animate-spin mr-2" /> : 'Simpan Perubahan'}
+                    </Button>
+                  </form>
+                </Card>
+              </div>
+            )}
+          </div>
+        </main>
+      </div>
+
+      {/* Dialogs */}
       <ProductDialog isOpen={isDialogOpen} onClose={() => { setIsDialogOpen(false); setEditingProduct(null); }} product={editingProduct} />
       <BannerDialog isOpen={isBannerDialogOpen} onClose={() => { setIsBannerDialogOpen(false); setEditingBanner(null); }} banner={editingBanner} />
       <VoucherDialog isOpen={isVoucherDialogOpen} onClose={() => { setIsVoucherDialogOpen(false); setEditingVoucher(null); }} voucher={editingVoucher} />
