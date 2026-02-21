@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -7,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { ArrowLeft, Lock, ShieldCheck, Loader2, QrCode, Wallet, Mail, Star, Info, User, KeyRound } from 'lucide-react';
-import { formatRupiah, getPlaceholderImageDetails } from '@/lib/utils';
+import { formatRupiah, getPlaceholderImageDetails, cn } from '@/lib/utils';
 import Image from 'next/image';
 import { useToast } from '@/hooks/use-toast';
 import { createPakasirTransaction } from '@/lib/pakasir-actions';
