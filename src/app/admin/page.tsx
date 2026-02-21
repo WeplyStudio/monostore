@@ -2,11 +2,11 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useFirestore, useCollection, useUser, useAuth, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, deleteDoc, doc, query, orderBy, setDoc, serverTimestamp, onSnapshot, limit, addDoc, getDocs, updateDoc, increment, where } from 'firebase/firestore';
+import { collection, deleteDoc, doc, query, orderBy, setDoc, serverTimestamp, arrayUnion } from 'firebase/firestore';
 import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
   Table,
@@ -20,58 +20,35 @@ import {
   Plus, 
   Pencil, 
   Trash2, 
-  Search, 
   LayoutDashboard, 
   Loader2,
   Lock,
-  AlertCircle,
   Ticket,
-  Zap,
-  Tag,
-  Clock,
-  Timer,
-  CheckCircle2,
-  AlertTriangle,
   Package,
   Image as ImageIcon,
   ShoppingCart,
   LogOut,
-  ChevronRight,
-  Menu,
   X,
   Settings as SettingsIcon,
-  Store,
-  Phone,
-  Mail,
   BarChart3,
   TrendingUp,
   Layers,
   Bell,
-  BellRing,
   Volume2,
-  Link as LinkIcon,
-  ExternalLink,
   Wallet,
   Eye,
-  ShieldCheck,
-  Calendar
+  Menu
 } from 'lucide-react';
 import { ProductDialog } from '@/components/admin/product-dialog';
 import { BannerDialog } from '@/components/admin/banner-dialog';
 import { VoucherDialog } from '@/components/admin/voucher-dialog';
 import { BundleDialog } from '@/components/admin/bundle-dialog';
 import { PaymentKeyDetailsDialog } from '@/components/admin/payment-key-details-dialog';
-import { formatRupiah } from '@/lib/utils';
+import { formatRupiah, cn } from '@/lib/utils';
 import Image from 'next/image';
 import { useToast } from '@/hooks/use-toast';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
-import { cn } from '@/lib/utils';
 import { Label } from '@/components/ui/label';
 import { 
-  BarChart, 
-  Bar, 
   XAxis, 
   YAxis, 
   CartesianGrid, 
@@ -80,6 +57,7 @@ import {
   AreaChart, 
   Area 
 } from 'recharts';
+import { getVapidPublicKey } from '@/lib/push-notifications';
 
 const ADMIN_EMAIL = 'matchboxdevelopment@gmail.com';
 
@@ -98,8 +76,6 @@ export default function AdminPage() {
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
 
-  const [searchTerm, setSearchTerm] = useState('');
-  
   // Dialog States
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
@@ -127,27 +103,56 @@ export default function AdminPage() {
   const keysQuery = useMemoFirebase(() => db ? query(collection(db, 'payment_keys'), orderBy('createdAt', 'desc')) : null, [db]);
   const settingsRef = useMemoFirebase(() => db ? doc(db, 'settings', 'shop') : null, [db]);
 
-  const { data: products, loading: productsLoading } = useCollection(productsQuery);
-  const { data: orders, loading: ordersLoading } = useCollection(ordersQuery);
+  const { data: products } = useCollection(productsQuery);
+  const { data: orders } = useCollection(ordersQuery);
   const { data: banners, loading: bannersLoading } = useCollection(bannersQuery);
   const { data: vouchers, loading: vouchersLoading } = useCollection(vouchersQuery);
   const { data: bundles, loading: bundlesLoading } = useCollection(bundlesQuery);
   const { data: paymentKeys, loading: keysLoading } = useCollection(keysQuery);
-  const { data: settings, loading: settingsLoading } = useDoc<any>(settingsRef);
+  const { data: settings } = useDoc<any>(settingsRef);
 
-  // Notification Logic
   const prevOrdersCount = useRef<number>(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
+  // Register Push Subscription when admin logs in
   useEffect(() => {
-    if (user && user.email === ADMIN_EMAIL) {
+    if (user && user.email === ADMIN_EMAIL && db) {
+      const setupPush = async () => {
+        if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+        
+        try {
+          const registration = await navigator.serviceWorker.register('/sw.js');
+          let subscription = await registration.pushManager.getSubscription();
+          
+          if (!subscription) {
+            const key = await getVapidPublicKey();
+            subscription = await registration.pushManager.subscribe({
+              userVisibleOnly: true,
+              applicationServerKey: key
+            });
+          }
+
+          if (subscription) {
+            const pushConfigRef = doc(db, 'settings', 'push_config');
+            await setDoc(pushConfigRef, {
+              adminSubscriptions: arrayUnion(JSON.parse(JSON.stringify(subscription)))
+            }, { merge: true });
+          }
+        } catch (error) {
+          console.error("Gagal mendaftarkan push notification:", error);
+        }
+      };
+
+      setupPush();
+      
+      // Request standard permission
       if (typeof window !== 'undefined' && 'Notification' in window) {
-        if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
+        if (Notification.permission !== 'granted') {
           Notification.requestPermission();
         }
       }
     }
-  }, [user]);
+  }, [user, db]);
 
   useEffect(() => {
     if (orders && orders.length > prevOrdersCount.current) {
@@ -161,13 +166,6 @@ export default function AdminPage() {
           
           if (audioRef.current) {
             audioRef.current.play().catch(() => {});
-          }
-
-          if (typeof window !== 'undefined' && Notification.permission === 'granted') {
-            new Notification("MonoStore: Pesanan Baru!", {
-              body: `${newOrder.customerName} membeli template senilai ${formatRupiah(newOrder.totalAmount)}`,
-              icon: '/favicon.ico'
-            });
           }
         }
       }
@@ -289,7 +287,6 @@ export default function AdminPage() {
     <div className="relative min-h-screen bg-[#F8F9FA] flex flex-col">
       <audio ref={audioRef} src="https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3" preload="auto" />
       
-      {/* Overlay Backdrop */}
       {isSidebarOpen && (
         <div 
           className="fixed inset-0 bg-black/40 backdrop-blur-[2px] z-[60] transition-opacity duration-300"
@@ -297,7 +294,6 @@ export default function AdminPage() {
         />
       )}
 
-      {/* Side Menu */}
       <aside className={cn(
         "fixed inset-y-0 left-0 bg-white border-r border-slate-200 w-72 flex flex-col z-[70] transition-transform duration-300 ease-in-out shadow-2xl",
         isSidebarOpen ? "translate-x-0" : "-translate-x-full"
@@ -336,7 +332,6 @@ export default function AdminPage() {
         </div>
       </aside>
 
-      {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0">
         <header className="h-16 border-b bg-white px-6 flex items-center justify-between sticky top-0 z-30 shadow-sm">
           <div className="flex items-center gap-4">
@@ -597,7 +592,7 @@ export default function AdminPage() {
                         <Bell size={16} className="text-primary" /> Notifikasi Transaksi
                       </h4>
                       <p className="text-[10px] text-muted-foreground mb-4 uppercase tracking-widest leading-relaxed">
-                        Pastikan browser Anda mengizinkan notifikasi untuk menerima peringatan suara saat ada pesanan baru di HP atau Desktop.
+                        HP Admin Anda telah didaftarkan untuk menerima Push Notifications. Pastikan browser mengizinkan notifikasi untuk MonoStore.
                       </p>
                       <Button 
                         type="button" 
@@ -623,7 +618,6 @@ export default function AdminPage() {
         </main>
       </div>
 
-      {/* Dialogs */}
       <ProductDialog isOpen={isDialogOpen} onClose={() => { setIsDialogOpen(false); setEditingProduct(null); }} product={editingProduct} />
       <BannerDialog isOpen={isBannerDialogOpen} onClose={() => { setIsBannerDialogOpen(false); setEditingBanner(null); }} banner={editingBanner} />
       <VoucherDialog isOpen={isVoucherDialogOpen} onClose={() => { setIsVoucherDialogOpen(false); setEditingVoucher(null); }} voucher={editingVoucher} />

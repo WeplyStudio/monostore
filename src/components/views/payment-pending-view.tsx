@@ -1,18 +1,18 @@
-
 "use client";
 
 import React, { useState, useEffect } from 'react';
 import { useApp } from '@/context/app-context';
 import { useFirestore } from '@/firebase';
-import { doc, updateDoc, increment, getDoc, serverTimestamp, collection, getDocs } from 'firebase/firestore';
+import { doc, updateDoc, increment, getDoc, serverTimestamp } from 'firebase/firestore';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Loader2, RefreshCw, Smartphone, CheckCircle2, AlertTriangle, ArrowLeft, Lock } from 'lucide-react';
+import { Loader2, RefreshCw, Smartphone, CheckCircle2, ArrowLeft } from 'lucide-react';
 import { formatRupiah } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { checkPakasirStatus } from '@/lib/pakasir-actions';
 import { sendOrderConfirmationEmail } from '@/lib/email-actions';
 import { useRouter } from 'next/navigation';
+import { sendAdminNotification } from '@/lib/push-notifications';
 
 export default function PaymentPendingView() {
   const { paymentData, resetCart, setLastOrder, setActivePaymentKey, activePaymentKey } = useApp();
@@ -87,7 +87,6 @@ export default function PaymentPendingView() {
         }
       }
 
-      // Update Points if Payment Key is connected
       if (paymentData.paymentKeyId) {
         const keyRef = doc(db, 'payment_keys', paymentData.paymentKeyId);
         const pointsUpdate = (paymentData.pointsRedeemed || 0) > 0 ? -paymentData.pointsRedeemed : paymentData.pointsEarned;
@@ -96,13 +95,22 @@ export default function PaymentPendingView() {
           points: increment(pointsUpdate)
         });
 
-        // Sync local state if it's the currently active key
         if (activePaymentKey && activePaymentKey.id === paymentData.paymentKeyId) {
           setActivePaymentKey({
             ...activePaymentKey,
             points: (activePaymentKey.points || 0) + pointsUpdate
           });
         }
+      }
+
+      // Send Push Notification to Admin
+      const pushSnap = await getDoc(doc(db, 'settings', 'push_config'));
+      const subs = pushSnap.data()?.adminSubscriptions || [];
+      if (subs.length > 0) {
+        sendAdminNotification(subs, {
+          title: "💰 Pesanan Baru (QRIS)!",
+          body: `${paymentData.customerName} membeli template senilai ${formatRupiah(amount)}`
+        });
       }
       
       await sendOrderConfirmationEmail({

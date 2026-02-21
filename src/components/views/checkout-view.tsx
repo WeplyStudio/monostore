@@ -1,12 +1,11 @@
-
 "use client";
 
 import React, { useState, useEffect } from 'react';
 import { useApp } from '@/context/app-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent } from '@/components/ui/card';
-import { ArrowLeft, Lock, ShieldCheck, Loader2, QrCode, Wallet, Mail, CheckCircle2, Star, Info, Send, RefreshCw, User, KeyRound } from 'lucide-react';
+import { Card } from '@/components/ui/card';
+import { ArrowLeft, Lock, ShieldCheck, Loader2, QrCode, Wallet, Mail, Star, Info, User, KeyRound } from 'lucide-react';
 import { formatRupiah, getPlaceholderImageDetails } from '@/lib/utils';
 import Image from 'next/image';
 import { useToast } from '@/hooks/use-toast';
@@ -16,6 +15,7 @@ import { collection, addDoc, serverTimestamp, doc, updateDoc, increment, getDoc 
 import { sendOrderConfirmationEmail } from '@/lib/email-actions';
 import { useRouter } from 'next/navigation';
 import { Switch } from '@/components/ui/switch';
+import { sendAdminNotification } from '@/lib/push-notifications';
 
 export default function CheckoutView() {
   const { 
@@ -30,8 +30,6 @@ export default function CheckoutView() {
   const [paymentMethod, setPaymentMethod] = useState<'qris' | 'wallet'>('qris');
   const [walletKeyInput, setWalletKeyInput] = useState(activePaymentKey?.key || '');
   const [isVerifyingKey, setIsVerifyingKey] = useState(false);
-  
-  // 2SV (PIN) States
   const [pinInput, setPinInput] = useState('');
 
   const { toast } = useToast();
@@ -68,7 +66,6 @@ export default function CheckoutView() {
   const handleCheckoutSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validasi kondisional berdasarkan metode
     if (paymentMethod === 'qris') {
       if (!formData.email || !formData.name || !formData.whatsapp) {
           toast({ variant: "destructive", title: "Data tidak lengkap", description: "Harap isi Nama, Email, dan WhatsApp." });
@@ -86,7 +83,6 @@ export default function CheckoutView() {
 
     const orderId = "INV" + Date.now().toString().slice(-10);
 
-    // PAY VIA WALLET
     if (paymentMethod === 'wallet') {
       if (!activePaymentKey) {
         toast({ variant: "destructive", title: "Wallet Belum Terhubung", description: "Gunakan Payment Key Anda." });
@@ -125,7 +121,6 @@ export default function CheckoutView() {
           createdAt: serverTimestamp()
         });
 
-        // Gunakan email dari Payment Key, dan fallback nama/wa jika kosong
         const finalEmail = activePaymentKey.email;
         const finalName = formData.name || `User (${activePaymentKey.key})`;
         const finalWhatsapp = formData.whatsapp || '-';
@@ -159,6 +154,16 @@ export default function CheckoutView() {
           await updateDoc(productRef, { sold: increment(item.quantity), stock: increment(-item.quantity) });
         }
 
+        // Send Push Notification to Admin
+        const pushSnap = await getDoc(doc(db, 'settings', 'push_config'));
+        const subs = pushSnap.data()?.adminSubscriptions || [];
+        if (subs.length > 0) {
+          sendAdminNotification(subs, {
+            title: "💰 Pesanan Baru (Wallet)!",
+            body: `${orderRecord.customerName} membeli template senilai ${formatRupiah(cartTotal)}`
+          });
+        }
+
         await sendOrderConfirmationEmail({
           customerName: orderRecord.customerName,
           customerEmail: orderRecord.customerEmail,
@@ -185,7 +190,6 @@ export default function CheckoutView() {
       return;
     }
 
-    // PAY VIA QRIS
     try {
       const orderRecord = {
         customerName: formData.name,
@@ -348,7 +352,6 @@ export default function CheckoutView() {
               </div>
             </Card>
 
-            {/* Sembunyikan form pengiriman jika menggunakan wallet */}
             {paymentMethod === 'qris' ? (
               <Card className="rounded-[2rem] border-none shadow-sm bg-white p-8 space-y-6">
                 <h3 className="text-xl font-black">Informasi Pengiriman</h3>
