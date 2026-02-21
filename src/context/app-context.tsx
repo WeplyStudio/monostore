@@ -34,10 +34,13 @@ type AppContextType = {
   isInitialLoading: boolean;
   loadingProgress: number;
   settings: any;
+  isDataLoading: boolean;
   activePaymentKey: PaymentKey | null;
   setActivePaymentKey: (key: PaymentKey | null) => void;
   fetchPaymentKey: (keyString: string) => Promise<PaymentKey | null>;
   generateNewPaymentKey: () => Promise<PaymentKey>;
+  viewedProducts: Product[];
+  addViewedProduct: (product: Product) => void;
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -52,6 +55,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [activePaymentKey, setActivePaymentKey] = useState<PaymentKey | null>(null);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [loadingProgress, setLoadingProgress] = useState(0);
+  const [viewedProducts, setViewedProducts] = useState<Product[]>([]);
+  
   const { toast } = useToast();
   const db = useFirestore();
 
@@ -101,6 +106,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setActivePaymentKey(newKey);
     return newKey;
   };
+
+  const addViewedProduct = useCallback((product: Product) => {
+    setViewedProducts(prev => {
+      if (prev.find(p => p.id === product.id)) return prev;
+      return [product, ...prev].slice(0, 10); // Keep last 10
+    });
+  }, []);
 
   // Global Sync
   const settingsRef = useMemoFirebase(() => db ? doc(db, 'settings', 'shop') : null, [db]);
@@ -182,8 +194,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       formData, setFormData, handleInputChange: (e) => setFormData({...formData, [e.target.name]: e.target.value}),
       resetCart, lastOrder, setLastOrder, paymentData, setPaymentData,
       activeVoucher, applyVoucher, removeVoucher: () => setActiveVoucher(null),
-      isInitialLoading, loadingProgress, settings, activePaymentKey, setActivePaymentKey,
-      fetchPaymentKey, generateNewPaymentKey
+      isInitialLoading, loadingProgress, settings, isDataLoading, activePaymentKey, setActivePaymentKey,
+      fetchPaymentKey, generateNewPaymentKey, viewedProducts, addViewedProduct
     }}>
       {children}
     </AppContext.Provider>
