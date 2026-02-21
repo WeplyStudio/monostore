@@ -1,10 +1,10 @@
 
-"use client";
+'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '@/context/app-context';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, orderBy, doc, updateDoc } from 'firebase/firestore';
+import { collection, query, where, orderBy, doc, updateDoc, increment, addDoc, serverTimestamp } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -20,11 +20,13 @@ import {
   Zap,
   ShieldCheck,
   Mail,
-  Lock
+  Lock,
+  CheckCircle2,
+  RefreshCw
 } from 'lucide-react';
 import { formatRupiah } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
-import { createPakasirTransaction } from '@/lib/pakasir-actions';
+import { createPakasirTransaction, checkPakasirStatus } from '@/lib/pakasir-actions';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export default function WalletView() {
@@ -38,6 +40,8 @@ export default function WalletView() {
   const [topupAmount, setTopupAmount] = useState('50000');
   const [isTopupLoading, setIsTopupLoading] = useState(false);
   const [topupQR, setTopupQR] = useState<any>(null);
+  const [isCheckingStatus, setIsCheckingStatus] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
 
   const txQuery = useMemoFirebase(() => {
     if (!db || !activePaymentKey) return null;
@@ -49,6 +53,70 @@ export default function WalletView() {
   }, [db, activePaymentKey]);
 
   const { data: transactions, loading: txLoading } = useCollection<any>(txQuery);
+
+  // Polling for top-up status
+  useEffect(() => {
+    if (!topupQR || isSuccess) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const result = await checkPakasirStatus(topupQR.order_id, topupQR.amount);
+        if (result.transaction && (result.transaction.status === 'success' || result.transaction.status === 'completed')) {
+          handleTopupSuccess();
+        }
+      } catch (err) {
+        console.error("Topup polling error:", err);
+      }
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [topupQR, isSuccess]);
+
+  const handleTopupSuccess = async () => {
+    if (!db || !activePaymentKey || !topupQR || isSuccess) return;
+    setIsSuccess(true);
+
+    try {
+      const keyRef = doc(db, 'payment_keys', activePaymentKey.id);
+      const topupAmount = topupQR.amount;
+
+      // 1. Update Balance in Firestore
+      await updateDoc(keyRef, { 
+        balance: increment(topupAmount),
+        updatedAt: serverTimestamp() 
+      });
+
+      // 2. Create Transaction Record
+      await addDoc(collection(db, 'wallet_transactions'), {
+        paymentKeyId: activePaymentKey.id,
+        amount: topupAmount,
+        type: 'topup',
+        description: `Top Up Saldo via QRIS`,
+        createdAt: serverTimestamp()
+      });
+
+      // 3. Update Local State
+      setActivePaymentKey({
+        ...activePaymentKey,
+        balance: activePaymentKey.balance + topupAmount
+      });
+
+      toast({ 
+        title: "Top Up Berhasil!", 
+        description: `Saldo sebesar ${formatRupiah(topupAmount)} telah ditambahkan.` 
+      });
+
+      // Clear QR after a short delay
+      setTimeout(() => {
+        setTopupQR(null);
+        setIsSuccess(false);
+      }, 3000);
+
+    } catch (err) {
+      console.error("Critical topup processing error:", err);
+      toast({ variant: "destructive", title: "Gagal memproses saldo", description: "Hubungi admin jika pembayaran Anda sudah berhasil." });
+    }
+  };
 
   const handleAccessKey = async () => {
     if (!inputKey.trim()) return;
@@ -99,6 +167,7 @@ export default function WalletView() {
   const handleTopup = async () => {
     if (!activePaymentKey) return;
     setIsTopupLoading(true);
+    setIsSuccess(false);
     const amount = parseInt(topupAmount);
     const orderId = `TOPUP-${Date.now()}`;
     
@@ -225,7 +294,7 @@ export default function WalletView() {
             <div className="space-y-4">
               <div className="space-y-2">
                 <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Nominal (IDR)</label>
-                <Select value={topupAmount} onValueChange={setTopupAmount}>
+                <Select value={topupAmount} onValueChange={setTopupAmount} disabled={!!topupQR && !isSuccess}>
                   <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold">
                     <SelectValue />
                   </SelectTrigger>
@@ -238,12 +307,28 @@ export default function WalletView() {
               </div>
 
               {topupQR ? (
-                <div className="space-y-4 text-center p-4 bg-slate-50 rounded-2xl animate-fadeIn">
-                  <div className="aspect-square w-full max-w-[180px] mx-auto bg-white p-3 rounded-xl border border-slate-100 shadow-inner">
-                    <img src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(topupQR.payment_number)}`} alt="QRIS" className="w-full h-full object-contain" />
+                <div className="space-y-4 text-center p-4 bg-slate-50 rounded-2xl animate-fadeIn relative">
+                  <div className="aspect-square w-full max-w-[180px] mx-auto bg-white p-3 rounded-xl border border-slate-100 shadow-inner relative">
+                    <img 
+                      src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(topupQR.payment_number)}`} 
+                      alt="QRIS" 
+                      className={`w-full h-full object-contain ${isSuccess ? 'opacity-20 grayscale' : ''}`} 
+                    />
+                    {isSuccess && (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center animate-fadeIn">
+                        <CheckCircle2 size={48} className="text-green-500 mb-2" />
+                        <span className="text-xs font-black text-green-600">BERHASIL</span>
+                      </div>
+                    )}
                   </div>
-                  <p className="text-[10px] font-bold text-slate-500">Scan QRIS untuk top up {formatRupiah(topupQR.amount)}</p>
-                  <Button variant="outline" className="w-full text-xs font-bold" onClick={() => setTopupQR(null)}>Batal</Button>
+                  {!isSuccess && (
+                    <div className="flex flex-col gap-2">
+                      <p className="text-[10px] font-bold text-slate-500 flex items-center justify-center gap-2">
+                        <RefreshCw size={10} className="animate-spin" /> Menunggu pembayaran {formatRupiah(topupQR.amount)}
+                      </p>
+                      <Button variant="ghost" className="w-full text-[10px] font-bold text-destructive h-8" onClick={() => setTopupQR(null)}>Batal</Button>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <Button onClick={handleTopup} disabled={isTopupLoading} className="w-full h-12 rounded-xl font-black text-lg shadow-lg shadow-primary/20">
