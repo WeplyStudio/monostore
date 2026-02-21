@@ -38,7 +38,8 @@ import {
   CheckCircle2, 
   X,
   Send,
-  Lock
+  Lock,
+  KeyRound
 } from 'lucide-react';
 import { formatRupiah } from '@/lib/utils';
 import { sendVerificationCodeEmail } from '@/lib/email-actions';
@@ -56,6 +57,7 @@ export function PaymentKeyDetailsDialog({ isOpen, onClose, paymentKey }: Payment
   const [balanceInput, setBalanceInput] = useState('0');
   const [isUpdating, setIsUpdating] = useState(false);
   const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [lastSentOtp, setLastSentOtp] = useState<string | null>(null);
 
   // Fetch transactions for this key
   const txQuery = useMemoFirebase(() => {
@@ -108,10 +110,12 @@ export function PaymentKeyDetailsDialog({ isOpen, onClose, paymentKey }: Payment
   const handleSendOtp = async () => {
     if (!paymentKey?.email) return;
     setIsSendingOtp(true);
+    setLastSentOtp(null);
     try {
       const code = Math.floor(100000 + Math.random() * 900000).toString();
       const res = await sendVerificationCodeEmail(paymentKey.email, code);
       if (res.success) {
+        setLastSentOtp(code);
         toast({ title: "OTP Terkirim", description: `Kode verifikasi telah dikirim ke ${paymentKey.email}` });
       } else {
         throw new Error("Gagal mengirim email.");
@@ -126,7 +130,12 @@ export function PaymentKeyDetailsDialog({ isOpen, onClose, paymentKey }: Payment
   if (!paymentKey) return null;
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
+    <Dialog open={isOpen} onOpenChange={(open) => {
+      if (!open) {
+        setLastSentOtp(null);
+        onClose();
+      }
+    }}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto rounded-[2.5rem]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3 text-xl font-black">
@@ -198,6 +207,18 @@ export function PaymentKeyDetailsDialog({ isOpen, onClose, paymentKey }: Payment
                     Kirim OTP
                   </Button>
                </div>
+
+               {lastSentOtp && (
+                 <div className="p-4 bg-orange-50 border border-orange-100 rounded-2xl flex flex-col items-center gap-1 animate-fadeIn">
+                    <div className="flex items-center gap-2 mb-1">
+                      <KeyRound size={14} className="text-orange-500" />
+                      <span className="text-[10px] font-black text-orange-400 uppercase tracking-[0.2em]">OTP TERKIRIM (ADMIN VIEW)</span>
+                    </div>
+                    <span className="text-3xl font-black text-orange-600 tracking-[0.4em]">{lastSentOtp}</span>
+                    <p className="text-[8px] text-orange-400 font-bold uppercase mt-1">Sebutkan kode ini ke user untuk verifikasi instan</p>
+                 </div>
+               )}
+
                <p className="text-[9px] text-muted-foreground font-medium italic">
                  Gunakan fitur ini untuk mengirimkan kode OTP ke email pemilik jika ingin memverifikasi kepemilikan Key ini secara manual.
                </p>
@@ -236,7 +257,7 @@ export function PaymentKeyDetailsDialog({ isOpen, onClose, paymentKey }: Payment
         </div>
 
         <DialogFooter>
-          <Button variant="ghost" onClick={onClose} className="rounded-xl font-bold">Tutup</Button>
+          <Button variant="ghost" onClick={() => { setLastSentOtp(null); onClose(); }} className="rounded-xl font-bold">Tutup</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
