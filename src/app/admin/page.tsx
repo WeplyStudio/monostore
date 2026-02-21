@@ -2,7 +2,18 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useFirestore, useCollection, useUser, useAuth, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, deleteDoc, doc, query, orderBy, setDoc, serverTimestamp, arrayUnion } from 'firebase/firestore';
+import { 
+  collection, 
+  deleteDoc, 
+  doc, 
+  query, 
+  orderBy, 
+  setDoc, 
+  serverTimestamp, 
+  arrayUnion, 
+  getDocs, 
+  writeBatch 
+} from 'firebase/firestore';
 import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -37,7 +48,8 @@ import {
   Volume2,
   Wallet,
   Eye,
-  Menu
+  Menu,
+  AlertTriangle
 } from 'lucide-react';
 import { ProductDialog } from '@/components/admin/product-dialog';
 import { BannerDialog } from '@/components/admin/banner-dialog';
@@ -93,6 +105,7 @@ export default function AdminPage() {
   const [whatsapp, setWhatsapp] = useState('');
   const [supportEmail, setSupportEmail] = useState('');
   const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [isResetting, setIsResetting] = useState(false);
 
   // Queries
   const productsQuery = useMemoFirebase(() => db ? query(collection(db, 'products'), orderBy('name', 'asc')) : null, [db]);
@@ -145,7 +158,6 @@ export default function AdminPage() {
 
       setupPush();
       
-      // Request standard permission
       if (typeof window !== 'undefined' && 'Notification' in window) {
         if (Notification.permission !== 'granted') {
           Notification.requestPermission();
@@ -243,6 +255,36 @@ export default function AdminPage() {
     setDoc(docRef, { shopName, whatsapp, supportEmail, updatedAt: serverTimestamp() }, { merge: true })
       .then(() => toast({ title: 'Tersimpan' }))
       .finally(() => setIsSavingSettings(false));
+  };
+
+  const handleResetAllData = async () => {
+    if (!db || !window.confirm("PERINGATAN KERAS: Semua data (Produk, Payment Key, Saldo, Pesanan, Promo) akan dihapus secara permanen. Akun Admin tetap aman. Lanjutkan?")) return;
+    
+    setIsResetting(true);
+    try {
+      const collectionsToClear = [
+        'products', 
+        'payment_keys', 
+        'wallet_transactions', 
+        'banners', 
+        'vouchers', 
+        'orders', 
+        'bundles'
+      ];
+
+      for (const colName of collectionsToClear) {
+        const snap = await getDocs(collection(db, colName));
+        const batch = writeBatch(db);
+        snap.docs.forEach((doc) => batch.delete(doc.ref));
+        await batch.commit();
+      }
+
+      toast({ title: "Reset Berhasil", description: "Semua data operasional telah dibersihkan." });
+    } catch (error: any) {
+      toast({ variant: "destructive", title: "Reset Gagal", description: error.message });
+    } finally {
+      setIsResetting(false);
+    }
   };
 
   const handleDelete = (id: string, collectionName: string) => {
@@ -467,7 +509,7 @@ export default function AdminPage() {
                 </div>
                 <Card className="rounded-[2.5rem] overflow-hidden border-none shadow-sm bg-white">
                   <Table>
-                    <TableHeader className="bg-slate-50"><TableRow><TableHead>GAMBAR</TableHead><TableHead>JUDUL</TableHead><TableHead>URUTAN</TableHead><TableHead className="text-right">AKSI</TableHead></TableRow></TableHeader>
+                    <TableHeader className="bg-slate-50"><TableRow><TableHead>GAMBAR</TableHead><TableHead>JUDUL</TableHead><TableHead>URUTAN</TableHead><TableHead className="text-right">AKSI</TableHead></TableHeader>
                     <TableBody>
                       {bannersLoading ? <TableRow><TableCell colSpan={4} className="text-center h-20"><Loader2 className="animate-spin mx-auto" /></TableCell></TableRow> :
                         banners?.map((b: any) => (
@@ -611,6 +653,34 @@ export default function AdminPage() {
                       {isSavingSettings ? <Loader2 className="animate-spin mr-2" /> : 'Simpan Perubahan'}
                     </Button>
                   </form>
+
+                  {/* Danger Zone */}
+                  <div className="pt-10 border-t border-red-100 mt-10">
+                    <div className="flex items-center gap-2 mb-4 text-destructive">
+                      <AlertTriangle size={20} />
+                      <h4 className="text-sm font-black uppercase tracking-widest">Danger Zone</h4>
+                    </div>
+                    <Card className="border-2 border-red-50 bg-red-50/30 p-6 rounded-[2rem]">
+                      <div className="flex flex-col md:flex-row justify-between items-center gap-6">
+                        <div className="text-center md:text-left">
+                          <p className="text-sm font-bold text-red-900">Reset Seluruh Data Toko</p>
+                          <p className="text-[10px] text-red-600 font-medium max-w-sm uppercase tracking-tight mt-1 leading-relaxed">
+                            Menghapus secara permanen semua produk, payment key, saldo user, transaksi, dan pesanan. Akun Admin tetap aman.
+                          </p>
+                        </div>
+                        <Button 
+                          type="button"
+                          variant="destructive" 
+                          onClick={handleResetAllData}
+                          disabled={isResetting}
+                          className="rounded-xl h-12 px-8 font-bold shadow-lg shadow-destructive/20"
+                        >
+                          {isResetting ? <Loader2 className="animate-spin mr-2" /> : <Trash2 size={18} className="mr-2" />}
+                          Hapus Semua Data
+                        </Button>
+                      </div>
+                    </Card>
+                  </div>
                 </Card>
               </div>
             )}
