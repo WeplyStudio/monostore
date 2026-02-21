@@ -22,7 +22,8 @@ import {
   Mail,
   Lock,
   CheckCircle2,
-  RefreshCw
+  RefreshCw,
+  LogOut
 } from 'lucide-react';
 import { formatRupiah } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -40,9 +41,9 @@ export default function WalletView() {
   const [topupAmount, setTopupAmount] = useState('50000');
   const [isTopupLoading, setIsTopupLoading] = useState(false);
   const [topupQR, setTopupQR] = useState<any>(null);
-  const [isCheckingStatus, setIsCheckingStatus] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
 
+  // Kueri transaksi disederhanakan untuk menghindari error perizinan/indeks
   const txQuery = useMemoFirebase(() => {
     if (!db || !activePaymentKey) return null;
     return query(
@@ -52,9 +53,9 @@ export default function WalletView() {
     );
   }, [db, activePaymentKey]);
 
-  const { data: transactions, loading: txLoading } = useCollection<any>(txQuery);
+  const { data: transactions, loading: txLoading, error: txError } = useCollection<any>(txQuery);
 
-  // Polling for top-up status
+  // Polling status top-up
   useEffect(() => {
     if (!topupQR || isSuccess) return;
 
@@ -78,43 +79,41 @@ export default function WalletView() {
 
     try {
       const keyRef = doc(db, 'payment_keys', activePaymentKey.id);
-      const topupAmount = topupQR.amount;
+      const amount = topupQR.amount;
 
-      // 1. Update Balance in Firestore
+      // 1. Update Saldo di Firestore
       await updateDoc(keyRef, { 
-        balance: increment(topupAmount),
+        balance: increment(amount),
         updatedAt: serverTimestamp() 
       });
 
-      // 2. Create Transaction Record
+      // 2. Catat Transaksi
       await addDoc(collection(db, 'wallet_transactions'), {
         paymentKeyId: activePaymentKey.id,
-        amount: topupAmount,
+        amount: amount,
         type: 'topup',
         description: `Top Up Saldo via QRIS`,
         createdAt: serverTimestamp()
       });
 
-      // 3. Update Local State
+      // 3. Update State Lokal
       setActivePaymentKey({
         ...activePaymentKey,
-        balance: activePaymentKey.balance + topupAmount
+        balance: activePaymentKey.balance + amount
       });
 
       toast({ 
         title: "Top Up Berhasil!", 
-        description: `Saldo sebesar ${formatRupiah(topupAmount)} telah ditambahkan.` 
+        description: `Saldo sebesar ${formatRupiah(amount)} telah ditambahkan.` 
       });
 
-      // Clear QR after a short delay
       setTimeout(() => {
         setTopupQR(null);
         setIsSuccess(false);
       }, 3000);
 
     } catch (err) {
-      console.error("Critical topup processing error:", err);
-      toast({ variant: "destructive", title: "Gagal memproses saldo", description: "Hubungi admin jika pembayaran Anda sudah berhasil." });
+      console.error("Topup processing error:", err);
     }
   };
 
@@ -130,7 +129,7 @@ export default function WalletView() {
         toast({ variant: "destructive", title: "Key Tidak Valid", description: "Periksa kembali kode Payment Key Anda." });
       }
     } catch (err: any) {
-      toast({ variant: "destructive", title: "Gagal memuat key", description: err.message || "Terjadi kesalahan koneksi." });
+      toast({ variant: "destructive", title: "Gagal", description: "Terjadi kesalahan koneksi." });
     } finally {
       setLoading(false);
     }
@@ -144,10 +143,10 @@ export default function WalletView() {
     setLoading(true);
     try {
       await generateNewPaymentKey(inputEmail.trim());
-      toast({ title: "Berhasil!", description: "Detail Payment Key telah dimuat dan dikirim ke email Anda." });
+      toast({ title: "Berhasil!", description: "Payment Key telah dibuat dan dikirim ke email." });
       setInputEmail('');
     } catch (err: any) {
-      toast({ variant: "destructive", title: "Gagal membuat key", description: err.message || "Coba lagi beberapa saat." });
+      toast({ variant: "destructive", title: "Gagal", description: err.message || "Coba lagi beberapa saat." });
     } finally {
       setLoading(false);
     }
@@ -158,9 +157,9 @@ export default function WalletView() {
     try {
       await updateDoc(doc(db, 'payment_keys', activePaymentKey.id), { is2SVEnabled: enabled });
       setActivePaymentKey({ ...activePaymentKey, is2SVEnabled: enabled });
-      toast({ title: enabled ? "2SV Aktif" : "2SV Nonaktif", description: `Keamanan pembayaran telah diperbarui.` });
+      toast({ title: enabled ? "2SV Aktif" : "2SV Nonaktif" });
     } catch (err) {
-      toast({ variant: "destructive", title: "Error", description: "Gagal memperbarui keamanan." });
+      console.error("Update 2SV error:", err);
     }
   };
 
@@ -185,7 +184,7 @@ export default function WalletView() {
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    toast({ title: "Disalin!", description: "Kode key telah disalin ke clipboard." });
+    toast({ title: "Disalin!" });
   };
 
   if (!activePaymentKey) {
@@ -197,12 +196,12 @@ export default function WalletView() {
               <Wallet size={32} />
             </div>
             <CardTitle className="text-2xl font-black font-headline">Mono Wallet</CardTitle>
-            <CardDescription className="text-white/70">Akses saldo aman dengan Payment Key.</CardDescription>
+            <CardDescription className="text-white/70">Akses saldo tanpa login menggunakan Payment Key.</CardDescription>
           </CardHeader>
           <CardContent className="p-10 space-y-8">
             <div className="space-y-4">
               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Akses Key Terdaftar</label>
+                <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Punya Payment Key?</label>
                 <div className="flex gap-2">
                   <Input 
                     placeholder="MONO-XXXX-XXXX" 
@@ -222,7 +221,7 @@ export default function WalletView() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Masukkan Email Anda</label>
+                <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Masukkan Email</label>
                 <div className="flex gap-2">
                   <div className="relative flex-1">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
@@ -237,7 +236,6 @@ export default function WalletView() {
                     {loading ? <Loader2 className="animate-spin" /> : 'Buat Key'}
                   </Button>
                 </div>
-                <p className="text-[9px] text-slate-400 italic">1 email hanya bisa memiliki 1 Payment Key.</p>
               </div>
             </div>
           </CardContent>
@@ -261,7 +259,9 @@ export default function WalletView() {
             <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded-lg flex items-center gap-1">
               <Mail size={10} /> {activePaymentKey.email}
             </span>
-            <Button variant="ghost" className="text-xs font-bold text-destructive px-2 h-8" onClick={() => setActivePaymentKey(null)}>Logout</Button>
+            <Button variant="ghost" className="text-xs font-bold text-destructive px-2 h-8 flex items-center gap-1" onClick={() => setActivePaymentKey(null)}>
+              <LogOut size={12} /> Logout
+            </Button>
           </div>
         </div>
         <div className="text-right">
@@ -281,11 +281,11 @@ export default function WalletView() {
                 <Switch 
                   checked={activePaymentKey.is2SVEnabled} 
                   onCheckedChange={handleToggle2SV}
-                  className="data-[state=checked]:bg-white data-[state=checked]:text-primary"
+                  className="data-[state=checked]:bg-white"
                 />
              </div>
              <p className="text-[10px] text-white/70 leading-relaxed">
-               Jika aktif, sistem akan mengirimkan kode 6-digit ke email <strong>{activePaymentKey.email}</strong> setiap kali Anda melakukan pembayaran.
+               Setiap pembayaran akan meminta kode verifikasi yang dikirim ke email Anda.
              </p>
           </Card>
 
@@ -293,7 +293,7 @@ export default function WalletView() {
             <h3 className="text-lg font-black flex items-center gap-2"><Plus size={20} /> Top Up Saldo</h3>
             <div className="space-y-4">
               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Nominal (IDR)</label>
+                <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Nominal</label>
                 <Select value={topupAmount} onValueChange={setTopupAmount} disabled={!!topupQR && !isSuccess}>
                   <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold">
                     <SelectValue />
@@ -324,7 +324,7 @@ export default function WalletView() {
                   {!isSuccess && (
                     <div className="flex flex-col gap-2">
                       <p className="text-[10px] font-bold text-slate-500 flex items-center justify-center gap-2">
-                        <RefreshCw size={10} className="animate-spin" /> Menunggu pembayaran {formatRupiah(topupQR.amount)}
+                        <RefreshCw size={10} className="animate-spin" /> Menunggu pembayaran...
                       </p>
                       <Button variant="ghost" className="w-full text-[10px] font-bold text-destructive h-8" onClick={() => setTopupQR(null)}>Batal</Button>
                     </div>
@@ -341,14 +341,17 @@ export default function WalletView() {
 
         <div className="lg:col-span-8 space-y-6">
           <Card className="rounded-[2.5rem] border-none shadow-sm bg-white p-8">
-            <div className="flex items-center justify-between mb-8">
-              <h3 className="text-lg font-black flex items-center gap-2"><History size={20} /> Riwayat Transaksi</h3>
-            </div>
+            <h3 className="text-lg font-black flex items-center gap-2 mb-8"><History size={20} /> Riwayat Transaksi</h3>
             <div className="space-y-4">
               {txLoading ? (
                 <div className="py-20 text-center"><Loader2 className="animate-spin mx-auto text-slate-200" size={32} /></div>
+              ) : txError ? (
+                <div className="py-10 text-center bg-red-50 rounded-2xl p-4">
+                  <AlertCircle className="mx-auto text-red-500 mb-2" />
+                  <p className="text-xs font-bold text-red-600">Gagal memuat transaksi. Silakan muat ulang halaman.</p>
+                </div>
               ) : transactions?.length === 0 ? (
-                <div className="py-20 text-center space-y-2 border-2 border-dashed border-slate-50 rounded-[2rem]">
+                <div className="py-20 text-center border-2 border-dashed border-slate-50 rounded-[2rem]">
                   <p className="text-sm font-bold text-slate-300">Belum ada transaksi</p>
                 </div>
               ) : (

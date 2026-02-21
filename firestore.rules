@@ -3,10 +3,12 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
+    // Fungsi pembantu untuk mengecek admin
     function isAdmin() {
       return request.auth != null && request.auth.token.email == 'matchboxdevelopment@gmail.com';
     }
 
+    // Koleksi Produk: Semua bisa baca, hanya admin bisa tulis
     match /products/{productId} {
       allow read: if true;
       allow write: if isAdmin();
@@ -17,43 +19,48 @@ service cloud.firestore {
       }
     }
 
+    // Koleksi Payment Keys: Akses publik untuk sistem wallet anonim
     match /payment_keys/{keyId} {
-      // Akses publik untuk sistem wallet anonim
-      allow get, list, create: if true;
-      allow update: if true;
+      allow read, create, update: if true;
       allow delete: if isAdmin();
     }
 
+    // Koleksi Transaksi Wallet: Akses publik agar user bisa melihat riwayat mereka sendiri via Key
     match /wallet_transactions/{txId} {
-      // Akses publik untuk melihat riwayat transaksi via Key
-      allow get, list, create: if true;
+      allow read, create: if true;
       allow update, delete: if isAdmin();
     }
 
+    // Koleksi Banner: Promo publik
     match /banners/{bannerId} {
       allow read: if true;
       allow write: if isAdmin();
     }
 
+    // Koleksi Voucher: Promo publik
     match /vouchers/{voucherId} {
       allow read: if true;
       allow write: if isAdmin();
     }
 
+    // Koleksi Bundling: Promo publik
     match /bundles/{bundleId} {
       allow read: if true;
       allow write: if isAdmin();
     }
     
+    // Koleksi Pesanan: User butuh read untuk halaman sukses & riwayat anonim
     match /orders/{orderId} {
-      allow create: if true;
-      allow get, list: if true; // Diperlukan untuk halaman sukses & riwayat anonim
+      allow read, create: if true;
       allow update, delete: if isAdmin();
     }
 
+    // Koleksi Pengaturan: Publik baca, admin tulis
     match /settings/{settingId} {
       allow read: if true;
       allow write: if isAdmin();
     }
+    
+    // Komentar pemicu redeploy: 2024-05-20_v2
   }
 }
