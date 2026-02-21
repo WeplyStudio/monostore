@@ -317,19 +317,22 @@ export default function CheckoutView() {
 
                   {activePaymentKey && (
                     <div className="mt-6 space-y-4">
-                      <div className="flex items-center justify-between p-4 bg-yellow-50 border border-yellow-100 rounded-2xl">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-yellow-400 text-white rounded-full flex items-center justify-center shadow-sm">
-                            <Star size={20} className="fill-white" />
+                      <div className="flex items-center justify-between p-6 bg-gradient-to-r from-yellow-50 to-amber-50 border border-yellow-100 rounded-[2rem] shadow-sm relative overflow-hidden group">
+                        <div className="absolute -right-4 -bottom-4 opacity-5 group-hover:scale-110 transition-transform duration-500 pointer-events-none">
+                          <Star size={80} className="fill-yellow-600 text-yellow-600" />
+                        </div>
+                        <div className="flex items-center gap-4 relative z-10">
+                          <div className="w-12 h-12 bg-yellow-400 text-white rounded-2xl flex items-center justify-center shadow-md">
+                            <Star size={24} className="fill-white" />
                           </div>
                           <div>
-                            <div className="text-[10px] font-black text-yellow-600 uppercase tracking-widest">MonoPoints</div>
-                            <div className="text-lg font-black text-yellow-700">{activePaymentKey.points || 0} Poin</div>
+                            <div className="text-[10px] font-black text-yellow-600 uppercase tracking-widest mb-0.5">Loyalty MonoPoints</div>
+                            <div className="text-xl font-black text-yellow-700">{activePaymentKey.points || 0} Poin</div>
                           </div>
                         </div>
                         {activePaymentKey.points && activePaymentKey.points > 0 ? (
-                          <div className="flex flex-col items-end gap-1">
-                            <span className="text-[9px] font-bold text-yellow-600 uppercase">Tukarkan Poin</span>
+                          <div className="flex flex-col items-end gap-2 relative z-10">
+                            <span className="text-[9px] font-bold text-yellow-600 uppercase tracking-wider">Tukarkan Poin</span>
                             <Slider 
                               className="w-32" 
                               max={Math.min(activePaymentKey.points, cartSubtotal)} 
@@ -337,19 +340,21 @@ export default function CheckoutView() {
                               value={[pointsToRedeem]} 
                               onValueChange={(val) => setPointsToRedeem(val[0])} 
                             />
-                            <div className="text-[10px] font-black text-yellow-700">-{formatRupiah(pointsToRedeem)}</div>
+                            <div className="text-xs font-black text-yellow-700 bg-white border border-yellow-100 px-3 py-1 rounded-xl shadow-sm">
+                              -{formatRupiah(pointsToRedeem)}
+                            </div>
                           </div>
                         ) : (
-                          <div className="text-[9px] font-bold text-yellow-600 uppercase italic">Kumpulkan poin tiap belanja</div>
+                          <div className="text-[9px] font-bold text-yellow-600 uppercase italic bg-white/50 px-3 py-1 rounded-full border border-yellow-100">Kumpulkan poin tiap belanja</div>
                         )}
                       </div>
                       
                       {pointsToRedeem > 0 ? (
-                        <div className="flex items-center gap-2 p-3 bg-red-50 text-red-600 rounded-xl text-[9px] font-bold uppercase tracking-widest">
+                        <div className="flex items-center gap-2 p-3 bg-red-50 text-red-600 rounded-xl text-[9px] font-bold uppercase tracking-widest border border-red-100">
                           <Info size={14} /> Poin digunakan: Kamu tidak akan mendapatkan poin baru untuk transaksi ini.
                         </div>
                       ) : pointsEarned > 0 && (
-                        <div className="flex items-center gap-2 p-3 bg-green-50 text-green-600 rounded-xl text-[9px] font-bold uppercase tracking-widest">
+                        <div className="flex items-center gap-2 p-3 bg-green-50 text-green-600 rounded-xl text-[9px] font-bold uppercase tracking-widest border border-green-100">
                           <CheckCircle2 size={14} /> Kamu akan mendapatkan +{pointsEarned} MonoPoints!
                         </div>
                       )}

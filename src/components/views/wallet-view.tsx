@@ -323,39 +323,54 @@ export default function WalletView() {
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-12 space-y-10 animate-fadeIn">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-        <div>
-          <h1 className="text-3xl font-black font-headline flex items-center gap-3">
-            <Wallet size={32} className="text-primary" /> Wallet Dashboard
-          </h1>
-          <div className="flex flex-wrap items-center gap-2 mt-2">
-            <code className="bg-slate-100 px-3 py-1 rounded-lg font-black text-sm tracking-widest">{activePaymentKey.key}</code>
-            <Button variant="ghost" size="icon" onClick={() => copyToClipboard(activePaymentKey.key)} className="h-8 w-8 rounded-lg">
-              <Copy size={14} />
-            </Button>
-            <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded-lg flex items-center gap-1">
-              <Mail size={10} /> {activePaymentKey.email}
-            </span>
-            <Button variant="ghost" className="text-xs font-bold text-destructive px-2 h-8 flex items-center gap-1" onClick={() => {
-              localStorage.removeItem('mono_payment_key');
-              setActivePaymentKey(null);
-            }}>
-              <LogOut size={12} /> Logout
-            </Button>
-          </div>
-        </div>
-        <div className="flex gap-8">
-          <div className="text-right">
-            <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Total Saldo</div>
-            <div className="text-4xl font-black text-primary">{formatRupiah(activePaymentKey.balance || 0)}</div>
-          </div>
-          <div className="text-right">
-            <div className="text-[10px] font-black text-yellow-500 uppercase tracking-widest mb-1">MonoPoints</div>
-            <div className="text-4xl font-black text-yellow-600 flex items-center justify-end gap-2">
-              <Star size={28} className="fill-yellow-500" />
-              {activePaymentKey.points || 0}
+      <div className="flex flex-col gap-8">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+          <div>
+            <h1 className="text-3xl font-black font-headline flex items-center gap-3">
+              <Wallet size={32} className="text-primary" /> Wallet Dashboard
+            </h1>
+            <div className="flex flex-wrap items-center gap-2 mt-2">
+              <code className="bg-slate-100 px-3 py-1 rounded-lg font-black text-sm tracking-widest">{activePaymentKey.key}</code>
+              <Button variant="ghost" size="icon" onClick={() => copyToClipboard(activePaymentKey.key)} className="h-8 w-8 rounded-lg">
+                <Copy size={14} />
+              </Button>
+              <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded-lg flex items-center gap-1">
+                <Mail size={10} /> {activePaymentKey.email}
+              </span>
+              <Button variant="ghost" className="text-xs font-bold text-destructive px-2 h-8 flex items-center gap-1" onClick={() => {
+                localStorage.removeItem('mono_payment_key');
+                setActivePaymentKey(null);
+              }}>
+                <LogOut size={12} /> Logout
+              </Button>
             </div>
           </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <Card className="rounded-[2.5rem] border-none shadow-sm bg-white p-8 flex flex-col justify-center min-h-[160px]">
+            <div className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Saldo Wallet Aktif</div>
+            <div className="text-4xl md:text-5xl font-black text-primary tracking-tight truncate">
+              {formatRupiah(activePaymentKey.balance || 0)}
+            </div>
+          </Card>
+
+          <Card className="rounded-[2.5rem] border-none shadow-sm bg-gradient-to-br from-yellow-400 to-amber-500 p-8 text-white relative overflow-hidden group min-h-[160px]">
+            <div className="absolute -right-4 -bottom-4 opacity-20 group-hover:scale-110 transition-transform duration-500">
+              <Star size={120} className="fill-white text-white" />
+            </div>
+            <div className="relative z-10">
+              <div className="text-[10px] font-black text-white/80 uppercase tracking-[0.2em] mb-2">Total MonoPoints</div>
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center shadow-lg border border-white/10">
+                  <Star size={32} className="fill-white text-white" />
+                </div>
+                <div className="text-4xl md:text-5xl font-black tracking-tight">
+                  {activePaymentKey.points || 0}
+                </div>
+              </div>
+            </div>
+          </Card>
         </div>
       </div>
 
