@@ -135,16 +135,40 @@ export default function AdminPage() {
   const { data: paymentKeys, loading: keysLoading } = useCollection(keysQuery);
   const { data: settings, loading: settingsLoading } = useDoc<any>(settingsRef);
 
+  // Notification Logic
   const prevOrdersCount = useRef<number>(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    if (user && user.email === ADMIN_EMAIL) {
+      if (typeof window !== 'undefined' && 'Notification' in window) {
+        if (Notification.permission !== 'granted' && Notification.permission !== 'denied') {
+          Notification.requestPermission();
+        }
+      }
+    }
+  }, [user]);
 
   useEffect(() => {
     if (orders && orders.length > prevOrdersCount.current) {
       if (prevOrdersCount.current !== 0) {
         const newOrder = orders[0];
         if (newOrder.status === 'completed') {
-          toast({ title: "Pesanan Baru!", description: `${newOrder.customerName} membeli template.` });
-          if (audioRef.current) audioRef.current.play().catch(() => {});
+          toast({ 
+            title: "🔔 Pesanan Baru!", 
+            description: `${newOrder.customerName} baru saja membeli template.` 
+          });
+          
+          if (audioRef.current) {
+            audioRef.current.play().catch(() => {});
+          }
+
+          if (typeof window !== 'undefined' && Notification.permission === 'granted') {
+            new Notification("MonoStore: Pesanan Baru!", {
+              body: `${newOrder.customerName} membeli template senilai ${formatRupiah(newOrder.totalAmount)}`,
+              icon: '/favicon.ico'
+            });
+          }
         }
       }
       prevOrdersCount.current = orders.length;
@@ -273,7 +297,7 @@ export default function AdminPage() {
         />
       )}
 
-      {/* Side Menu (Above Layer) */}
+      {/* Side Menu */}
       <aside className={cn(
         "fixed inset-y-0 left-0 bg-white border-r border-slate-200 w-72 flex flex-col z-[70] transition-transform duration-300 ease-in-out shadow-2xl",
         isSidebarOpen ? "translate-x-0" : "-translate-x-full"
@@ -567,7 +591,28 @@ export default function AdminPage() {
                       <Label className="text-xs font-bold text-slate-400 uppercase">Email Dukungan</Label>
                       <Input type="email" value={supportEmail} onChange={e => setSupportEmail(e.target.value)} required className="h-12 rounded-xl bg-slate-50 border-none" />
                     </div>
-                    <Button type="submit" disabled={isSavingSettings} className="w-full h-12 rounded-xl font-bold">
+                    
+                    <div className="pt-6 border-t border-slate-50">
+                      <h4 className="text-sm font-bold text-slate-900 mb-4 flex items-center gap-2">
+                        <Bell size={16} className="text-primary" /> Notifikasi Transaksi
+                      </h4>
+                      <p className="text-[10px] text-muted-foreground mb-4 uppercase tracking-widest leading-relaxed">
+                        Pastikan browser Anda mengizinkan notifikasi untuk menerima peringatan suara saat ada pesanan baru di HP atau Desktop.
+                      </p>
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        onClick={() => {
+                          if (audioRef.current) audioRef.current.play();
+                          toast({ title: "Sound Test", description: "Jika Anda mendengar suara, notifikasi suara aktif." });
+                        }}
+                        className="rounded-xl h-11 px-6 font-bold gap-2"
+                      >
+                        <Volume2 size={18} /> Test Suara Notifikasi
+                      </Button>
+                    </div>
+
+                    <Button type="submit" disabled={isSavingSettings} className="w-full h-12 rounded-xl font-bold mt-4">
                       {isSavingSettings ? <Loader2 className="animate-spin mr-2" /> : 'Simpan Perubahan'}
                     </Button>
                   </form>
