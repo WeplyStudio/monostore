@@ -509,7 +509,7 @@ export default function AdminPage() {
                 </div>
                 <Card className="rounded-[2.5rem] overflow-hidden border-none shadow-sm bg-white">
                   <Table>
-                    <TableHeader className="bg-slate-50"><TableRow><TableHead>GAMBAR</TableHead><TableHead>JUDUL</TableHead><TableHead>URUTAN</TableHead><TableHead className="text-right">AKSI</TableHead></TableHeader>
+                    <TableHeader className="bg-slate-50"><TableRow><TableHead>GAMBAR</TableHead><TableHead>JUDUL</TableHead><TableHead>URUTAN</TableHead><TableHead className="text-right">AKSI</TableHead></TableRow></TableHeader>
                     <TableBody>
                       {bannersLoading ? <TableRow><TableCell colSpan={4} className="text-center h-20"><Loader2 className="animate-spin mx-auto" /></TableCell></TableRow> :
                         banners?.map((b: any) => (
