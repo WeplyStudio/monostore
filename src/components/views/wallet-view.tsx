@@ -385,7 +385,7 @@ export default function WalletView() {
                 <Switch 
                   checked={activePaymentKey.is2SVEnabled || false} 
                   onCheckedChange={handleToggle2SV}
-                  className="data-[state=checked]:bg-white"
+                  className="data-[state=checked]:bg-green-500 data-[state=unchecked]:bg-slate-700"
                 />
              </div>
              <p className="text-[10px] text-white/70 leading-relaxed">
