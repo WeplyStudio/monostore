@@ -43,6 +43,9 @@ type AppContextType = {
   viewedProducts: Product[];
   addViewedProduct: (product: Product) => void;
   sendVerificationCode: (paymentKey: PaymentKey) => Promise<{ code: string } | null>;
+  pointsToRedeem: number;
+  setPointsToRedeem: (points: number) => void;
+  pointsEarned: number;
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -58,6 +61,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [viewedProducts, setViewedProducts] = useState<Product[]>([]);
+  const [pointsToRedeem, setPointsToRedeem] = useState(0);
   
   const { toast } = useToast();
   const db = useFirestore();
@@ -102,17 +106,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     if (!db) throw new Error("Firestore belum siap. Coba lagi sebentar.");
     
     try {
-      // Check if email already has a key
       const q = query(collection(db, 'payment_keys'), where('email', '==', email.toLowerCase()));
       const snap = await getDocs(q);
       
       if (!snap.empty) {
         const existingData = snap.docs[0].data() as any;
         const existingKey = { ...existingData, id: snap.docs[0].id } as PaymentKey;
-        
-        // Try resend existing key (don't block if email fails)
         sendPaymentKeyEmail(email, existingKey.key, true).catch(err => console.warn("Failed to resend email:", err));
-        
         setActivePaymentKey(existingKey);
         return existingKey;
       }
@@ -122,16 +122,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         key: randomKey,
         email: email.toLowerCase(),
         balance: 0,
+        points: 0,
         is2SVEnabled: false,
         createdAt: serverTimestamp()
       };
       
       const docRef = await addDoc(collection(db, 'payment_keys'), payload);
       const newKey = { ...payload, id: docRef.id, createdAt: new Date() } as any;
-      
-      // Try send new key (don't block if email fails)
       sendPaymentKeyEmail(email, randomKey, false).catch(err => console.warn("Failed to send initial email:", err));
-      
       setActivePaymentKey(newKey);
       return newKey;
     } catch (err: any) {
@@ -196,7 +194,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const removeFromCart = (id: string | number) => setCart(cart.filter(i => i.id !== id));
-  const resetCart = () => { setCart([]); setActiveVoucher(null); };
+  const resetCart = () => { 
+    setCart([]); 
+    setActiveVoucher(null); 
+    setPointsToRedeem(0);
+  };
 
   const applyVoucher = (voucher: Voucher) => {
     setActiveVoucher(voucher);
@@ -223,8 +225,16 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     return activeVoucher.type === 'percentage' ? (cartSubtotal * activeVoucher.value) / 100 : activeVoucher.value;
   }, [activeVoucher, cartSubtotal]);
 
-  const cartTotal = Math.max(0, cartSubtotal - bundleDiscountTotal - discountTotal);
+  // Points Logic: 1 Point = 1 IDR. Max redeem is the subtotal after other discounts.
+  const maxPossiblePointsToRedeem = Math.max(0, cartSubtotal - bundleDiscountTotal - discountTotal);
+  const effectivePointsRedeemed = Math.min(pointsToRedeem, maxPossiblePointsToRedeem, activePaymentKey?.points || 0);
+
+  const cartTotal = Math.max(0, cartSubtotal - bundleDiscountTotal - discountTotal - effectivePointsRedeemed);
   const totalItems = cart.reduce((acc, i) => acc + i.quantity, 0);
+
+  // Loyalty Logic: Every 550 spent = 1 Point. 
+  // If points are redeemed (pointsToRedeem > 0), then pointsEarned = 0.
+  const pointsEarned = effectivePointsRedeemed > 0 ? 0 : Math.floor(cartTotal / 550);
 
   return (
     <AppContext.Provider value={{
@@ -234,7 +244,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       resetCart, lastOrder, setLastOrder, paymentData, setPaymentData,
       activeVoucher, applyVoucher, removeVoucher: () => setActiveVoucher(null),
       isInitialLoading, loadingProgress, settings, isDataLoading, activePaymentKey, setActivePaymentKey,
-      fetchPaymentKey, generateNewPaymentKey, viewedProducts, addViewedProduct, sendVerificationCode
+      fetchPaymentKey, generateNewPaymentKey, viewedProducts, addViewedProduct, sendVerificationCode,
+      pointsToRedeem: effectivePointsRedeemed, setPointsToRedeem, pointsEarned
     }}>
       {children}
     </AppContext.Provider>

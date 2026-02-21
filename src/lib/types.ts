@@ -26,6 +26,7 @@ export type PaymentKey = {
   key: string;
   email: string;
   balance: number;
+  points?: number;
   is2SVEnabled?: boolean;
   lastCheckIn?: any;
   createdAt: any;
@@ -61,4 +62,21 @@ export type Voucher = {
 
 export type CartItem = Product & {
   quantity: number;
+};
+
+export type Order = {
+  id?: string;
+  customerName: string;
+  customerEmail: string;
+  whatsapp: string;
+  order_id: string;
+  paymentKey?: string;
+  items: any[];
+  totalAmount: number;
+  discountAmount: number;
+  pointsEarned?: number;
+  pointsRedeemed?: number;
+  voucherCode?: string | null;
+  status: 'completed' | 'pending';
+  createdAt?: any;
 };

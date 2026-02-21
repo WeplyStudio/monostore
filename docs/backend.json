@@ -28,13 +28,14 @@
     },
     "PaymentKey": {
       "title": "PaymentKey",
-      "description": "Anonymous wallet key that holds balance.",
+      "description": "Anonymous wallet key that holds balance and loyalty points.",
       "type": "object",
       "properties": {
         "id": { "type": "string" },
         "key": { "type": "string" },
         "email": { "type": "string", "format": "email" },
         "balance": { "type": "number" },
+        "points": { "type": "number", "description": "Loyalty points balance." },
         "is2SVEnabled": { "type": "boolean" },
         "lastCheckIn": { "type": "string", "format": "date-time" },
         "createdAt": { "type": "string", "format": "date-time" }
@@ -112,6 +113,8 @@
         "items": { "type": "array", "items": { "type": "object" } },
         "totalAmount": { "type": "number" },
         "discountAmount": { "type": "number" },
+        "pointsEarned": { "type": "number" },
+        "pointsRedeemed": { "type": "number" },
         "voucherCode": { "type": "string" },
         "status": { "type": "string", "enum": ["completed", "pending"] },
         "createdAt": { "type": "string", "format": "date-time" }

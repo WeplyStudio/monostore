@@ -26,7 +26,8 @@ import {
   LogOut,
   CalendarCheck,
   Gift,
-  Sparkles
+  Sparkles,
+  Star
 } from 'lucide-react';
 import { formatRupiah } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -158,18 +159,15 @@ export default function WalletView() {
     
     setIsCheckingIn(true);
     try {
-      // Random reward between 50 and 5000
       const reward = Math.floor(Math.random() * (5000 - 50 + 1)) + 50;
       const keyRef = doc(db, 'payment_keys', activePaymentKey.id);
 
-      // 1. Update Payment Key in Firestore
       await updateDoc(keyRef, {
         balance: increment(reward),
         lastCheckIn: serverTimestamp(),
         updatedAt: serverTimestamp()
       });
 
-      // 2. Log Transaction
       await addDoc(collection(db, 'wallet_transactions'), {
         paymentKeyId: activePaymentKey.id,
         amount: reward,
@@ -178,11 +176,10 @@ export default function WalletView() {
         createdAt: serverTimestamp()
       });
 
-      // 3. Update Local State immediately
       setActivePaymentKey({
         ...activePaymentKey,
         balance: (activePaymentKey.balance || 0) + reward,
-        lastCheckIn: new Date() // Use current local date for instant UI update
+        lastCheckIn: new Date()
       });
 
       toast({
@@ -347,9 +344,18 @@ export default function WalletView() {
             </Button>
           </div>
         </div>
-        <div className="text-right">
-          <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Total Saldo</div>
-          <div className="text-4xl font-black text-primary">{formatRupiah(activePaymentKey.balance || 0)}</div>
+        <div className="flex gap-8">
+          <div className="text-right">
+            <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Total Saldo</div>
+            <div className="text-4xl font-black text-primary">{formatRupiah(activePaymentKey.balance || 0)}</div>
+          </div>
+          <div className="text-right">
+            <div className="text-[10px] font-black text-yellow-500 uppercase tracking-widest mb-1">MonoPoints</div>
+            <div className="text-4xl font-black text-yellow-600 flex items-center justify-end gap-2">
+              <Star size={28} className="fill-yellow-500" />
+              {activePaymentKey.points || 0}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -372,7 +378,6 @@ export default function WalletView() {
              </p>
           </Card>
 
-          {/* Daily Check-in Bonus Card */}
           <Card className="rounded-[2.5rem] border-none shadow-sm bg-orange-50 p-8 space-y-6 relative overflow-hidden group">
             <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
               <Gift size={80} className="text-orange-600 rotate-12" />

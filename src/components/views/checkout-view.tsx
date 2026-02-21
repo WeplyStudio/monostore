@@ -1,12 +1,12 @@
 
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '@/context/app-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
-import { ArrowLeft, Lock, ShieldCheck, Loader2, QrCode, Wallet, Mail, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Lock, ShieldCheck, Loader2, QrCode, Wallet, Mail, CheckCircle2, Star, Info } from 'lucide-react';
 import { formatRupiah, getPlaceholderImageDetails } from '@/lib/utils';
 import Image from 'next/image';
 import { useToast } from '@/hooks/use-toast';
@@ -15,12 +15,14 @@ import { useFirestore } from '@/firebase';
 import { collection, addDoc, serverTimestamp, doc, updateDoc, increment, getDoc } from 'firebase/firestore';
 import { sendOrderConfirmationEmail } from '@/lib/email-actions';
 import { useRouter } from 'next/navigation';
+import { Slider } from '@/components/ui/slider';
 
 export default function CheckoutView() {
   const { 
     cart, cartTotal, cartSubtotal, discountTotal, bundleDiscountTotal, 
     formData, handleInputChange, setPaymentData, activeVoucher, 
-    resetCart, setLastOrder, activePaymentKey, fetchPaymentKey, setActivePaymentKey, sendVerificationCode
+    resetCart, setLastOrder, activePaymentKey, fetchPaymentKey, setActivePaymentKey, sendVerificationCode,
+    pointsToRedeem, setPointsToRedeem, pointsEarned
   } = useApp();
   
   const router = useRouter();
@@ -37,6 +39,12 @@ export default function CheckoutView() {
 
   const { toast } = useToast();
   const db = useFirestore();
+
+  useEffect(() => {
+    if (activePaymentKey) {
+      setWalletKeyInput(activePaymentKey.key);
+    }
+  }, [activePaymentKey]);
 
   const handleVerifyWallet = async () => {
     if (!walletKeyInput.trim()) return;
@@ -88,6 +96,8 @@ export default function CheckoutView() {
     if (!db) return;
     setLoading(true);
 
+    const orderId = "INV" + Date.now().toString().slice(-10);
+
     // PAY VIA WALLET
     if (paymentMethod === 'wallet') {
       if (!activePaymentKey) {
@@ -109,11 +119,16 @@ export default function CheckoutView() {
       }
 
       try {
-        const orderId = "INV" + Date.now().toString().slice(-10);
-        
         // 1. Update Balance & Create Order
         const keyRef = doc(db, 'payment_keys', activePaymentKey.id);
-        await updateDoc(keyRef, { balance: increment(-cartTotal) });
+        
+        // Final points update: deduct redeemed, add earned
+        const pointsUpdate = pointsToRedeem > 0 ? -pointsToRedeem : pointsEarned;
+        
+        await updateDoc(keyRef, { 
+          balance: increment(-cartTotal),
+          points: increment(pointsUpdate)
+        });
 
         await addDoc(collection(db, 'wallet_transactions'), {
           paymentKeyId: activePaymentKey.id,
@@ -136,7 +151,9 @@ export default function CheckoutView() {
             quantity: item.quantity
           })),
           totalAmount: cartTotal,
-          discountAmount: discountTotal + bundleDiscountTotal,
+          discountAmount: discountTotal + bundleDiscountTotal + pointsToRedeem,
+          pointsEarned: pointsEarned,
+          pointsRedeemed: pointsToRedeem,
           voucherCode: activeVoucher?.code || null,
           status: 'completed',
           order_id: orderId,
@@ -158,6 +175,13 @@ export default function CheckoutView() {
           items: orderRecord.items.map(i => ({ name: i.name, deliveryContent: i.deliveryContent }))
         });
 
+        // Update local active key state
+        setActivePaymentKey({
+          ...activePaymentKey,
+          balance: activePaymentKey.balance - cartTotal,
+          points: (activePaymentKey.points || 0) + pointsUpdate
+        });
+
         setLastOrder({ ...orderRecord, id: docRef.id });
         resetCart();
         toast({ title: "Pembayaran Berhasil!", description: "Template Anda sedang disiapkan." });
@@ -172,7 +196,6 @@ export default function CheckoutView() {
 
     // PAY VIA QRIS
     try {
-      const orderId = "INV" + Date.now().toString().slice(-10);
       const orderRecord = {
         customerName: formData.name,
         customerEmail: formData.email,
@@ -185,7 +208,9 @@ export default function CheckoutView() {
           quantity: item.quantity
         })),
         totalAmount: cartTotal,
-        discountAmount: discountTotal + bundleDiscountTotal,
+        discountAmount: discountTotal + bundleDiscountTotal + pointsToRedeem,
+        pointsEarned: pointsEarned,
+        pointsRedeemed: pointsToRedeem,
         voucherCode: activeVoucher?.code || null,
         status: 'pending',
         order_id: orderId,
@@ -204,7 +229,10 @@ export default function CheckoutView() {
           customerName: formData.name,
           customerEmail: formData.email,
           whatsapp: formData.whatsapp,
-          items: cart
+          items: cart,
+          pointsEarned,
+          pointsRedeemed: pointsToRedeem,
+          paymentKeyId: activePaymentKey?.id || null
         });
         router.push('/checkout/pending');
       }
@@ -243,10 +271,10 @@ export default function CheckoutView() {
                 </button>
               </div>
 
-              {paymentMethod === 'wallet' && (
-                <div className="space-y-6 animate-fadeIn">
+              <div className="space-y-6">
+                <div className={paymentMethod === 'wallet' ? 'animate-fadeIn' : 'hidden md:block opacity-50'}>
                   <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100">
-                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-3">Akses Payment Key</label>
+                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-3">Akses Payment Key (Wajib untuk Poin)</label>
                     <div className="flex gap-2">
                       <Input 
                         placeholder="MONO-XXXX-XXXX" 
@@ -260,8 +288,8 @@ export default function CheckoutView() {
                     </div>
                   </div>
 
-                  {requires2SV && activePaymentKey && (
-                    <div className="p-6 bg-blue-50 rounded-2xl border border-blue-100 space-y-4">
+                  {requires2SV && activePaymentKey && paymentMethod === 'wallet' && (
+                    <div className="p-6 bg-blue-50 rounded-2xl border border-blue-100 space-y-4 mt-4">
                       <div className="flex items-center gap-2">
                         <Lock size={16} className="text-blue-600" />
                         <span className="text-xs font-bold text-blue-600 uppercase tracking-widest">2-Step Verification</span>
@@ -287,13 +315,48 @@ export default function CheckoutView() {
                     </div>
                   )}
 
-                  {activePaymentKey && !requires2SV && (
-                    <div className="flex items-center gap-2 p-3 bg-green-50 text-green-600 rounded-xl text-[10px] font-bold uppercase tracking-widest">
-                      <CheckCircle2 size={14} /> Wallet Terhubung: {formatRupiah(activePaymentKey.balance)}
+                  {activePaymentKey && (
+                    <div className="mt-6 space-y-4">
+                      <div className="flex items-center justify-between p-4 bg-yellow-50 border border-yellow-100 rounded-2xl">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-yellow-400 text-white rounded-full flex items-center justify-center shadow-sm">
+                            <Star size={20} className="fill-white" />
+                          </div>
+                          <div>
+                            <div className="text-[10px] font-black text-yellow-600 uppercase tracking-widest">MonoPoints</div>
+                            <div className="text-lg font-black text-yellow-700">{activePaymentKey.points || 0} Poin</div>
+                          </div>
+                        </div>
+                        {activePaymentKey.points && activePaymentKey.points > 0 ? (
+                          <div className="flex flex-col items-end gap-1">
+                            <span className="text-[9px] font-bold text-yellow-600 uppercase">Tukarkan Poin</span>
+                            <Slider 
+                              className="w-32" 
+                              max={Math.min(activePaymentKey.points, cartSubtotal)} 
+                              step={1} 
+                              value={[pointsToRedeem]} 
+                              onValueChange={(val) => setPointsToRedeem(val[0])} 
+                            />
+                            <div className="text-[10px] font-black text-yellow-700">-{formatRupiah(pointsToRedeem)}</div>
+                          </div>
+                        ) : (
+                          <div className="text-[9px] font-bold text-yellow-600 uppercase italic">Kumpulkan poin tiap belanja</div>
+                        )}
+                      </div>
+                      
+                      {pointsToRedeem > 0 ? (
+                        <div className="flex items-center gap-2 p-3 bg-red-50 text-red-600 rounded-xl text-[9px] font-bold uppercase tracking-widest">
+                          <Info size={14} /> Poin digunakan: Kamu tidak akan mendapatkan poin baru untuk transaksi ini.
+                        </div>
+                      ) : pointsEarned > 0 && (
+                        <div className="flex items-center gap-2 p-3 bg-green-50 text-green-600 rounded-xl text-[9px] font-bold uppercase tracking-widest">
+                          <CheckCircle2 size={14} /> Kamu akan mendapatkan +{pointsEarned} MonoPoints!
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
-              )}
+              </div>
             </Card>
 
             <Card className="rounded-[2rem] border-none shadow-sm bg-white p-8 space-y-6">
@@ -342,6 +405,7 @@ export default function CheckoutView() {
                 </div>
                 {bundleDiscountTotal > 0 && <div className="flex justify-between text-xs font-black text-primary uppercase"><span>Bundle Hemat</span><span>-{formatRupiah(bundleDiscountTotal)}</span></div>}
                 {discountTotal > 0 && <div className="flex justify-between text-xs font-black text-green-600 uppercase"><span>Voucher</span><span>-{formatRupiah(discountTotal)}</span></div>}
+                {pointsToRedeem > 0 && <div className="flex justify-between text-xs font-black text-yellow-600 uppercase"><span>Tukar Poin</span><span>-{formatRupiah(pointsToRedeem)}</span></div>}
                 <div className="flex justify-between items-center pt-2">
                   <span className="text-sm font-black">Total Akhir</span>
                   <span className="text-2xl font-black text-primary">{formatRupiah(cartTotal)}</span>

@@ -40,7 +40,8 @@ import {
   X,
   Send,
   Lock,
-  KeyRound
+  KeyRound,
+  Star
 } from 'lucide-react';
 import { formatRupiah } from '@/lib/utils';
 import { sendVerificationCodeEmail } from '@/lib/email-actions';
@@ -56,6 +57,7 @@ export function PaymentKeyDetailsDialog({ isOpen, onClose, paymentKey }: Payment
   const { toast } = useToast();
   
   const [balanceInput, setBalanceInput] = useState('0');
+  const [pointsInput, setPointsInput] = useState('0');
   const [isUpdating, setIsUpdating] = useState(false);
   const [isSendingOtp, setIsSendingOtp] = useState(false);
   const [lastSentOtp, setLastSentOtp] = useState<string | null>(null);
@@ -108,6 +110,30 @@ export function PaymentKeyDetailsDialog({ isOpen, onClose, paymentKey }: Payment
     }
   };
 
+  const handleUpdatePoints = async (type: 'add' | 'subtract') => {
+    if (!db || !paymentKey || !pointsInput) return;
+    const amount = parseInt(pointsInput);
+    if (isNaN(amount) || amount <= 0) return;
+
+    setIsUpdating(true);
+    try {
+      const finalAmount = type === 'add' ? amount : -amount;
+      const keyRef = doc(db, 'payment_keys', paymentKey.id);
+      
+      await updateDoc(keyRef, {
+        points: increment(finalAmount),
+        updatedAt: serverTimestamp()
+      });
+
+      toast({ title: "Berhasil", description: `Poin ${type === 'add' ? 'ditambah' : 'dikurangi'} ${amount} Poin` });
+      setPointsInput('0');
+    } catch (err) {
+      toast({ variant: "destructive", title: "Gagal", description: "Terjadi kesalahan sistem." });
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
   const handleSendOtp = async () => {
     if (!paymentKey?.email) return;
     setIsSendingOtp(true);
@@ -137,7 +163,7 @@ export function PaymentKeyDetailsDialog({ isOpen, onClose, paymentKey }: Payment
         onClose();
       }
     }}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto rounded-[2.5rem]">
+      <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto rounded-[2.5rem]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-3 text-xl font-black">
             <Wallet className="text-primary" /> Detail Payment Key
@@ -147,46 +173,52 @@ export function PaymentKeyDetailsDialog({ isOpen, onClose, paymentKey }: Payment
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 py-6">
-          {/* Section: Management */}
-          <div className="space-y-8">
-            <Card className="rounded-[2rem] border-none shadow-sm bg-slate-50 p-6 space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Saldo Saat Ini</span>
-                <span className="text-xl font-black text-primary">{formatRupiah(paymentKey.balance)}</span>
-              </div>
-              <div className="space-y-3">
-                <Label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Penyesuaian Saldo (IDR)</Label>
-                <div className="flex gap-2">
-                  <Input 
-                    type="number" 
-                    value={balanceInput} 
-                    onChange={e => setBalanceInput(e.target.value)} 
-                    className="h-12 rounded-xl bg-white border-none font-bold"
-                  />
-                  <div className="flex gap-1">
-                    <Button 
-                      variant="outline" 
-                      size="icon" 
-                      className="h-12 w-12 rounded-xl text-green-600 bg-white" 
-                      onClick={() => handleUpdateBalance('add')}
-                      disabled={isUpdating}
-                    >
-                      <Plus size={20} />
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="icon" 
-                      className="h-12 w-12 rounded-xl text-red-600 bg-white" 
-                      onClick={() => handleUpdateBalance('subtract')}
-                      disabled={isUpdating}
-                    >
-                      <Minus size={20} />
-                    </Button>
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-8 py-6">
+          {/* Section: Management (Left) */}
+          <div className="md:col-span-7 space-y-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Card className="rounded-[2rem] border-none shadow-sm bg-slate-50 p-6 space-y-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Saldo</span>
+                  <span className="text-xl font-black text-primary">{formatRupiah(paymentKey.balance || 0)}</span>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex gap-2">
+                    <Input 
+                      type="number" 
+                      value={balanceInput} 
+                      onChange={e => setBalanceInput(e.target.value)} 
+                      className="h-10 rounded-xl bg-white border-none font-bold"
+                    />
+                    <div className="flex gap-1">
+                      <Button variant="outline" size="icon" className="h-10 w-10 rounded-xl text-green-600 bg-white" onClick={() => handleUpdateBalance('add')} disabled={isUpdating}><Plus size={18} /></Button>
+                      <Button variant="outline" size="icon" className="h-10 w-10 rounded-xl text-red-600 bg-white" onClick={() => handleUpdateBalance('subtract')} disabled={isUpdating}><Minus size={18} /></Button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            </Card>
+              </Card>
+
+              <Card className="rounded-[2rem] border-none shadow-sm bg-yellow-50 p-6 space-y-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] font-black text-yellow-600 uppercase tracking-widest flex items-center gap-1"><Star size={10} /> MonoPoints</span>
+                  <span className="text-xl font-black text-yellow-700">{paymentKey.points || 0}</span>
+                </div>
+                <div className="space-y-3">
+                  <div className="flex gap-2">
+                    <Input 
+                      type="number" 
+                      value={pointsInput} 
+                      onChange={e => setPointsInput(e.target.value)} 
+                      className="h-10 rounded-xl bg-white border-none font-bold text-yellow-700"
+                    />
+                    <div className="flex gap-1">
+                      <Button variant="outline" size="icon" className="h-10 w-10 rounded-xl text-yellow-600 bg-white" onClick={() => handleUpdatePoints('add')} disabled={isUpdating}><Plus size={18} /></Button>
+                      <Button variant="outline" size="icon" className="h-10 w-10 rounded-xl text-red-600 bg-white" onClick={() => handleUpdatePoints('subtract')} disabled={isUpdating}><Minus size={18} /></Button>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            </div>
 
             <Card className="rounded-[2rem] border-none shadow-sm bg-white p-6 space-y-4 border border-slate-100">
                <div className="flex items-center gap-2 mb-2">
@@ -226,10 +258,10 @@ export function PaymentKeyDetailsDialog({ isOpen, onClose, paymentKey }: Payment
             </Card>
           </div>
 
-          {/* Section: History */}
-          <div className="space-y-4">
+          {/* Section: History (Right) */}
+          <div className="md:col-span-5 space-y-4">
             <h4 className="text-sm font-black flex items-center gap-2">
-              <History size={18} className="text-slate-400" /> Riwayat Transaksi Key
+              <History size={18} className="text-slate-400" /> Riwayat Transaksi
             </h4>
             <ScrollArea className="h-[400px] rounded-3xl border border-slate-100 bg-slate-50/50 p-4">
               <div className="space-y-3">
@@ -240,13 +272,13 @@ export function PaymentKeyDetailsDialog({ isOpen, onClose, paymentKey }: Payment
                 ) : (
                   sortedTransactions.map((tx: any) => (
                     <div key={tx.id} className="bg-white p-3 rounded-2xl border border-slate-100 flex items-center justify-between">
-                      <div>
-                        <div className="text-[11px] font-bold">{tx.description}</div>
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[11px] font-bold truncate">{tx.description}</div>
                         <div className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">
                           {tx.createdAt?.toDate ? tx.createdAt.toDate().toLocaleDateString('id-ID') : 'Baru saja'}
                         </div>
                       </div>
-                      <div className={`text-xs font-black ${tx.type === 'topup' ? 'text-green-600' : 'text-red-600'}`}>
+                      <div className={`text-xs font-black shrink-0 ml-2 ${tx.type === 'topup' ? 'text-green-600' : 'text-red-600'}`}>
                         {tx.type === 'topup' ? '+' : '-'}{formatRupiah(tx.amount).replace(",00", "")}
                       </div>
                     </div>

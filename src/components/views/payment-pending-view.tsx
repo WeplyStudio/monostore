@@ -15,7 +15,7 @@ import { sendOrderConfirmationEmail } from '@/lib/email-actions';
 import { useRouter } from 'next/navigation';
 
 export default function PaymentPendingView() {
-  const { paymentData, resetCart, setLastOrder } = useApp();
+  const { paymentData, resetCart, setLastOrder, setActivePaymentKey, activePaymentKey } = useApp();
   const router = useRouter();
   const [status, setStatus] = useState<'pending' | 'success' | 'failed'>('pending');
   const [isChecking, setIsChecking] = useState(false);
@@ -84,6 +84,24 @@ export default function PaymentPendingView() {
             } else { updateData.flashSaleStock = newFSStock; }
           }
           await updateDoc(productRef, updateData);
+        }
+      }
+
+      // Update Points if Payment Key is connected
+      if (paymentData.paymentKeyId) {
+        const keyRef = doc(db, 'payment_keys', paymentData.paymentKeyId);
+        const pointsUpdate = (paymentData.pointsRedeemed || 0) > 0 ? -paymentData.pointsRedeemed : paymentData.pointsEarned;
+        
+        await updateDoc(keyRef, {
+          points: increment(pointsUpdate)
+        });
+
+        // Sync local state if it's the currently active key
+        if (activePaymentKey && activePaymentKey.id === paymentData.paymentKeyId) {
+          setActivePaymentKey({
+            ...activePaymentKey,
+            points: (activePaymentKey.points || 0) + pointsUpdate
+          });
         }
       }
       
