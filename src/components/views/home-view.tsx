@@ -10,11 +10,11 @@ import ProductCard from '@/components/product-card';
 import BannerCarousel from '@/components/banner-carousel';
 import { CATEGORIES } from '@/lib/data';
 import { useApp } from '@/context/app-context';
-import { useFirestore, useCollection, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, query, orderBy, doc } from 'firebase/firestore';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, query, orderBy } from 'firebase/firestore';
 import type { Product } from '@/lib/types';
 import { getPersonalizedRecommendations } from '@/ai/flows/personalized-recommendations-flow';
-import { formatRupiah, getPlaceholderImageDetails, parseDescriptionToHtml, stripDescriptionFormatting } from '@/lib/utils';
+import { formatRupiah, getPlaceholderImageDetails, stripDescriptionFormatting } from '@/lib/utils';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -24,7 +24,6 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion";
-import { Progress } from '@/components/ui/progress';
 
 export default function HomeView() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -80,7 +79,7 @@ export default function HomeView() {
           features: p.features || [],
         }));
 
-        const viewedProductIds = viewedProducts.map(p => String(p.id));
+        const viewedProductIds = (viewedProducts || []).map(p => String(p.id));
         
         const result = await getPersonalizedRecommendations({
           viewedProductIds,
@@ -148,7 +147,6 @@ export default function HomeView() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 pb-20">
-      
       {!searchTerm && <BannerCarousel />}
 
       <div className="text-center mb-10 mt-12 animate-fadeIn">
@@ -222,7 +220,7 @@ export default function HomeView() {
           <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-10 gap-4">
              <div>
                <div className="flex items-center gap-2 text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-3">
-                 <SafeIcon name="Sparkles" size={14} /> Editor's Choice
+                 <Sparkles size={14} /> Editor's Choice
                </div>
                <h2 className="text-2xl md:text-3xl font-bold text-foreground font-headline">Rekomendasi Untukmu</h2>
                <p className="text-muted-foreground text-sm mt-2">Pilihan template terbaik yang mungkin sesuai dengan minatmu.</p>
@@ -262,7 +260,6 @@ export default function HomeView() {
         </div>
       )}
 
-      {/* Risk-Free Guarantee Section */}
       {!searchTerm && (
         <div className="mb-20 bg-white rounded-[2.5rem] p-8 md:p-16 border border-slate-100 shadow-sm overflow-hidden relative">
           <div className="absolute top-0 right-0 w-96 h-96 bg-primary/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl pointer-events-none" />
@@ -536,9 +533,3 @@ const RecommendationSkeleton = () => (
       </div>
   </div>
 )
-
-function SafeIcon({ name, size, className }: { name: string, size?: number, className?: string }) {
-  const Icon = require('lucide-react')[name];
-  if (!Icon) return null;
-  return <Icon size={size} className={className} />;
-}

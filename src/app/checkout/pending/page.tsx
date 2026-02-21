@@ -1,23 +1,17 @@
 
-"use client";
+'use client';
 
 import React from 'react';
 import { useApp } from '@/context/app-context';
-import HomeView from '@/components/views/home-view';
+import PaymentPendingView from '@/components/views/payment-pending-view';
 import LoadingScreen from '@/components/loading-screen';
-import CartSheet from '@/components/cart-sheet';
 
-export default function Home() {
+export default function PaymentPendingPage() {
   const { isInitialLoading, loadingProgress } = useApp();
 
   if (isInitialLoading) {
     return <LoadingScreen progress={loadingProgress} />;
   }
 
-  return (
-    <>
-      <HomeView />
-      <CartSheet />
-    </>
-  );
+  return <PaymentPendingView />;
 }

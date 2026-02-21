@@ -1,13 +1,13 @@
 
-"use client";
+'use client';
 
 import React from 'react';
 import { useApp } from '@/context/app-context';
-import HomeView from '@/components/views/home-view';
+import CheckoutView from '@/components/views/checkout-view';
 import LoadingScreen from '@/components/loading-screen';
 import CartSheet from '@/components/cart-sheet';
 
-export default function Home() {
+export default function CheckoutPage() {
   const { isInitialLoading, loadingProgress } = useApp();
 
   if (isInitialLoading) {
@@ -16,7 +16,7 @@ export default function Home() {
 
   return (
     <>
-      <HomeView />
+      <CheckoutView />
       <CartSheet />
     </>
   );

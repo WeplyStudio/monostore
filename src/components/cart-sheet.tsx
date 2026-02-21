@@ -1,3 +1,4 @@
+
 "use client";
 
 import Image from 'next/image';
@@ -8,13 +9,15 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Trash2 } from 'lucide-react';
 import { formatRupiah, getPlaceholderImageDetails } from '@/lib/utils';
 import type { CartItem } from '@/lib/types';
+import { useRouter } from 'next/navigation';
 
 export default function CartSheet() {
-  const { isCartOpen, setIsCartOpen, cart, removeFromCart, cartTotal, totalItems, setView } = useApp();
+  const { isCartOpen, setIsCartOpen, cart, removeFromCart, cartTotal, totalItems } = useApp();
+  const router = useRouter();
 
   const handleCheckout = () => {
     setIsCartOpen(false);
-    setView('checkout');
+    router.push('/checkout');
   };
 
   return (

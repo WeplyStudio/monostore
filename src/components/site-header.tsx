@@ -6,23 +6,24 @@ import { ShoppingBag, Loader2, Wallet } from 'lucide-react';
 import { useApp } from '@/context/app-context';
 import { Button } from '@/components/ui/button';
 import { formatRupiah } from '@/lib/utils';
+import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 export default function SiteHeader() {
   const [mounted, setMounted] = useState(false);
-  const { setView, setIsCartOpen, totalItems, settings, isDataLoading, activePaymentKey } = useApp();
+  const { setIsCartOpen, totalItems, settings, isDataLoading, activePaymentKey } = useApp();
+  const router = useRouter();
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
-  const goHome = () => setView('home');
-  const goWallet = () => setView('wallet');
   const shopName = settings?.shopName || 'MonoStore';
 
   return (
     <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/50">
       <div className="max-w-6xl mx-auto px-4 md:px-6 h-16 flex items-center justify-between">
-        <div className="flex items-center gap-2 cursor-pointer" onClick={goHome}>
+        <Link href="/" className="flex items-center gap-2 cursor-pointer">
           {!mounted || isDataLoading ? (
             <Loader2 size={16} className="animate-spin text-muted-foreground" />
           ) : (
@@ -30,10 +31,10 @@ export default function SiteHeader() {
               {shopName.toLowerCase()}<span className="text-primary">.</span>
             </span>
           )}
-        </div>
+        </Link>
         <div className="flex items-center gap-3">
           <Button
-            onClick={goWallet}
+            onClick={() => router.push('/wallet')}
             variant="ghost"
             className="hidden sm:flex items-center gap-2 rounded-xl bg-slate-50 hover:bg-slate-100 px-4 h-10 border border-slate-100"
           >

@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -35,7 +36,7 @@ import { doc, collection, getDocs, limit, query, orderBy } from 'firebase/firest
 import Link from 'next/link';
 
 export default function ProductDetailPage() {
-  const { addToCart, addViewedProduct, viewedProducts, setView, router: appRouter } = useApp();
+  const { addToCart, addViewedProduct, viewedProducts } = useApp();
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const db = useFirestore();
@@ -67,7 +68,6 @@ export default function ProductDetailPage() {
     }
   }, [product, addViewedProduct]);
 
-  // Flash Sale Timer
   useEffect(() => {
     if (!product?.flashSaleEnd) return;
 
@@ -119,7 +119,7 @@ export default function ProductDetailPage() {
         });
 
         const result = await getPersonalizedRecommendations({
-          viewedProductIds: viewedProducts.map(p => String(p.id)),
+          viewedProductIds: (viewedProducts || []).map(p => String(p.id)),
           currentProductId: String(product.id),
           allProducts: sanitizedAllProducts as any,
         });
@@ -161,8 +161,7 @@ export default function ProductDetailPage() {
   const handleBuyNow = () => {
     if (isOutOfStock) return;
     addToCart(product, quantity);
-    setView('checkout');
-    router.push('/');
+    router.push('/checkout');
   };
 
   const incrementQty = () => {
@@ -307,7 +306,6 @@ export default function ProductDetailPage() {
 
                   <Separator className="opacity-50" />
 
-                  {/* Quantity Selector */}
                   <div className="space-y-4">
                     <div className="flex items-center gap-4">
                       <div className="flex items-center border border-slate-200 rounded-xl p-1 bg-slate-50">
