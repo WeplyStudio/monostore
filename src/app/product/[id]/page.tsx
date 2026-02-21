@@ -161,7 +161,8 @@ export default function ProductDetailPage() {
 
   const handleBuyNow = () => {
     if (isOutOfStock) return;
-    addToCart(product, quantity);
+    // Add to cart but don't open the cart sheet
+    addToCart(product, quantity, false);
     router.push('/checkout');
   };
 

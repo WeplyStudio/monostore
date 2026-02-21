@@ -12,7 +12,7 @@ type AppContextType = {
   view: string;
   setView: (view: string) => void;
   cart: CartItem[];
-  addToCart: (product: Product, quantity?: number) => void;
+  addToCart: (product: Product, quantity?: number, openSheet?: boolean) => void;
   removeFromCart: (id: number | string) => void;
   cartTotal: number;
   cartSubtotal: number;
@@ -185,14 +185,24 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [loadingProgress, isDataLoading]);
 
-  const addToCart = (product: Product, quantity = 1) => {
+  const addToCart = (product: Product, quantity = 1, openSheet = true) => {
+    const isCartEnabled = settings?.isCartEnabled !== false;
+
     setCart(prev => {
+      // If cart is disabled, enforce single item (direct purchase mode)
+      if (!isCartEnabled) {
+        return [{ ...product, quantity }];
+      }
+      
       const existing = prev.find(i => i.id === product.id);
       if (existing) return prev.map(i => i.id === product.id ? { ...i, quantity: i.quantity + quantity } : i);
       return [...prev, { ...product, quantity }];
     });
-    toast({ title: `${product.name} ditambahkan` });
-    setIsCartOpen(true);
+
+    if (isCartEnabled && openSheet) {
+      toast({ title: `${product.name} ditambahkan` });
+      setIsCartOpen(true);
+    }
   };
 
   const removeFromCart = (id: string | number) => setCart(cart.filter(i => i.id !== id));
@@ -244,10 +254,16 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   // If points are redeemed (effectivePointsRedeemed > 0), then pointsEarned = 0.
   const pointsEarned = effectivePointsRedeemed > 0 ? 0 : Math.floor(cartTotal / 550);
 
+  const handleSetIsCartOpen = (isOpen: boolean) => {
+    // Prevent opening if cart feature is disabled
+    if (isOpen && settings?.isCartEnabled === false) return;
+    setIsCartOpen(isOpen);
+  };
+
   return (
     <AppContext.Provider value={{
       view, setView, cart, addToCart, removeFromCart, cartTotal, cartSubtotal,
-      discountTotal, bundleDiscountTotal, totalItems, isCartOpen, setIsCartOpen,
+      discountTotal, bundleDiscountTotal, totalItems, isCartOpen, setIsCartOpen: handleSetIsCartOpen,
       formData, setFormData, handleInputChange: (e) => setFormData({...formData, [e.target.name]: e.target.value}),
       resetCart, lastOrder, setLastOrder, paymentData, setPaymentData,
       activeVoucher, applyVoucher, removeVoucher: () => setActiveVoucher(null),
