@@ -130,7 +130,9 @@
       "properties": {
         "shopName": { "type": "string" },
         "whatsapp": { "type": "string" },
-        "supportEmail": { "type": "string" }
+        "supportEmail": { "type": "string" },
+        "isCartEnabled": { "type": "boolean" },
+        "isWalletEnabled": { "type": "boolean" }
       },
       "required": ["shopName"]
     }

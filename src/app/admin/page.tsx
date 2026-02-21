@@ -53,7 +53,8 @@ import {
   Menu,
   AlertTriangle,
   Zap,
-  Clock
+  Clock,
+  ToggleRight
 } from 'lucide-react';
 import { ProductDialog } from '@/components/admin/product-dialog';
 import { BannerDialog } from '@/components/admin/banner-dialog';
@@ -75,6 +76,7 @@ import {
   Area 
 } from 'recharts';
 import { getVapidPublicKey } from '@/lib/push-notifications';
+import { Switch } from '@/components/ui/switch';
 
 const ADMIN_EMAIL = 'matchboxdevelopment@gmail.com';
 
@@ -111,6 +113,8 @@ export default function AdminPage() {
   const [shopName, setShopName] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
   const [supportEmail, setSupportEmail] = useState('');
+  const [isCartEnabled, setIsCartEnabled] = useState(true);
+  const [isWalletEnabled, setIsWalletEnabled] = useState(true);
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [isResetting, setIsResetting] = useState(false);
 
@@ -203,6 +207,8 @@ export default function AdminPage() {
       setShopName(settings.shopName || '');
       setWhatsapp(settings.whatsapp || '');
       setSupportEmail(settings.supportEmail || '');
+      setIsCartEnabled(settings.isCartEnabled !== false);
+      setIsWalletEnabled(settings.isWalletEnabled !== false);
     }
   }, [settings]);
 
@@ -265,7 +271,14 @@ export default function AdminPage() {
     if (!db) return;
     setIsSavingSettings(true);
     const docRef = doc(db, 'settings', 'shop');
-    setDoc(docRef, { shopName, whatsapp, supportEmail, updatedAt: serverTimestamp() }, { merge: true })
+    setDoc(docRef, { 
+      shopName, 
+      whatsapp, 
+      supportEmail, 
+      isCartEnabled, 
+      isWalletEnabled,
+      updatedAt: serverTimestamp() 
+    }, { merge: true })
       .then(() => toast({ title: 'Tersimpan' }))
       .finally(() => setIsSavingSettings(false));
   };
@@ -460,7 +473,7 @@ export default function AdminPage() {
                   <div className="h-[350px] w-full">
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={revenueData}>
-                        <defs><linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#2563eb" stopOpacity={0.1}/><stop offset="95%" stopColor="#2563eb" stopOpacity={0}/></linearGradient></defs>
+                        <defs><linearGradient id="colorRev" x1="0" x2="0" x2="0" y2="1"><stop offset="5%" stopColor="#2563eb" stopOpacity={0.1}/><stop offset="95%" stopColor="#2563eb" stopOpacity={0}/></linearGradient></defs>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                         <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fontSize: 12, fontWeight: 700, fill: '#64748b'}} />
                         <YAxis axisLine={false} tickLine={false} tick={{fontSize: 12, fontWeight: 700, fill: '#64748b'}} />
@@ -717,6 +730,23 @@ export default function AdminPage() {
                 <h2 className="text-2xl font-bold">Pengaturan Toko</h2>
                 <Card className="rounded-[2.5rem] border-none shadow-sm bg-white p-8">
                   <form onSubmit={handleSaveSettings} className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-6 bg-slate-50 rounded-3xl border border-slate-100">
+                      <div className="flex items-center justify-between">
+                        <div className="space-y-0.5">
+                          <Label className="text-sm font-black uppercase tracking-tight">Fitur Keranjang</Label>
+                          <p className="text-[10px] text-muted-foreground font-bold">Aktifkan sistem keranjang belanja</p>
+                        </div>
+                        <Switch checked={isCartEnabled} onCheckedChange={setIsCartEnabled} />
+                      </div>
+                      <div className="flex items-center justify-between border-t md:border-t-0 md:border-l border-slate-200 pt-4 md:pt-0 md:pl-6">
+                        <div className="space-y-0.5">
+                          <Label className="text-sm font-black uppercase tracking-tight">Fitur Wallet</Label>
+                          <p className="text-[10px] text-muted-foreground font-bold">Aktifkan sistem Payment Key</p>
+                        </div>
+                        <Switch checked={isWalletEnabled} onCheckedChange={setIsWalletEnabled} />
+                      </div>
+                    </div>
+
                     <div className="space-y-2">
                       <Label className="text-xs font-bold text-slate-400 uppercase">Nama Toko</Label>
                       <Input value={shopName} onChange={e => setShopName(e.target.value)} required className="h-12 rounded-xl bg-slate-50 border-none" />

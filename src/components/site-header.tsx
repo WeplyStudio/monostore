@@ -19,6 +19,8 @@ export default function SiteHeader() {
   }, []);
 
   const shopName = settings?.shopName || 'MonoStore';
+  const isCartEnabled = settings?.isCartEnabled !== false;
+  const isWalletEnabled = settings?.isWalletEnabled !== false;
 
   return (
     <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-xl border-b border-border/50">
@@ -33,32 +35,36 @@ export default function SiteHeader() {
           )}
         </Link>
         <div className="flex items-center gap-3">
-          <Button
-            onClick={() => router.push('/wallet')}
-            variant="ghost"
-            className="flex items-center gap-2 rounded-xl bg-slate-50 hover:bg-slate-100 px-3 sm:px-4 h-10 border border-slate-100"
-          >
-            <Wallet size={20} className="text-primary" />
-            <div className="text-left hidden sm:block">
-              <div className="text-[8px] font-black text-slate-400 uppercase leading-none">Wallet</div>
-              <div className="text-[11px] font-black text-primary leading-none mt-0.5">
-                {activePaymentKey ? formatRupiah(activePaymentKey.balance).replace(",00", "") : "Buka Wallet"}
+          {isWalletEnabled && (
+            <Button
+              onClick={() => router.push('/wallet')}
+              variant="ghost"
+              className="flex items-center gap-2 rounded-xl bg-slate-50 hover:bg-slate-100 px-3 sm:px-4 h-10 border border-slate-100"
+            >
+              <Wallet size={20} className="text-primary" />
+              <div className="text-left hidden sm:block">
+                <div className="text-[8px] font-black text-slate-400 uppercase leading-none">Wallet</div>
+                <div className="text-[11px] font-black text-primary leading-none mt-0.5">
+                  {activePaymentKey ? formatRupiah(activePaymentKey.balance).replace(",00", "") : "Buka Wallet"}
+                </div>
               </div>
-            </div>
-          </Button>
+            </Button>
+          )}
 
-          <Button
-            onClick={() => setIsCartOpen(true)}
-            variant="ghost"
-            size="icon"
-            className="relative rounded-xl bg-slate-50"
-          >
-            <ShoppingBag size={20} />
-            {totalItems > 0 && (
-              <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-accent rounded-full ring-2 ring-background"></span>
-            )}
-            <span className="sr-only">Open cart</span>
-          </Button>
+          {isCartEnabled && (
+            <Button
+              onClick={() => setIsCartOpen(true)}
+              variant="ghost"
+              size="icon"
+              className="relative rounded-xl bg-slate-50"
+            >
+              <ShoppingBag size={20} />
+              {totalItems > 0 && (
+                <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 bg-accent rounded-full ring-2 ring-background"></span>
+              )}
+              <span className="sr-only">Open cart</span>
+            </Button>
+          )}
         </div>
       </div>
     </header>

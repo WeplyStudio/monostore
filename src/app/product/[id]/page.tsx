@@ -36,12 +36,13 @@ import { doc, collection, getDocs, limit, query, orderBy } from 'firebase/firest
 import Link from 'next/link';
 
 export default function ProductDetailPage() {
-  const { addToCart, addViewedProduct, viewedProducts } = useApp();
+  const { addToCart, addViewedProduct, viewedProducts, settings } = useApp();
   const router = useRouter();
   const params = useParams<{ id: string }>();
   const db = useFirestore();
   
   const id = params?.id as string;
+  const isCartEnabled = settings?.isCartEnabled !== false;
   
   const productRef = useMemoFirebase(() => {
     if (!db || !id) return null;
@@ -307,36 +308,41 @@ export default function ProductDetailPage() {
                   <Separator className="opacity-50" />
 
                   <div className="space-y-4">
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center border border-slate-200 rounded-xl p-1 bg-slate-50">
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-10 w-10 rounded-lg hover:bg-slate-200 text-slate-600 transition-colors" 
-                          onClick={decrementQty}
-                          disabled={isOutOfStock || quantity <= 1}
-                        >
-                          <Minus size={18} strokeWidth={2.5} />
-                        </Button>
-                        <div className="w-12 text-center font-bold text-lg text-slate-900">{quantity}</div>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-10 w-10 rounded-lg hover:bg-slate-200 text-slate-600 transition-colors" 
-                          onClick={incrementQty}
-                          disabled={isOutOfStock || quantity >= stock}
-                        >
-                          <Plus size={18} strokeWidth={2.5} />
-                        </Button>
+                    {isCartEnabled && (
+                      <div className="flex items-center gap-4">
+                        <div className="flex items-center border border-slate-200 rounded-xl p-1 bg-slate-50">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-10 w-10 rounded-lg hover:bg-slate-200 text-slate-600 transition-colors" 
+                            onClick={decrementQty}
+                            disabled={isOutOfStock || quantity <= 1}
+                          >
+                            <Minus size={18} strokeWidth={2.5} />
+                          </Button>
+                          <div className="w-12 text-center font-bold text-lg text-slate-900">{quantity}</div>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-10 w-10 rounded-lg hover:bg-slate-200 text-slate-600 transition-colors" 
+                            onClick={incrementQty}
+                            disabled={isOutOfStock || quantity >= stock}
+                          >
+                            <Plus size={18} strokeWidth={2.5} />
+                          </Button>
+                        </div>
+                        <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+                          Stok: {stock}
+                        </div>
                       </div>
-                      <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">
-                        Stok: {stock}
-                      </div>
-                    </div>
+                    )}
 
-                    <Button onClick={() => addToCart(product, quantity)} variant="secondary" disabled={isOutOfStock} className="w-full h-12 rounded-xl font-bold">
-                      <ShoppingCart size={18} className="mr-2" /> + Keranjang
-                    </Button>
+                    {isCartEnabled && (
+                      <Button onClick={() => addToCart(product, quantity)} variant="secondary" disabled={isOutOfStock} className="w-full h-12 rounded-xl font-bold">
+                        <ShoppingCart size={18} className="mr-2" /> + Keranjang
+                      </Button>
+                    )}
+                    
                     <Button onClick={handleBuyNow} disabled={isOutOfStock} className="w-full h-12 rounded-xl font-bold bg-primary text-white">
                       {isOutOfStock ? 'Stok Habis' : 'Beli Sekarang'}
                     </Button>

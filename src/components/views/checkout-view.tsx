@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -22,7 +23,7 @@ export default function CheckoutView() {
     cart, cartTotal, cartSubtotal, discountTotal, bundleDiscountTotal, 
     formData, handleInputChange, setPaymentData, activeVoucher, 
     resetCart, setLastOrder, activePaymentKey, fetchPaymentKey, setActivePaymentKey,
-    pointsToRedeem, pointsEarned, usePoints, setUsePoints
+    pointsToRedeem, pointsEarned, usePoints, setUsePoints, settings
   } = useApp();
   
   const router = useRouter();
@@ -35,11 +36,20 @@ export default function CheckoutView() {
   const { toast } = useToast();
   const db = useFirestore();
 
+  const isWalletEnabled = settings?.isWalletEnabled !== false;
+
   useEffect(() => {
     if (activePaymentKey) {
       setWalletKeyInput(activePaymentKey.key);
     }
   }, [activePaymentKey]);
+
+  // If wallet is disabled and user was on wallet method, switch to qris
+  useEffect(() => {
+    if (!isWalletEnabled && paymentMethod === 'wallet') {
+      setPaymentMethod('qris');
+    }
+  }, [isWalletEnabled, paymentMethod]);
 
   const handleVerifyWallet = async () => {
     if (!walletKeyInput.trim()) return;
@@ -249,7 +259,7 @@ export default function CheckoutView() {
           <div className="lg:col-span-7 space-y-6">
             <Card className="rounded-[2rem] border-none shadow-sm bg-white p-8">
               <h3 className="text-xl font-black mb-6">Metode Pembayaran</h3>
-              <div className="grid grid-cols-2 gap-4 mb-8">
+              <div className={cn("grid gap-4 mb-8", isWalletEnabled ? "grid-cols-2" : "grid-cols-1")}>
                 <button 
                   onClick={() => setPaymentMethod('qris')}
                   className={`p-6 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 ${paymentMethod === 'qris' ? 'border-primary bg-primary/5' : 'border-slate-50 hover:bg-slate-50'}`}
@@ -257,17 +267,19 @@ export default function CheckoutView() {
                   <QrCode size={32} className={paymentMethod === 'qris' ? 'text-primary' : 'text-slate-300'} />
                   <span className={`text-[10px] font-black uppercase tracking-widest ${paymentMethod === 'qris' ? 'text-primary' : 'text-slate-400'}`}>Scan QRIS</span>
                 </button>
-                <button 
-                  onClick={() => setPaymentMethod('wallet')}
-                  className={`p-6 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 ${paymentMethod === 'wallet' ? 'border-primary bg-primary/5' : 'border-slate-50 hover:bg-slate-50'}`}
-                >
-                  <Wallet size={32} className={paymentMethod === 'wallet' ? 'text-primary' : 'text-slate-300'} />
-                  <span className={`text-[10px] font-black uppercase tracking-widest ${paymentMethod === 'wallet' ? 'text-primary' : 'text-slate-400'}`}>Mono Wallet</span>
-                </button>
+                {isWalletEnabled && (
+                  <button 
+                    onClick={() => setPaymentMethod('wallet')}
+                    className={`p-6 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 ${paymentMethod === 'wallet' ? 'border-primary bg-primary/5' : 'border-slate-50 hover:bg-slate-50'}`}
+                  >
+                    <Wallet size={32} className={paymentMethod === 'wallet' ? 'text-primary' : 'text-slate-300'} />
+                    <span className={`text-[10px] font-black uppercase tracking-widest ${paymentMethod === 'wallet' ? 'text-primary' : 'text-slate-400'}`}>Mono Wallet</span>
+                  </button>
+                )}
               </div>
 
               <div className="space-y-6">
-                <div className={paymentMethod === 'wallet' || activePaymentKey ? 'animate-fadeIn' : 'hidden md:block opacity-50'}>
+                <div className={(paymentMethod === 'wallet' || activePaymentKey) && isWalletEnabled ? 'animate-fadeIn' : 'hidden md:block opacity-50'}>
                   <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100">
                     <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-3">Akses Payment Key (Wajib untuk Poin)</label>
                     <div className="flex gap-2">
