@@ -50,7 +50,16 @@ export default function WalletView() {
   // Check if user can check in today
   const canCheckIn = useMemo(() => {
     if (!activePaymentKey) return false;
-    const lastCheckIn = activePaymentKey.lastCheckIn?.toDate ? activePaymentKey.lastCheckIn.toDate() : (activePaymentKey.lastCheckIn ? new Date(activePaymentKey.lastCheckIn) : null);
+    
+    let lastCheckIn: Date | null = null;
+    if (activePaymentKey.lastCheckIn) {
+      if (typeof activePaymentKey.lastCheckIn.toDate === 'function') {
+        lastCheckIn = activePaymentKey.lastCheckIn.toDate();
+      } else {
+        lastCheckIn = new Date(activePaymentKey.lastCheckIn);
+      }
+    }
+
     if (!lastCheckIn) return true;
 
     const today = new Date();
@@ -61,7 +70,7 @@ export default function WalletView() {
     );
   }, [activePaymentKey]);
 
-  // Kueri transaksi disederhanakan: Hapus orderBy untuk menghindari error index/permission
+  // Query transactions for the current key
   const txQuery = useMemoFirebase(() => {
     if (!db || !activePaymentKey) return null;
     return query(
@@ -72,7 +81,7 @@ export default function WalletView() {
 
   const { data: transactions, loading: txLoading, error: txError } = useCollection<any>(txQuery);
 
-  // Urutkan transaksi secara manual di sisi klien (descending berdasarkan createdAt)
+  // Sort transactions locally
   const sortedTransactions = useMemo(() => {
     if (!transactions) return [];
     return [...transactions].sort((a, b) => {
@@ -108,13 +117,13 @@ export default function WalletView() {
       const keyRef = doc(db, 'payment_keys', activePaymentKey.id);
       const amount = topupQR.amount;
 
-      // 1. Update Saldo di Firestore
+      // 1. Update Balance in Firestore
       await updateDoc(keyRef, { 
         balance: increment(amount),
         updatedAt: serverTimestamp() 
       });
 
-      // 2. Catat Transaksi
+      // 2. Log Transaction
       await addDoc(collection(db, 'wallet_transactions'), {
         paymentKeyId: activePaymentKey.id,
         amount: amount,
@@ -123,7 +132,7 @@ export default function WalletView() {
         createdAt: serverTimestamp()
       });
 
-      // 3. Update State Lokal
+      // 3. Update Local State
       setActivePaymentKey({
         ...activePaymentKey,
         balance: (activePaymentKey.balance || 0) + amount
@@ -153,7 +162,7 @@ export default function WalletView() {
       const reward = Math.floor(Math.random() * (5000 - 50 + 1)) + 50;
       const keyRef = doc(db, 'payment_keys', activePaymentKey.id);
 
-      // 1. Update Payment Key
+      // 1. Update Payment Key in Firestore
       await updateDoc(keyRef, {
         balance: increment(reward),
         lastCheckIn: serverTimestamp(),
@@ -169,11 +178,11 @@ export default function WalletView() {
         createdAt: serverTimestamp()
       });
 
-      // 3. Update Local State
+      // 3. Update Local State immediately
       setActivePaymentKey({
         ...activePaymentKey,
         balance: (activePaymentKey.balance || 0) + reward,
-        lastCheckIn: new Date()
+        lastCheckIn: new Date() // Use current local date for instant UI update
       });
 
       toast({
