@@ -3,7 +3,7 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useFirestore, useCollection, useUser, useAuth, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, deleteDoc, doc, query, orderBy, setDoc, serverTimestamp, onSnapshot, limit, addDoc, getDocs } from 'firebase/firestore';
+import { collection, deleteDoc, doc, query, orderBy, setDoc, serverTimestamp, onSnapshot, limit, addDoc, getDocs, updateDoc, increment, where } from 'firebase/firestore';
 import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -52,13 +52,15 @@ import {
   Volume2,
   Link as LinkIcon,
   ExternalLink,
-  Wallet
+  Wallet,
+  Eye,
+  ShieldCheck
 } from 'lucide-react';
 import { ProductDialog } from '@/components/admin/product-dialog';
 import { BannerDialog } from '@/components/admin/banner-dialog';
 import { VoucherDialog } from '@/components/admin/voucher-dialog';
-import { FlashSaleDialog } from '@/components/admin/flash-sale-dialog';
 import { BundleDialog } from '@/components/admin/bundle-dialog';
+import { PaymentKeyDetailsDialog } from '@/components/admin/payment-key-details-dialog';
 import { formatRupiah } from '@/lib/utils';
 import Image from 'next/image';
 import { useToast } from '@/hooks/use-toast';
@@ -107,8 +109,8 @@ export default function AdminPage() {
   const [editingVoucher, setEditingVoucher] = useState<any>(null);
   const [isBundleDialogOpen, setIsBundleDialogOpen] = useState(false);
   const [editingBundle, setEditingBundle] = useState<any>(null);
-  const [isFlashSaleDialogOpen, setIsFlashSaleDialogOpen] = useState(false);
-  const [selectedFlashSaleProduct, setSelectedFlashSaleProduct] = useState<any>(null);
+  const [isKeyDetailsOpen, setIsKeyDetailsOpen] = useState(false);
+  const [selectedKey, setSelectedKey] = useState<any>(null);
 
   // Settings State
   const [shopName, setShopName] = useState('');
@@ -383,15 +385,23 @@ export default function AdminPage() {
                 </div>
                 <Card className="rounded-[2.5rem] overflow-hidden border-none shadow-sm bg-white">
                   <Table>
-                    <TableHeader className="bg-slate-50"><TableRow><TableHead>KEY</TableHead><TableHead>SALDO</TableHead><TableHead>DIBUAT PADA</TableHead><TableHead className="text-right">AKSI</TableHead></TableRow></TableHeader>
+                    <TableHeader className="bg-slate-50"><TableRow><TableHead>KEY / EMAIL</TableHead><TableHead>SALDO</TableHead><TableHead>STATUS 2SV</TableHead><TableHead className="text-right">AKSI</TableHead></TableRow></TableHeader>
                     <TableBody>
                       {keysLoading ? <TableRow><TableCell colSpan={4} className="text-center h-40"><Loader2 className="animate-spin mx-auto" /></TableCell></TableRow> :
                         paymentKeys?.map((k: any) => (
                           <TableRow key={k.id}>
-                            <TableCell className="font-black font-mono tracking-widest">{k.key}</TableCell>
-                            <TableCell className="font-bold text-primary">{formatRupiah(k.balance)}</TableCell>
-                            <TableCell className="text-xs text-muted-foreground">{k.createdAt?.toDate ? k.createdAt.toDate().toLocaleDateString('id-ID') : 'Baru saja'}</TableCell>
+                            <TableCell>
+                              <div className="font-black font-mono tracking-widest text-primary">{k.key}</div>
+                              <div className="text-[10px] text-muted-foreground font-bold">{k.email}</div>
+                            </TableCell>
+                            <TableCell className="font-bold">{formatRupiah(k.balance)}</TableCell>
+                            <TableCell>
+                              <Badge variant={k.is2SVEnabled ? 'default' : 'outline'} className="rounded-lg text-[9px]">
+                                {k.is2SVEnabled ? '2SV AKTIF' : 'NONAKTIF'}
+                              </Badge>
+                            </TableCell>
                             <TableCell className="text-right">
+                              <Button variant="ghost" size="icon" className="rounded-xl mr-1 text-blue-600" onClick={() => { setSelectedKey(k); setIsKeyDetailsOpen(true); }}><Eye size={16} /></Button>
                               <Button variant="ghost" size="icon" className="text-destructive rounded-xl" onClick={() => handleDelete(k.id, 'payment_keys')}><Trash2 size={16} /></Button>
                             </TableCell>
                           </TableRow>
@@ -484,6 +494,7 @@ export default function AdminPage() {
       <BannerDialog isOpen={isBannerDialogOpen} onClose={() => { setIsBannerDialogOpen(false); setEditingBanner(null); }} banner={editingBanner} />
       <VoucherDialog isOpen={isVoucherDialogOpen} onClose={() => { setIsVoucherDialogOpen(false); setEditingVoucher(null); }} voucher={editingVoucher} />
       <BundleDialog isOpen={isBundleDialogOpen} onClose={() => { setIsBundleDialogOpen(false); setEditingBundle(null); }} bundle={editingBundle} products={products || []} />
+      <PaymentKeyDetailsDialog isOpen={isKeyDetailsOpen} onClose={() => { setIsKeyDetailsOpen(false); setSelectedKey(null); }} paymentKey={selectedKey} />
     </div>
   );
 }
