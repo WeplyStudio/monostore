@@ -27,12 +27,21 @@ import {
   CalendarCheck,
   Gift,
   Sparkles,
-  Star
+  Star,
+  ShieldAlert
 } from 'lucide-react';
 import { formatRupiah } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { createPakasirTransaction, checkPakasirStatus } from '@/lib/pakasir-actions';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 export default function WalletView() {
   const { activePaymentKey, setActivePaymentKey, fetchPaymentKey, generateNewPaymentKey } = useApp();
@@ -47,6 +56,11 @@ export default function WalletView() {
   const [topupQR, setTopupQR] = useState<any>(null);
   const [isSuccess, setIsSuccess] = useState(false);
   const [isCheckingIn, setIsCheckingIn] = useState(false);
+
+  // 2SV PIN States
+  const [isPinDialogOpen, setIsPinDialogOpen] = useState(false);
+  const [newPin, setNewPin] = useState('');
+  const [isSavingPin, setIsSavingPin] = useState(false);
 
   // Check if user can check in today
   const canCheckIn = useMemo(() => {
@@ -229,14 +243,27 @@ export default function WalletView() {
     }
   };
 
-  const handleToggle2SV = async (enabled: boolean) => {
-    if (!db || !activePaymentKey) return;
+  const handleSetPin = async () => {
+    if (newPin.length !== 6 || !/^\d+$/.test(newPin)) {
+      toast({ variant: "destructive", title: "PIN Tidak Valid", description: "PIN harus berupa 6 digit angka." });
+      return;
+    }
+
+    setIsSavingPin(true);
     try {
-      await updateDoc(doc(db, 'payment_keys', activePaymentKey.id), { is2SVEnabled: enabled });
-      setActivePaymentKey({ ...activePaymentKey, is2SVEnabled: enabled });
-      toast({ title: enabled ? "2SV Aktif" : "2SV Nonaktif" });
+      await updateDoc(doc(db, 'payment_keys', activePaymentKey.id), { 
+        is2SVEnabled: true,
+        pin: newPin,
+        updatedAt: serverTimestamp()
+      });
+      setActivePaymentKey({ ...activePaymentKey, is2SVEnabled: true, pin: newPin });
+      toast({ title: "2SV Berhasil Diaktifkan!", description: "PIN Anda telah disimpan dengan aman." });
+      setIsPinDialogOpen(false);
+      setNewPin('');
     } catch (err) {
-      console.error("Update 2SV error:", err);
+      toast({ variant: "destructive", title: "Gagal", description: "Gagal mengaktifkan 2SV." });
+    } finally {
+      setIsSavingPin(false);
     }
   };
 
@@ -384,13 +411,21 @@ export default function WalletView() {
                 </div>
                 <Switch 
                   checked={activePaymentKey.is2SVEnabled || false} 
-                  onCheckedChange={handleToggle2SV}
+                  disabled={activePaymentKey.is2SVEnabled}
+                  onCheckedChange={(val) => val && setIsPinDialogOpen(true)}
                   className="data-[state=checked]:bg-green-500 data-[state=unchecked]:bg-slate-700"
                 />
              </div>
-             <p className="text-[10px] text-white/70 leading-relaxed">
-               Setiap pembayaran akan meminta kode verifikasi yang dikirim ke email Anda.
-             </p>
+             {activePaymentKey.is2SVEnabled ? (
+               <div className="p-3 bg-white/10 rounded-xl flex items-center gap-2 border border-white/5 animate-fadeIn">
+                  <Lock size={14} className="text-green-400" />
+                  <p className="text-[9px] text-white/80 font-bold uppercase tracking-widest">PIN AKTIF & TERKUNCI</p>
+               </div>
+             ) : (
+               <p className="text-[10px] text-white/70 leading-relaxed">
+                 Amankan wallet Anda dengan 6 digit PIN. Sekali aktif, fitur ini tidak dapat dimatikan demi keamanan.
+               </p>
+             )}
           </Card>
 
           <Card className="rounded-[2.5rem] border-none shadow-sm bg-orange-50 p-8 space-y-6 relative overflow-hidden group">
@@ -521,6 +556,39 @@ export default function WalletView() {
           </Card>
         </div>
       </div>
+
+      {/* PIN Setup Dialog */}
+      <Dialog open={isPinDialogOpen} onOpenChange={setIsPinDialogOpen}>
+        <DialogContent className="sm:max-w-md rounded-[2rem] border-none shadow-2xl">
+          <DialogHeader className="text-center">
+            <div className="w-16 h-16 bg-primary/5 text-primary rounded-[1.5rem] flex items-center justify-center mx-auto mb-4">
+              <ShieldAlert size={32} />
+            </div>
+            <DialogTitle className="text-2xl font-black">Buat PIN Keamanan</DialogTitle>
+            <DialogDescription className="text-xs font-medium leading-relaxed">
+              PIN ini akan diminta setiap kali Anda melakukan pembayaran menggunakan wallet. <br/>
+              <strong>PENTING:</strong> 2SV tidak dapat dimatikan setelah diaktifkan.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-6">
+            <Input
+              type="password"
+              placeholder="Masukkan 6 Digit PIN"
+              maxLength={6}
+              value={newPin}
+              onChange={(e) => setNewPin(e.target.value.replace(/\D/g, ''))}
+              className="h-14 rounded-2xl bg-slate-50 border-none text-center font-black tracking-[1em] text-xl"
+            />
+            <p className="text-[10px] text-slate-400 text-center mt-4 font-bold uppercase tracking-widest">PIN harus berupa angka (0-9)</p>
+          </div>
+          <DialogFooter className="flex flex-col sm:flex-row gap-2">
+            <Button variant="ghost" onClick={() => setIsPinDialogOpen(false)} className="rounded-xl font-bold">Batal</Button>
+            <Button onClick={handleSetPin} disabled={isSavingPin || newPin.length !== 6} className="h-12 rounded-xl font-bold px-8">
+              {isSavingPin ? <Loader2 className="animate-spin" /> : 'Aktifkan 2SV'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

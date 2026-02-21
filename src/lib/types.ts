@@ -28,6 +28,7 @@ export type PaymentKey = {
   balance: number;
   points?: number;
   is2SVEnabled?: boolean;
+  pin?: string;
   lastCheckIn?: any;
   createdAt: any;
 };

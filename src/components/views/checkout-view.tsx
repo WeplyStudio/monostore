@@ -6,7 +6,7 @@ import { useApp } from '@/context/app-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
-import { ArrowLeft, Lock, ShieldCheck, Loader2, QrCode, Wallet, Mail, CheckCircle2, Star, Info, Send, RefreshCw, User } from 'lucide-react';
+import { ArrowLeft, Lock, ShieldCheck, Loader2, QrCode, Wallet, Mail, CheckCircle2, Star, Info, Send, RefreshCw, User, KeyRound } from 'lucide-react';
 import { formatRupiah, getPlaceholderImageDetails } from '@/lib/utils';
 import Image from 'next/image';
 import { useToast } from '@/hooks/use-toast';
@@ -21,7 +21,7 @@ export default function CheckoutView() {
   const { 
     cart, cartTotal, cartSubtotal, discountTotal, bundleDiscountTotal, 
     formData, handleInputChange, setPaymentData, activeVoucher, 
-    resetCart, setLastOrder, activePaymentKey, fetchPaymentKey, setActivePaymentKey, sendVerificationCode,
+    resetCart, setLastOrder, activePaymentKey, fetchPaymentKey, setActivePaymentKey,
     pointsToRedeem, setPointsToRedeem, pointsEarned
   } = useApp();
   
@@ -31,12 +31,8 @@ export default function CheckoutView() {
   const [walletKeyInput, setWalletKeyInput] = useState(activePaymentKey?.key || '');
   const [isVerifyingKey, setIsVerifyingKey] = useState(false);
   
-  // 2SV States
-  const [requires2SV, setRequires2SV] = useState(false);
-  const [verificationCodeInput, setVerificationCodeInput] = useState('');
-  const [serverCode, setServerCode] = useState<string | null>(null);
-  const [isSendingCode, setIsSendingCode] = useState(false);
-  const [isOtpSent, setIsOtpSent] = useState(false);
+  // 2SV (PIN) States
+  const [pinInput, setPinInput] = useState('');
 
   const { toast } = useToast();
   const db = useFirestore();
@@ -55,12 +51,8 @@ export default function CheckoutView() {
       if (keyData) {
         setActivePaymentKey(keyData);
         if (keyData.is2SVEnabled) {
-          setRequires2SV(true);
-          setIsOtpSent(false);
-          toast({ title: "2-Step Verification Aktif", description: "Klik tombol 'Kirim Kode' untuk mendapatkan OTP." });
+          toast({ title: "2-Step Verification Aktif", description: "Silakan masukkan PIN keamanan Anda." });
         } else {
-          setRequires2SV(false);
-          setIsOtpSent(false);
           toast({ title: "Wallet Terhubung", description: `Saldo: ${formatRupiah(keyData.balance)}` });
         }
       } else {
@@ -70,23 +62,6 @@ export default function CheckoutView() {
       toast({ variant: "destructive", title: "Gagal Verifikasi", description: "Terjadi kesalahan." });
     } finally {
       setIsVerifyingKey(false);
-    }
-  };
-
-  const handleSendCode = async () => {
-    if (!activePaymentKey) return;
-    setIsSendingCode(true);
-    try {
-      const res = await sendVerificationCode(activePaymentKey);
-      if (res) {
-        setServerCode(res.code);
-        setIsOtpSent(true);
-        toast({ title: "Kode Terkirim", description: `Cek email ${activePaymentKey.email}` });
-      } else {
-        toast({ variant: "destructive", title: "Gagal", description: "Gagal mengirim email verifikasi." });
-      }
-    } finally {
-      setIsSendingCode(false);
     }
   };
 
@@ -119,14 +94,9 @@ export default function CheckoutView() {
         return;
       }
 
-      if (requires2SV) {
-        if (!isOtpSent) {
-          toast({ variant: "destructive", title: "OTP Belum Dikirim", description: "Silakan kirim kode OTP terlebih dahulu." });
-          setLoading(false);
-          return;
-        }
-        if (verificationCodeInput !== serverCode) {
-          toast({ variant: "destructive", title: "Kode Salah", description: "Kode verifikasi 2SV tidak cocok." });
+      if (activePaymentKey.is2SVEnabled) {
+        if (pinInput !== activePaymentKey.pin) {
+          toast({ variant: "destructive", title: "PIN Salah", description: "PIN keamanan 2SV tidak cocok." });
           setLoading(false);
           return;
         }
@@ -309,40 +279,27 @@ export default function CheckoutView() {
                     </div>
                   </div>
 
-                  {requires2SV && activePaymentKey && paymentMethod === 'wallet' && (
+                  {activePaymentKey?.is2SVEnabled && paymentMethod === 'wallet' && (
                     <div className="p-6 bg-blue-50 rounded-2xl border border-blue-100 space-y-4 mt-4 animate-fadeIn">
                       <div className="flex items-center gap-2">
                         <Lock size={16} className="text-blue-600" />
                         <span className="text-xs font-bold uppercase tracking-widest">2-Step Verification</span>
                       </div>
                       
-                      {!isOtpSent ? (
-                        <p className="text-[10px] text-blue-500 font-medium leading-relaxed">
-                          Klik tombol di bawah untuk mendapatkan kode OTP ke email <strong>{activePaymentKey.email}</strong>.
-                        </p>
-                      ) : (
-                        <div className="space-y-4 animate-fadeIn">
-                          <div className="flex justify-between items-center">
-                            <p className="text-[10px] text-blue-500 font-medium">Masukkan kode verifikasi:</p>
-                            <Button 
-                              variant="ghost" 
-                              size="sm" 
-                              onClick={handleSendCode} 
-                              disabled={isSendingCode}
-                              className="h-6 text-[9px] font-bold text-blue-600 hover:bg-blue-100 rounded-lg px-2"
-                            >
-                              <RefreshCw size={10} className={`mr-1 ${isSendingCode ? 'animate-spin' : ''}`} /> Kirim Ulang
-                            </Button>
-                          </div>
-                          <Input 
-                            placeholder="KODE OTP" 
-                            value={verificationCodeInput} 
-                            onChange={e => setVerificationCodeInput(e.target.value)}
-                            className="h-12 rounded-xl bg-white border-none text-center font-black tracking-[8px]"
-                            maxLength={6}
-                          />
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-2">
+                          <KeyRound size={14} className="text-blue-400" />
+                          <p className="text-[10px] text-blue-500 font-medium">Masukkan PIN 6-digit Anda:</p>
                         </div>
-                      )}
+                        <Input 
+                          type="password"
+                          placeholder="••••••" 
+                          value={pinInput} 
+                          onChange={e => setPinInput(e.target.value.replace(/\D/g, ''))}
+                          className="h-12 rounded-xl bg-white border-none text-center font-black tracking-[1em] text-xl"
+                          maxLength={6}
+                        />
+                      </div>
                     </div>
                   )}
 
@@ -451,25 +408,14 @@ export default function CheckoutView() {
                 </div>
               </div>
 
-              {paymentMethod === 'wallet' && requires2SV && !isOtpSent ? (
-                <Button 
-                  onClick={handleSendCode} 
-                  disabled={isSendingCode || loading} 
-                  className="w-full h-14 rounded-2xl font-black text-lg shadow-xl shadow-blue-200 bg-blue-600 hover:bg-blue-700 text-white"
-                >
-                  {isSendingCode ? <Loader2 className="animate-spin mr-2" /> : <Send size={20} className="mr-2" />}
-                  Kirim Kode OTP
-                </Button>
-              ) : (
-                <Button 
-                  onClick={handleCheckoutSubmit}
-                  className="w-full h-14 rounded-2xl font-black text-lg shadow-xl shadow-primary/20" 
-                  disabled={loading}
-                >
-                  {loading ? <Loader2 className="animate-spin mr-2" /> : 
-                   (paymentMethod === 'wallet' ? (isOtpSent ? 'Verifikasi & Bayar' : 'Bayar via Wallet') : `Bayar ${formatRupiah(cartTotal)}`)}
-                </Button>
-              )}
+              <Button 
+                onClick={handleCheckoutSubmit}
+                className="w-full h-14 rounded-2xl font-black text-lg shadow-xl shadow-primary/20" 
+                disabled={loading || (paymentMethod === 'wallet' && activePaymentKey?.is2SVEnabled && pinInput.length !== 6)}
+              >
+                {loading ? <Loader2 className="animate-spin mr-2" /> : 
+                 (paymentMethod === 'wallet' ? (activePaymentKey?.is2SVEnabled ? 'Verifikasi & Bayar' : 'Bayar via Wallet') : `Bayar ${formatRupiah(cartTotal)}`)}
+              </Button>
               
               <p className="text-[10px] text-center text-slate-400 font-bold uppercase tracking-widest flex items-center justify-center gap-2">
                 <ShieldCheck size={14} className="text-green-500" /> Transaksi Aman & Terenkripsi

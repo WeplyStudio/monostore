@@ -37,6 +37,7 @@
         "balance": { "type": "number" },
         "points": { "type": "number", "description": "Loyalty points balance." },
         "is2SVEnabled": { "type": "boolean" },
+        "pin": { "type": "string", "description": "6-digit security PIN for 2SV." },
         "lastCheckIn": { "type": "string", "format": "date-time" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
