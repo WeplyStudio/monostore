@@ -6,7 +6,7 @@ import { useApp } from '@/context/app-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
-import { ArrowLeft, Lock, ShieldCheck, Loader2, QrCode, Wallet, Mail, CheckCircle2, Star, Info } from 'lucide-react';
+import { ArrowLeft, Lock, ShieldCheck, Loader2, QrCode, Wallet, Mail, CheckCircle2, Star, Info, Send, RefreshCw } from 'lucide-react';
 import { formatRupiah, getPlaceholderImageDetails } from '@/lib/utils';
 import Image from 'next/image';
 import { useToast } from '@/hooks/use-toast';
@@ -36,6 +36,7 @@ export default function CheckoutView() {
   const [verificationCodeInput, setVerificationCodeInput] = useState('');
   const [serverCode, setServerCode] = useState<string | null>(null);
   const [isSendingCode, setIsSendingCode] = useState(false);
+  const [isOtpSent, setIsOtpSent] = useState(false);
 
   const { toast } = useToast();
   const db = useFirestore();
@@ -55,9 +56,11 @@ export default function CheckoutView() {
         setActivePaymentKey(keyData);
         if (keyData.is2SVEnabled) {
           setRequires2SV(true);
-          toast({ title: "2-Step Verification Aktif", description: "Klik tombol 'Kirim Kode' untuk melanjutkan." });
+          setIsOtpSent(false); // Reset OTP state when linking a new key
+          toast({ title: "2-Step Verification Aktif", description: "Klik tombol 'Kirim Kode' untuk mendapatkan OTP." });
         } else {
           setRequires2SV(false);
+          setIsOtpSent(false);
           toast({ title: "Wallet Terhubung", description: `Saldo: ${formatRupiah(keyData.balance)}` });
         }
       } else {
@@ -77,6 +80,7 @@ export default function CheckoutView() {
       const res = await sendVerificationCode(activePaymentKey);
       if (res) {
         setServerCode(res.code);
+        setIsOtpSent(true);
         toast({ title: "Kode Terkirim", description: `Cek email ${activePaymentKey.email}` });
       } else {
         toast({ variant: "destructive", title: "Gagal", description: "Gagal mengirim email verifikasi." });
@@ -106,10 +110,17 @@ export default function CheckoutView() {
         return;
       }
 
-      if (requires2SV && verificationCodeInput !== serverCode) {
-        toast({ variant: "destructive", title: "Kode Salah", description: "Kode verifikasi 2SV tidak cocok." });
-        setLoading(false);
-        return;
+      if (requires2SV) {
+        if (!isOtpSent) {
+          toast({ variant: "destructive", title: "OTP Belum Dikirim", description: "Silakan kirim kode OTP terlebih dahulu." });
+          setLoading(false);
+          return;
+        }
+        if (verificationCodeInput !== serverCode) {
+          toast({ variant: "destructive", title: "Kode Salah", description: "Kode verifikasi 2SV tidak cocok." });
+          setLoading(false);
+          return;
+        }
       }
 
       if (activePaymentKey.balance < cartTotal) {
@@ -289,29 +300,41 @@ export default function CheckoutView() {
                   </div>
 
                   {requires2SV && activePaymentKey && paymentMethod === 'wallet' && (
-                    <div className="p-6 bg-blue-50 rounded-2xl border border-blue-100 space-y-4 mt-4">
+                    <div className="p-6 bg-blue-50 rounded-2xl border border-blue-100 space-y-4 mt-4 animate-fadeIn">
                       <div className="flex items-center gap-2">
                         <Lock size={16} className="text-blue-600" />
                         <span className="text-xs font-bold text-blue-600 uppercase tracking-widest">2-Step Verification</span>
                       </div>
-                      <p className="text-[10px] text-blue-500 font-medium">Masukkan kode verifikasi yang dikirim ke <strong>{activePaymentKey.email}</strong></p>
-                      <div className="flex gap-2">
-                        <Input 
-                          placeholder="Kode 6-Digit" 
-                          value={verificationCodeInput} 
-                          onChange={e => setVerificationCodeInput(e.target.value)}
-                          className="h-12 rounded-xl bg-white border-none text-center font-black tracking-[10px]"
-                          maxLength={6}
-                        />
-                        <Button 
-                          onClick={handleSendCode} 
-                          disabled={isSendingCode} 
-                          variant="secondary"
-                          className="h-12 rounded-xl font-bold"
-                        >
-                          {isSendingCode ? <Loader2 className="animate-spin" /> : 'Kirim Kode'}
-                        </Button>
-                      </div>
+                      
+                      {!isOtpSent ? (
+                        <div className="space-y-3">
+                          <p className="text-[10px] text-blue-500 font-medium leading-relaxed">
+                            Keamanan akun aktif. Klik tombol di bawah untuk mengirimkan kode OTP ke email <strong>{activePaymentKey.email}</strong>.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="space-y-4 animate-fadeIn">
+                          <div className="flex justify-between items-center">
+                            <p className="text-[10px] text-blue-500 font-medium">Masukkan kode verifikasi:</p>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              onClick={handleSendCode} 
+                              disabled={isSendingCode}
+                              className="h-6 text-[9px] font-bold text-blue-600 hover:bg-blue-100 rounded-lg px-2"
+                            >
+                              <RefreshCw size={10} className={`mr-1 ${isSendingCode ? 'animate-spin' : ''}`} /> Kirim Ulang
+                            </Button>
+                          </div>
+                          <Input 
+                            placeholder="KODE OTP" 
+                            value={verificationCodeInput} 
+                            onChange={e => setVerificationCodeInput(e.target.value)}
+                            className="h-12 rounded-xl bg-white border-none text-center font-black tracking-[8px]"
+                            maxLength={6}
+                          />
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -417,9 +440,27 @@ export default function CheckoutView() {
                 </div>
               </div>
 
-              <Button type="submit" form="checkoutForm" className="w-full h-14 rounded-2xl font-black text-lg shadow-xl shadow-primary/20" disabled={loading}>
-                {loading ? <Loader2 className="animate-spin mr-2" /> : paymentMethod === 'wallet' ? 'Bayar via Wallet' : `Bayar ${formatRupiah(cartTotal)}`}
-              </Button>
+              {paymentMethod === 'wallet' && requires2SV && !isOtpSent ? (
+                <Button 
+                  onClick={handleSendCode} 
+                  disabled={isSendingCode || loading} 
+                  className="w-full h-14 rounded-2xl font-black text-lg shadow-xl shadow-blue-200 bg-blue-600 hover:bg-blue-700 text-white"
+                >
+                  {isSendingCode ? <Loader2 className="animate-spin mr-2" /> : <Send size={20} className="mr-2" />}
+                  Kirim Kode OTP
+                </Button>
+              ) : (
+                <Button 
+                  type="submit" 
+                  form="checkoutForm" 
+                  className="w-full h-14 rounded-2xl font-black text-lg shadow-xl shadow-primary/20" 
+                  disabled={loading}
+                >
+                  {loading ? <Loader2 className="animate-spin mr-2" /> : 
+                   (paymentMethod === 'wallet' ? (isOtpSent ? 'Verifikasi & Bayar' : 'Bayar via Wallet') : `Bayar ${formatRupiah(cartTotal)}`)}
+                </Button>
+              )}
+              
               <p className="text-[10px] text-center text-slate-400 font-bold uppercase tracking-widest flex items-center justify-center gap-2">
                 <ShieldCheck size={14} className="text-green-500" /> Transaksi Aman & Terenkripsi
               </p>
