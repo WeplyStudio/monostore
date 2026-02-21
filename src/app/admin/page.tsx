@@ -48,7 +48,9 @@ import {
   Layers,
   Bell,
   BellRing,
-  Volume2
+  Volume2,
+  Link as LinkIcon,
+  ExternalLink
 } from 'lucide-react';
 import { ProductDialog } from '@/components/admin/product-dialog';
 import { BannerDialog } from '@/components/admin/banner-dialog';
@@ -545,6 +547,98 @@ export default function AdminPage() {
                     </TableBody>
                   </Table>
                 </Card>
+              </div>
+            )}
+
+            {activeSection === 'vouchers' && (
+              <div className="space-y-6 animate-fadeIn">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                  <div>
+                    <h2 className="text-2xl font-bold tracking-tight">Manajemen Voucher</h2>
+                    <p className="text-sm text-muted-foreground">Kelola kode kupon diskon untuk pelanggan.</p>
+                  </div>
+                  <Button onClick={() => setIsVoucherDialogOpen(true)} className="h-12 px-6 rounded-xl font-bold shadow-lg shadow-primary/20"><Plus size={18} className="mr-2" /> Tambah Voucher</Button>
+                </div>
+
+                <Card className="rounded-2xl border-none shadow-sm overflow-hidden bg-white">
+                  <Table>
+                    <TableHeader className="bg-slate-50">
+                      <TableRow>
+                        <TableHead className="pl-8 font-bold">KODE</TableHead>
+                        <TableHead className="font-bold">POTONGAN</TableHead>
+                        <TableHead className="font-bold">MIN. BELANJA</TableHead>
+                        <TableHead className="font-bold">STATUS</TableHead>
+                        <TableHead className="text-right pr-8 font-bold">AKSI</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {vouchersLoading ? <TableRow><TableCell colSpan={5} className="text-center h-40"><Loader2 className="animate-spin mx-auto" /></TableCell></TableRow> :
+                        vouchers?.map((v: any) => (
+                          <TableRow key={v.id} className="hover:bg-slate-50/50 transition-colors">
+                            <TableCell className="pl-8 py-5">
+                              <div className="flex items-center gap-2">
+                                <Ticket size={14} className="text-primary" />
+                                <span className="font-black tracking-widest">{v.code}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="font-bold">
+                              {v.type === 'percentage' ? `${v.value}%` : formatRupiah(v.value)}
+                            </TableCell>
+                            <TableCell>{formatRupiah(v.minPurchase)}</TableCell>
+                            <TableCell>
+                              <Badge variant={v.isActive ? "default" : "secondary"}>
+                                {v.isActive ? 'AKTIF' : 'NONAKTIF'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right pr-8">
+                              <div className="flex justify-end gap-1">
+                                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg" onClick={() => { setEditingVoucher(v); setIsVoucherDialogOpen(true); }}><Pencil size={16} /></Button>
+                                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-lg text-destructive" onClick={() => handleDelete(v.id, 'vouchers')}><Trash2 size={16} /></Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      }
+                    </TableBody>
+                  </Table>
+                </Card>
+              </div>
+            )}
+
+            {activeSection === 'banners' && (
+              <div className="space-y-6 animate-fadeIn">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                  <div>
+                    <h2 className="text-2xl font-bold tracking-tight">Banner Promosi</h2>
+                    <p className="text-sm text-muted-foreground">Atur gambar carousel yang muncul di halaman beranda.</p>
+                  </div>
+                  <Button onClick={() => setIsBannerDialogOpen(true)} className="h-12 px-6 rounded-xl font-bold shadow-lg shadow-primary/20"><Plus size={18} className="mr-2" /> Tambah Banner</Button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {bannersLoading ? <div className="col-span-full py-20 text-center"><Loader2 className="animate-spin mx-auto" /></div> :
+                    banners?.map((b: any) => (
+                      <Card key={b.id} className="rounded-3xl border-none shadow-sm bg-white overflow-hidden group">
+                        <div className="aspect-[21/9] relative">
+                          <Image src={b.image} alt={b.title || ''} fill className="object-cover" />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                            <Button size="icon" variant="secondary" className="rounded-full" onClick={() => { setEditingBanner(b); setIsBannerDialogOpen(true); }}><Pencil size={16} /></Button>
+                            <Button size="icon" variant="destructive" className="rounded-full" onClick={() => handleDelete(b.id, 'banners')}><Trash2 size={16} /></Button>
+                          </div>
+                        </div>
+                        <CardContent className="p-4 flex items-center justify-between">
+                          <div className="min-w-0 flex-1">
+                            <h4 className="font-bold text-sm truncate">{b.title || 'Untitled Banner'}</h4>
+                            <div className="flex items-center gap-2 mt-1">
+                              <Badge variant="outline" className="text-[10px] h-5">Urutan: {b.order}</Badge>
+                              {b.link && <LinkIcon size={12} className="text-muted-foreground" />}
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))
+                  }
+                </div>
               </div>
             )}
 
