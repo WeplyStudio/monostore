@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -11,9 +12,11 @@ import { formatRupiah } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { checkPakasirStatus } from '@/lib/pakasir-actions';
 import { sendOrderConfirmationEmail } from '@/lib/email-actions';
+import { useRouter } from 'next/navigation';
 
 export default function PaymentPendingView() {
-  const { paymentData, setView, resetCart, setLastOrder } = useApp();
+  const { paymentData, resetCart, setLastOrder } = useApp();
+  const router = useRouter();
   const [status, setStatus] = useState<'pending' | 'success' | 'failed'>('pending');
   const [isChecking, setIsChecking] = useState(false);
   const [timeLeft, setTimeLeft] = useState(900); // 15 minutes in seconds
@@ -96,7 +99,7 @@ export default function PaymentPendingView() {
       setLastOrder({ ...updatedSnap.data(), id: firestoreId });
       resetCart();
       toast({ title: "Pembayaran Berhasil!", description: "Template website Anda siap diunduh dan telah dikirim ke email." });
-      setTimeout(() => setView('success'), 1500);
+      setTimeout(() => router.push('/checkout/success'), 1500);
     } catch (error) {
         console.error("Payment Success Error:", error);
     }
@@ -114,7 +117,7 @@ export default function PaymentPendingView() {
     <div className="bg-[#F8F9FA] min-h-screen py-12 px-4">
       <div className="max-w-md mx-auto space-y-6">
         <div className="flex items-center justify-between mb-4">
-            <Button variant="ghost" onClick={() => setView('checkout')} className="p-0 font-bold text-gray-500">
+            <Button variant="ghost" onClick={() => router.push('/checkout')} className="p-0 font-bold text-gray-500">
                 <ArrowLeft size={18} className="mr-2" /> Kembali
             </Button>
             <div className={`text-[10px] font-bold uppercase tracking-widest ${timeLeft < 60 ? 'text-destructive animate-pulse' : 'text-gray-400'}`}>

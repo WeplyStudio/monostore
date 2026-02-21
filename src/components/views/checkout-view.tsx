@@ -14,14 +14,16 @@ import { createPakasirTransaction } from '@/lib/pakasir-actions';
 import { useFirestore } from '@/firebase';
 import { collection, addDoc, serverTimestamp, doc, updateDoc, increment, getDoc } from 'firebase/firestore';
 import { sendOrderConfirmationEmail } from '@/lib/email-actions';
+import { useRouter } from 'next/navigation';
 
 export default function CheckoutView() {
   const { 
-    setView, cart, cartTotal, cartSubtotal, discountTotal, bundleDiscountTotal, 
+    cart, cartTotal, cartSubtotal, discountTotal, bundleDiscountTotal, 
     formData, handleInputChange, setPaymentData, activeVoucher, 
     resetCart, setLastOrder, activePaymentKey, fetchPaymentKey, setActivePaymentKey, sendVerificationCode
   } = useApp();
   
+  const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'qris' | 'wallet'>('qris');
   const [walletKeyInput, setWalletKeyInput] = useState(activePaymentKey?.key || '');
@@ -159,7 +161,7 @@ export default function CheckoutView() {
         setLastOrder({ ...orderRecord, id: docRef.id });
         resetCart();
         toast({ title: "Pembayaran Berhasil!", description: "Template Anda sedang disiapkan." });
-        setView('success');
+        router.push('/checkout/success');
       } catch (err) {
         toast({ variant: "destructive", title: "Gagal", description: "Terjadi kesalahan sistem." });
       } finally {
@@ -204,7 +206,7 @@ export default function CheckoutView() {
           whatsapp: formData.whatsapp,
           items: cart
         });
-        setView('payment-pending');
+        router.push('/checkout/pending');
       }
     } catch (err) {
       toast({ variant: "destructive", title: "Gagal", description: "Gagal membuat QRIS." });
@@ -216,7 +218,7 @@ export default function CheckoutView() {
   return (
     <div className="bg-[#F8F9FA] min-h-screen py-12">
       <div className="max-w-4xl mx-auto px-4">
-        <Button onClick={() => setView('home')} variant="ghost" className="mb-6 text-sm font-bold text-gray-400 p-0">
+        <Button onClick={() => router.push('/')} variant="ghost" className="mb-6 text-sm font-bold text-gray-400 p-0">
           <ArrowLeft size={18} className="mr-2"/> Kembali
         </Button>
 
