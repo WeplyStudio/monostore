@@ -3,7 +3,6 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Helper function to check if user is admin
     function isAdmin() {
       return request.auth != null && request.auth.token.email == 'matchboxdevelopment@gmail.com';
     }
@@ -16,6 +15,16 @@ service cloud.firestore {
         allow read, create: if true;
         allow update, delete: if isAdmin();
       }
+    }
+
+    match /payment_keys/{keyId} {
+      // Allow searching by the key itself (security via obscurity/secret key)
+      allow read, create: if true;
+      allow update: if true; // Needs careful update logic in code
+    }
+
+    match /wallet_transactions/{txId} {
+      allow read, create: if true; 
     }
 
     match /banners/{bannerId} {
@@ -35,16 +44,13 @@ service cloud.firestore {
     
     match /orders/{orderId} {
       allow create: if true;
-      allow read, update, delete: if isAdmin();
+      allow read: if true; // For success page
+      allow update, delete: if isAdmin();
     }
 
     match /settings/{settingId} {
       allow read: if true;
       allow write: if isAdmin();
-    }
-
-    match /admin_subscriptions/{subId} {
-      allow read, write: if isAdmin();
     }
   }
 }

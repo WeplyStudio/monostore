@@ -26,6 +26,32 @@
       },
       "required": ["name", "price", "category", "description", "image", "stock"]
     },
+    "PaymentKey": {
+      "title": "PaymentKey",
+      "description": "Anonymous wallet key that holds balance.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "key": { "type": "string" },
+        "balance": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["key", "balance"]
+    },
+    "WalletTransaction": {
+      "title": "WalletTransaction",
+      "description": "History of wallet top-ups and purchases.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "paymentKeyId": { "type": "string" },
+        "amount": { "type": "number" },
+        "type": { "type": "string", "enum": ["topup", "purchase"] },
+        "description": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["paymentKeyId", "amount", "type"]
+    },
     "Bundle": {
       "title": "Bundle",
       "description": "A package of multiple products with a special discount.",
@@ -79,6 +105,7 @@
         "customerEmail": { "type": "string" },
         "whatsapp": { "type": "string" },
         "order_id": { "type": "string" },
+        "paymentKey": { "type": "string" },
         "items": { "type": "array", "items": { "type": "object" } },
         "totalAmount": { "type": "number" },
         "discountAmount": { "type": "number" },
@@ -87,17 +114,6 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["customerName", "customerEmail", "items", "totalAmount"]
-    },
-    "AdminSubscription": {
-      "title": "AdminSubscription",
-      "description": "Web Push subscription data for admin notifications.",
-      "type": "object",
-      "properties": {
-        "id": { "type": "string" },
-        "subscription": { "type": "object" },
-        "userId": { "type": "string" },
-        "createdAt": { "type": "string", "format": "date-time" }
-      }
     },
     "Settings": {
       "title": "Settings",
@@ -112,15 +128,16 @@
     }
   },
   "auth": {
-    "providers": ["google.com", "password"]
+    "providers": ["password"]
   },
   "firestore": {
     "/products/{productId}": { "schema": "Product", "description": "Collection of products." },
+    "/payment_keys/{keyId}": { "schema": "PaymentKey", "description": "Anonymous payment keys." },
+    "/wallet_transactions/{txId}": { "schema": "WalletTransaction", "description": "Transactions per key." },
     "/banners/{bannerId}": { "schema": "Banner", "description": "Promotional banners." },
     "/vouchers/{voucherId}": { "schema": "Voucher", "description": "Discount vouchers." },
     "/orders/{orderId}": { "schema": "Order", "description": "Customer orders." },
     "/bundles/{bundleId}": { "schema": "Bundle", "description": "Product bundles." },
-    "/settings/{settingId}": { "schema": "Settings", "description": "Store settings." },
-    "/admin_subscriptions/{subId}": { "schema": "AdminSubscription", "description": "Push notification subscriptions." }
+    "/settings/{settingId}": { "schema": "Settings", "description": "Store settings." }
   }
 }

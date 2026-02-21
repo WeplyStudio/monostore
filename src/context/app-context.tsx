@@ -1,10 +1,11 @@
+
 "use client";
 
 import React, { createContext, useContext, useState, ReactNode, useCallback, useMemo, useEffect } from 'react';
-import type { Product, CartItem, Voucher, Bundle } from '@/lib/types';
+import type { Product, CartItem, Voucher, Bundle, PaymentKey } from '@/lib/types';
 import { useToast } from "@/hooks/use-toast"
 import { useFirestore, useCollection, useDoc, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, doc, where } from 'firebase/firestore';
+import { collection, query, orderBy, doc, where, getDocs, updateDoc, increment, addDoc, serverTimestamp } from 'firebase/firestore';
 
 type AppContextType = {
   view: string;
@@ -23,8 +24,6 @@ type AppContextType = {
   setFormData: (data: any) => void;
   handleInputChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   resetCart: () => void;
-  viewedProducts: Product[];
-  addViewedProduct: (product: Product) => void;
   lastOrder: any;
   setLastOrder: (order: any) => void;
   paymentData: any;
@@ -33,11 +32,12 @@ type AppContextType = {
   applyVoucher: (voucher: Voucher) => void;
   removeVoucher: () => void;
   isInitialLoading: boolean;
-  setIsInitialLoading: (loading: boolean) => void;
   loadingProgress: number;
   settings: any;
-  dbProducts: Product[];
-  isDataLoading: boolean;
+  activePaymentKey: PaymentKey | null;
+  setActivePaymentKey: (key: PaymentKey | null) => void;
+  fetchPaymentKey: (keyString: string) => Promise<PaymentKey | null>;
+  generateNewPaymentKey: () => Promise<PaymentKey>;
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -46,10 +46,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [view, setView] = useState('home');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
-  const [viewedProducts, setViewedProducts] = useState<Product[]>([]);
   const [lastOrder, setLastOrder] = useState<any>(null);
   const [paymentData, setPaymentData] = useState<any>(null);
   const [activeVoucher, setActiveVoucher] = useState<Voucher | null>(null);
+  const [activePaymentKey, setActivePaymentKey] = useState<PaymentKey | null>(null);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [loadingProgress, setLoadingProgress] = useState(0);
   const { toast } = useToast();
@@ -61,37 +61,63 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     whatsapp: '',
   });
 
-  // Fetch critical data globally
-  const settingsRef = useMemoFirebase(() => {
-    if (!db) return null;
-    return doc(db, 'settings', 'shop');
+  // Persist Payment Key
+  useEffect(() => {
+    const savedKey = localStorage.getItem('mono_payment_key');
+    if (savedKey && db) {
+      fetchPaymentKey(savedKey).then(k => {
+        if (k) setActivePaymentKey(k);
+      });
+    }
   }, [db]);
 
-  const productsQuery = useMemoFirebase(() => {
-    if (!db) return null;
-    return query(collection(db, 'products'), orderBy('createdAt', 'desc'));
-  }, [db]);
+  useEffect(() => {
+    if (activePaymentKey) {
+      localStorage.setItem('mono_payment_key', activePaymentKey.key);
+    } else {
+      localStorage.removeItem('mono_payment_key');
+    }
+  }, [activePaymentKey]);
 
-  const bundlesQuery = useMemoFirebase(() => {
+  const fetchPaymentKey = async (keyString: string) => {
     if (!db) return null;
-    return query(collection(db, 'bundles'), where('isActive', '==', true));
-  }, [db]);
+    const q = query(collection(db, 'payment_keys'), where('key', '==', keyString.toUpperCase()));
+    const snap = await getDocs(q);
+    if (snap.empty) return null;
+    const data = snap.docs[0].data();
+    return { ...data, id: snap.docs[0].id } as PaymentKey;
+  };
+
+  const generateNewPaymentKey = async () => {
+    if (!db) throw new Error("Firestore not initialized");
+    const randomKey = `MONO-${Math.random().toString(36).substring(2, 6).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+    const payload = {
+      key: randomKey,
+      balance: 0,
+      createdAt: serverTimestamp()
+    };
+    const docRef = await addDoc(collection(db, 'payment_keys'), payload);
+    const newKey = { ...payload, id: docRef.id } as any;
+    setActivePaymentKey(newKey);
+    return newKey;
+  };
+
+  // Global Sync
+  const settingsRef = useMemoFirebase(() => db ? doc(db, 'settings', 'shop') : null, [db]);
+  const bundlesQuery = useMemoFirebase(() => db ? query(collection(db, 'bundles'), where('isActive', '==', true)) : null, [db]);
 
   const { data: settings, loading: settingsLoading } = useDoc<any>(settingsRef);
-  const { data: dbProducts, loading: productsLoading } = useCollection<Product>(productsQuery);
   const { data: bundles, loading: bundlesLoading } = useCollection<Bundle>(bundlesQuery);
 
-  const isDataLoading = settingsLoading || productsLoading || bundlesLoading;
+  const isDataLoading = settingsLoading || bundlesLoading;
 
   useEffect(() => {
     let progressInterval: NodeJS.Timeout;
-    
     if (isInitialLoading) {
       progressInterval = setInterval(() => {
         setLoadingProgress(prev => {
           if (isDataLoading) {
             if (prev < 90) return prev + 1;
-            if (prev < 95) return prev + 0.5;
             return prev;
           }
           if (prev < 100) return prev + 5;
@@ -99,153 +125,73 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         });
       }, 50);
     }
-
     return () => clearInterval(progressInterval);
   }, [isDataLoading, isInitialLoading]);
 
   useEffect(() => {
     if (loadingProgress >= 100 && !isDataLoading) {
-      const timeout = setTimeout(() => {
-        setIsInitialLoading(false);
-      }, 400);
-      return () => clearTimeout(timeout);
+      setTimeout(() => setIsInitialLoading(false), 400);
     }
   }, [loadingProgress, isDataLoading]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
-  };
-  
-  const addViewedProduct = useCallback((product: Product) => {
-    if (product && !viewedProducts.find(p => p.id === product.id)) {
-        setViewedProducts(prev => [...prev, product]);
-    }
-  }, [viewedProducts]);
-
   const addToCart = (product: Product, quantity = 1) => {
-    setCart(prevCart => {
-      const existingItem = prevCart.find(item => item.id === product.id);
-      if (existingItem) {
-        return prevCart.map(item =>
-          item.id === product.id
-            ? { ...item, quantity: item.quantity + quantity }
-            : item
-        );
-      }
-      return [...prevCart, { ...product, quantity }];
+    setCart(prev => {
+      const existing = prev.find(i => i.id === product.id);
+      if (existing) return prev.map(i => i.id === product.id ? { ...i, quantity: i.quantity + quantity } : i);
+      return [...prev, { ...product, quantity }];
     });
-    toast({
-      title: `${product.name} ditambahkan`,
-      description: `Jumlah: ${quantity}`,
-    })
+    toast({ title: `${product.name} ditambahkan` });
     setIsCartOpen(true);
   };
 
-  const removeFromCart = (id: string | number) => {
-    setCart(cart.filter(item => item.id !== id));
-  };
-  
-  const resetCart = () => {
-    setCart([]);
-    setActiveVoucher(null);
-  }
+  const removeFromCart = (id: string | number) => setCart(cart.filter(i => i.id !== id));
+  const resetCart = () => { setCart([]); setActiveVoucher(null); };
 
   const applyVoucher = (voucher: Voucher) => {
     setActiveVoucher(voucher);
-    toast({ title: "Voucher Berhasil!", description: `Diskon diterapkan: ${voucher.code}` });
-  };
-
-  const removeVoucher = () => {
-    setActiveVoucher(null);
+    toast({ title: "Voucher Berhasil!", description: voucher.code });
   };
 
   const cartSubtotal = useMemo(() => cart.reduce((total, item) => total + (item.price * item.quantity), 0), [cart]);
-  
-  // Logical Bundling Check
   const bundleDiscountTotal = useMemo(() => {
-    if (!bundles || bundles.length === 0) return 0;
-    
-    let totalDiscount = 0;
-    const cartProductIds = cart.map(item => item.id);
-
-    bundles.forEach(bundle => {
-      // Cek apakah semua produk dalam bundle ada di keranjang
-      const hasAllProducts = bundle.productIds.every(pid => cartProductIds.includes(pid));
-      
-      if (hasAllProducts) {
-        // Hitung total harga item-item yang masuk dalam bundle ini (minimal 1 set)
-        const bundleItems = cart.filter(item => bundle.productIds.includes(item.id));
-        const bundleItemsPrice = bundleItems.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-        
-        // Diskon diterapkan pada total harga item tersebut
-        totalDiscount += (bundleItemsPrice * (bundle.discountPercentage / 100));
+    if (!bundles) return 0;
+    let total = 0;
+    const pids = cart.map(i => i.id);
+    bundles.forEach(b => {
+      if (b.productIds.every(pid => pids.includes(pid))) {
+        const items = cart.filter(i => b.productIds.includes(i.id));
+        const price = items.reduce((acc, i) => acc + (i.price * i.quantity), 0);
+        total += (price * (b.discountPercentage / 100));
       }
     });
-
-    return totalDiscount;
+    return total;
   }, [cart, bundles]);
 
-  const voucherDiscountTotal = useMemo(() => {
-    if (!activeVoucher) return 0;
-    // Voucher dihitung dari subtotal setelah dipotong bundle discount (optional logic)
-    // Di sini kita hitung dari subtotal asli saja
-    if (cartSubtotal < activeVoucher.minPurchase) return 0;
-
-    if (activeVoucher.type === 'percentage') {
-      return (cartSubtotal * activeVoucher.value) / 100;
-    } else {
-      return activeVoucher.value;
-    }
+  const discountTotal = useMemo(() => {
+    if (!activeVoucher || cartSubtotal < activeVoucher.minPurchase) return 0;
+    return activeVoucher.type === 'percentage' ? (cartSubtotal * activeVoucher.value) / 100 : activeVoucher.value;
   }, [activeVoucher, cartSubtotal]);
 
-  const discountTotal = voucherDiscountTotal;
-  const cartTotal = Math.max(0, cartSubtotal - bundleDiscountTotal - voucherDiscountTotal);
-  const totalItems = cart.reduce((acc, item) => acc + item.quantity, 0);
+  const cartTotal = Math.max(0, cartSubtotal - bundleDiscountTotal - discountTotal);
+  const totalItems = cart.reduce((acc, i) => acc + i.quantity, 0);
 
-  const value = {
-    view,
-    setView,
-    cart,
-    addToCart,
-    removeFromCart,
-    cartTotal,
-    cartSubtotal,
-    discountTotal,
-    bundleDiscountTotal,
-    totalItems,
-    isCartOpen,
-    setIsCartOpen,
-    formData,
-    setFormData,
-    handleInputChange,
-    resetCart,
-    viewedProducts,
-    addViewedProduct,
-    lastOrder,
-    setLastOrder,
-    paymentData,
-    setPaymentData,
-    activeVoucher,
-    applyVoucher,
-    removeVoucher,
-    isInitialLoading,
-    setIsInitialLoading,
-    loadingProgress,
-    settings,
-    dbProducts,
-    isDataLoading
-  };
-
-  return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
+  return (
+    <AppContext.Provider value={{
+      view, setView, cart, addToCart, removeFromCart, cartTotal, cartSubtotal,
+      discountTotal, bundleDiscountTotal, totalItems, isCartOpen, setIsCartOpen,
+      formData, setFormData, handleInputChange: (e) => setFormData({...formData, [e.target.name]: e.target.value}),
+      resetCart, lastOrder, setLastOrder, paymentData, setPaymentData,
+      activeVoucher, applyVoucher, removeVoucher: () => setActiveVoucher(null),
+      isInitialLoading, loadingProgress, settings, activePaymentKey, setActivePaymentKey,
+      fetchPaymentKey, generateNewPaymentKey
+    }}>
+      {children}
+    </AppContext.Provider>
+  );
 };
 
 export const useApp = () => {
   const context = useContext(AppContext);
-  if (context === undefined) {
-    throw new Error('useApp must be used within an AppProvider');
-  }
+  if (!context) throw new Error('useApp must be used within AppProvider');
   return context;
 };

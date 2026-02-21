@@ -21,6 +21,22 @@ export type Product = {
   updatedAt?: any;
 };
 
+export type PaymentKey = {
+  id: string;
+  key: string;
+  balance: number;
+  createdAt: any;
+};
+
+export type WalletTransaction = {
+  id: string;
+  paymentKeyId: string;
+  amount: number;
+  type: 'topup' | 'purchase';
+  description: string;
+  createdAt: any;
+};
+
 export type Bundle = {
   id: string;
   name: string;
@@ -38,16 +54,6 @@ export type Voucher = {
   minPurchase: number;
   isActive: boolean;
   expiryDate?: any;
-};
-
-export type Recommendation = {
-    id: string;
-    name: string;
-    price: number;
-    category: string;
-    desc: string;
-    image: string;
-    imageHint?: string;
 };
 
 export type CartItem = Product & {
