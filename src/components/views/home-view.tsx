@@ -74,6 +74,7 @@ export default function HomeView() {
           sold: p.sold || 0,
           stock: p.stock ?? 0,
           flashSaleStock: p.flashSaleStock || 0,
+          flashSaleInitialStock: p.flashSaleInitialStock || 0,
           flashSaleEnd: p.flashSaleEnd || null,
           isBestSeller: p.isBestSeller || false,
           features: p.features || [],
@@ -415,16 +416,17 @@ const FlashSaleSection = ({ products }: { products: Product[] }) => {
             <div className="w-10 h-10 bg-[#333] text-white flex items-center justify-center rounded-lg font-bold text-lg">{timeLeft.s}</div>
           </div>
           <div className="h-8 w-px bg-slate-200 hidden md:block" />
-          <div className="text-slate-300 font-bold text-xl hidden md:block">19:00</div>
+          <div className="text-slate-300 font-bold text-xl hidden md:block">Ending Soon</div>
         </div>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
         {products.map(product => {
           const fsStock = product.flashSaleStock || 0;
-          const soldCount = product.sold || 0;
-          const progressValue = fsStock > 0 
-            ? Math.min(100, (soldCount / (soldCount + fsStock)) * 100) 
+          const fsInitial = product.flashSaleInitialStock || fsStock; // Fallback to current if initial missing
+          const soldInFs = fsInitial - fsStock;
+          const progressValue = fsInitial > 0 
+            ? Math.min(100, (soldInFs / fsInitial) * 100) 
             : 100;
 
           return (
@@ -446,11 +448,11 @@ const FlashSaleSection = ({ products }: { products: Product[] }) => {
               <div className="space-y-2">
                 <div className="relative h-5 w-full bg-red-100 rounded-full overflow-hidden flex items-center px-3">
                   <div 
-                    className="absolute inset-0 bg-gradient-to-r from-red-500 to-pink-500" 
+                    className="absolute inset-0 bg-gradient-to-r from-red-500 to-pink-500 transition-all duration-1000" 
                     style={{ width: `${progressValue}%` }}
                   />
                   <span className="relative z-10 text-[9px] font-black text-white uppercase flex items-center gap-1">
-                    {soldCount} Terjual <Zap size={10} className="fill-yellow-400 text-yellow-400" />
+                    {Math.round(progressValue)}% Terjual <Zap size={10} className="fill-yellow-400 text-yellow-400" />
                   </span>
                 </div>
                 <div className="text-lg font-black text-red-600">

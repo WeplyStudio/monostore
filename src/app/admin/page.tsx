@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
@@ -12,7 +13,8 @@ import {
   serverTimestamp, 
   arrayUnion, 
   getDocs, 
-  writeBatch 
+  writeBatch,
+  updateDoc
 } from 'firebase/firestore';
 import { signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { Button } from '@/components/ui/button';
@@ -49,12 +51,15 @@ import {
   Wallet,
   Eye,
   Menu,
-  AlertTriangle
+  AlertTriangle,
+  Zap,
+  Clock
 } from 'lucide-react';
 import { ProductDialog } from '@/components/admin/product-dialog';
 import { BannerDialog } from '@/components/admin/banner-dialog';
 import { VoucherDialog } from '@/components/admin/voucher-dialog';
 import { BundleDialog } from '@/components/admin/bundle-dialog';
+import { FlashSaleDialog } from '@/components/admin/flash-sale-dialog';
 import { PaymentKeyDetailsDialog } from '@/components/admin/payment-key-details-dialog';
 import { formatRupiah, cn } from '@/lib/utils';
 import Image from 'next/image';
@@ -73,7 +78,7 @@ import { getVapidPublicKey } from '@/lib/push-notifications';
 
 const ADMIN_EMAIL = 'matchboxdevelopment@gmail.com';
 
-type AdminSection = 'analytics' | 'products' | 'payment-keys' | 'bundles' | 'vouchers' | 'banners' | 'orders' | 'settings';
+type AdminSection = 'analytics' | 'products' | 'flash-sale' | 'payment-keys' | 'bundles' | 'vouchers' | 'banners' | 'orders' | 'settings';
 
 export default function AdminPage() {
   const { user, loading: authLoading } = useUser();
@@ -97,6 +102,8 @@ export default function AdminPage() {
   const [editingVoucher, setEditingVoucher] = useState<any>(null);
   const [isBundleDialogOpen, setIsBundleDialogOpen] = useState(false);
   const [editingBundle, setEditingBundle] = useState<any>(null);
+  const [isFlashSaleDialogOpen, setIsFlashSaleDialogOpen] = useState(false);
+  const [selectedFsProduct, setSelectedFsProduct] = useState<any>(null);
   const [isKeyDetailsOpen, setIsKeyDetailsOpen] = useState(false);
   const [selectedKey, setSelectedKey] = useState<any>(null);
 
@@ -126,6 +133,12 @@ export default function AdminPage() {
 
   const prevOrdersCount = useRef<number>(0);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Filter products that are currently in flash sale
+  const activeFlashSales = useMemo(() => {
+    if (!products) return [];
+    return products.filter(p => p.flashSaleEnd && new Date(p.flashSaleEnd).getTime() > Date.now());
+  }, [products]);
 
   // Register Push Subscription when admin logs in
   useEffect(() => {
@@ -292,6 +305,26 @@ export default function AdminPage() {
     deleteDoc(doc(db, collectionName, id));
   };
 
+  const handleDisableFlashSale = async (productId: string) => {
+    if (!db) return;
+    const product = products?.find(p => p.id === productId);
+    if (!product) return;
+
+    try {
+      await updateDoc(doc(db, 'products', productId), {
+        price: product.originalPrice || product.price,
+        originalPrice: null,
+        flashSaleEnd: null,
+        flashSaleStock: null,
+        flashSaleInitialStock: null,
+        updatedAt: serverTimestamp()
+      });
+      toast({ title: "Flash Sale Dinonaktifkan" });
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Gagal", description: err.message });
+    }
+  };
+
   if (authLoading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="animate-spin" /></div>;
 
   if (!user || user.email !== ADMIN_EMAIL) {
@@ -317,6 +350,7 @@ export default function AdminPage() {
   const navItems = [
     { id: 'analytics', label: 'Dashboard', icon: BarChart3 },
     { id: 'products', label: 'Produk', icon: Package },
+    { id: 'flash-sale', label: 'Flash Sale', icon: Zap },
     { id: 'payment-keys', label: 'Payment Keys', icon: Wallet },
     { id: 'bundles', label: 'Bundling', icon: Layers },
     { id: 'vouchers', label: 'Voucher', icon: Ticket },
@@ -498,6 +532,73 @@ export default function AdminPage() {
                     </TableBody>
                   </Table>
                 </Card>
+              </div>
+            )}
+
+            {activeSection === 'flash-sale' && (
+              <div className="space-y-6 animate-fadeIn">
+                <div className="flex justify-between items-center">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-red-50 text-red-600 rounded-xl flex items-center justify-center"><Zap size={24} className="fill-red-600" /></div>
+                    <h2 className="text-2xl font-bold">Manajemen Flash Sale</h2>
+                  </div>
+                  <Button onClick={() => { setSelectedFsProduct(null); setIsFlashSaleDialogOpen(true); }} className="rounded-xl font-bold h-11 bg-red-600 hover:bg-red-700 shadow-lg shadow-red-200">
+                    <Plus size={20} className="mr-2" /> Tambah Promo Kilat
+                  </Button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {activeFlashSales.length === 0 ? (
+                    <Card className="col-span-full py-20 bg-white border-dashed border-2 border-slate-100 flex flex-col items-center justify-center text-center">
+                      <Zap size={48} className="text-slate-100 mb-4" />
+                      <p className="text-slate-400 font-bold uppercase tracking-widest text-xs">Belum ada Flash Sale aktif</p>
+                    </Card>
+                  ) : (
+                    activeFlashSales.map(fs => (
+                      <Card key={fs.id} className="rounded-3xl border-none shadow-sm bg-white overflow-hidden group">
+                        <div className="relative h-40 bg-slate-50">
+                          <Image src={fs.image} alt="" fill className="object-cover" />
+                          <div className="absolute top-2 right-2 bg-red-600 text-white text-[10px] font-black px-3 py-1 rounded-full shadow-lg">
+                            ACTIVE
+                          </div>
+                        </div>
+                        <div className="p-6 space-y-4">
+                          <div>
+                            <h3 className="font-bold text-base line-clamp-1">{fs.name}</h3>
+                            <p className="text-[10px] text-muted-foreground font-bold uppercase">{fs.category}</p>
+                          </div>
+                          
+                          <div className="flex items-center justify-between">
+                            <div className="text-xs font-bold text-red-600">{formatRupiah(fs.price)}</div>
+                            <div className="text-[10px] text-slate-400 line-through">{formatRupiah(fs.originalPrice)}</div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <div className="flex justify-between text-[9px] font-bold uppercase tracking-widest text-slate-400">
+                              <span>Progress Terjual</span>
+                              <span>{fs.flashSaleInitialStock! - fs.flashSaleStock!} / {fs.flashSaleInitialStock}</span>
+                            </div>
+                            <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                              <div 
+                                className="h-full bg-gradient-to-r from-red-500 to-orange-500 transition-all duration-1000"
+                                style={{ width: `${((fs.flashSaleInitialStock! - fs.flashSaleStock!) / fs.flashSaleInitialStock!) * 100}%` }}
+                              />
+                            </div>
+                          </div>
+
+                          <div className="pt-2 flex gap-2">
+                            <Button variant="outline" size="sm" className="flex-1 rounded-xl font-bold text-xs" onClick={() => { setSelectedFsProduct(fs); setIsFlashSaleDialogOpen(true); }}>
+                              <SettingsIcon size={14} className="mr-2" /> Atur
+                            </Button>
+                            <Button variant="ghost" size="sm" className="rounded-xl font-bold text-xs text-destructive hover:bg-red-50" onClick={() => handleDisableFlashSale(fs.id)}>
+                              Berhenti
+                            </Button>
+                          </div>
+                        </div>
+                      </Card>
+                    ))
+                  )}
+                </div>
               </div>
             )}
 
@@ -692,6 +793,7 @@ export default function AdminPage() {
       <BannerDialog isOpen={isBannerDialogOpen} onClose={() => { setIsBannerDialogOpen(false); setEditingBanner(null); }} banner={editingBanner} />
       <VoucherDialog isOpen={isVoucherDialogOpen} onClose={() => { setIsVoucherDialogOpen(false); setEditingVoucher(null); }} voucher={editingVoucher} />
       <BundleDialog isOpen={isBundleDialogOpen} onClose={() => { setIsBundleDialogOpen(false); setEditingBundle(null); }} bundle={editingBundle} products={products || []} />
+      <FlashSaleDialog isOpen={isFlashSaleDialogOpen} onClose={() => { setIsFlashSaleDialogOpen(false); setSelectedFsProduct(null); }} product={selectedFsProduct} allProducts={products || []} />
       <PaymentKeyDetailsDialog isOpen={isKeyDetailsOpen} onClose={() => { setIsKeyDetailsOpen(false); setSelectedKey(null); }} paymentKey={selectedKey} />
     </div>
   );

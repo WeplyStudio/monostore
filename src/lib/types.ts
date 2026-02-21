@@ -10,6 +10,7 @@ export type Product = {
   sold: number;
   stock: number;
   flashSaleStock?: number;
+  flashSaleInitialStock?: number;
   isBestSeller: boolean;
   description: string;
   features: string[];
