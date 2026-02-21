@@ -36,6 +36,7 @@
         "email": { "type": "string", "format": "email" },
         "balance": { "type": "number" },
         "is2SVEnabled": { "type": "boolean" },
+        "lastCheckIn": { "type": "string", "format": "date-time" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["key", "email", "balance"]

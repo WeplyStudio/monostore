@@ -23,7 +23,10 @@ import {
   Lock,
   CheckCircle2,
   RefreshCw,
-  LogOut
+  LogOut,
+  CalendarCheck,
+  Gift,
+  Sparkles
 } from 'lucide-react';
 import { formatRupiah } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -42,6 +45,21 @@ export default function WalletView() {
   const [isTopupLoading, setIsTopupLoading] = useState(false);
   const [topupQR, setTopupQR] = useState<any>(null);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [isCheckingIn, setIsCheckingIn] = useState(false);
+
+  // Check if user can check in today
+  const canCheckIn = useMemo(() => {
+    if (!activePaymentKey) return false;
+    const lastCheckIn = activePaymentKey.lastCheckIn?.toDate ? activePaymentKey.lastCheckIn.toDate() : (activePaymentKey.lastCheckIn ? new Date(activePaymentKey.lastCheckIn) : null);
+    if (!lastCheckIn) return true;
+
+    const today = new Date();
+    return (
+      lastCheckIn.getDate() !== today.getDate() ||
+      lastCheckIn.getMonth() !== today.getMonth() ||
+      lastCheckIn.getFullYear() !== today.getFullYear()
+    );
+  }, [activePaymentKey]);
 
   // Kueri transaksi disederhanakan: Hapus orderBy untuk menghindari error index/permission
   const txQuery = useMemoFirebase(() => {
@@ -123,6 +141,50 @@ export default function WalletView() {
 
     } catch (err) {
       console.error("Topup processing error:", err);
+    }
+  };
+
+  const handleDailyCheckIn = async () => {
+    if (!db || !activePaymentKey || !canCheckIn || isCheckingIn) return;
+    
+    setIsCheckingIn(true);
+    try {
+      // Random reward between 50 and 5000
+      const reward = Math.floor(Math.random() * (5000 - 50 + 1)) + 50;
+      const keyRef = doc(db, 'payment_keys', activePaymentKey.id);
+
+      // 1. Update Payment Key
+      await updateDoc(keyRef, {
+        balance: increment(reward),
+        lastCheckIn: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      });
+
+      // 2. Log Transaction
+      await addDoc(collection(db, 'wallet_transactions'), {
+        paymentKeyId: activePaymentKey.id,
+        amount: reward,
+        type: 'topup',
+        description: 'Bonus Check-in Harian',
+        createdAt: serverTimestamp()
+      });
+
+      // 3. Update Local State
+      setActivePaymentKey({
+        ...activePaymentKey,
+        balance: (activePaymentKey.balance || 0) + reward,
+        lastCheckIn: new Date()
+      });
+
+      toast({
+        title: "Check-in Berhasil!",
+        description: `Selamat! Anda mendapatkan bonus saldo ${formatRupiah(reward)}.`
+      });
+    } catch (error) {
+      console.error("Check-in error:", error);
+      toast({ variant: "destructive", title: "Gagal Check-in", description: "Terjadi kesalahan sistem." });
+    } finally {
+      setIsCheckingIn(false);
     }
   };
 
@@ -299,6 +361,46 @@ export default function WalletView() {
              <p className="text-[10px] text-white/70 leading-relaxed">
                Setiap pembayaran akan meminta kode verifikasi yang dikirim ke email Anda.
              </p>
+          </Card>
+
+          {/* Daily Check-in Bonus Card */}
+          <Card className="rounded-[2.5rem] border-none shadow-sm bg-orange-50 p-8 space-y-6 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+              <Gift size={80} className="text-orange-600 rotate-12" />
+            </div>
+            <div className="relative z-10">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-10 h-10 bg-orange-100 text-orange-600 rounded-xl flex items-center justify-center">
+                  <CalendarCheck size={20} />
+                </div>
+                <h3 className="text-lg font-black text-orange-900">Daily Bonus</h3>
+              </div>
+              
+              {canCheckIn ? (
+                <div className="space-y-4">
+                  <p className="text-xs text-orange-700 font-medium leading-relaxed">
+                    Klaim bonus saldo harianmu hari ini! Dapatkan <span className="font-bold">Rp50 - Rp5.000</span> gratis.
+                  </p>
+                  <Button 
+                    onClick={handleDailyCheckIn} 
+                    disabled={isCheckingIn}
+                    className="w-full h-12 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-black shadow-lg shadow-orange-200"
+                  >
+                    {isCheckingIn ? <Loader2 className="animate-spin" /> : <><Sparkles size={18} className="mr-2" /> Klaim Bonus</>}
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 p-3 bg-white/60 rounded-xl border border-orange-100">
+                    <CheckCircle2 size={16} className="text-green-500" />
+                    <span className="text-[10px] font-black text-orange-900 uppercase">Sudah Diklaim</span>
+                  </div>
+                  <p className="text-[10px] text-orange-600 font-bold text-center italic">
+                    Kembali lagi besok untuk bonus lainnya!
+                  </p>
+                </div>
+              )}
+            </div>
           </Card>
 
           <Card className="rounded-[2.5rem] border-none shadow-sm bg-white p-8 space-y-6">
