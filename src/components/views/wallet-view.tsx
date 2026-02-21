@@ -1,10 +1,10 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useApp } from '@/context/app-context';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, orderBy, doc, updateDoc, increment, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, doc, updateDoc, increment, addDoc, serverTimestamp } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -43,17 +43,26 @@ export default function WalletView() {
   const [topupQR, setTopupQR] = useState<any>(null);
   const [isSuccess, setIsSuccess] = useState(false);
 
-  // Kueri transaksi disederhanakan untuk menghindari error perizinan/indeks
+  // Kueri transaksi disederhanakan: Hapus orderBy untuk menghindari error index/permission
   const txQuery = useMemoFirebase(() => {
     if (!db || !activePaymentKey) return null;
     return query(
       collection(db, 'wallet_transactions'), 
-      where('paymentKeyId', '==', activePaymentKey.id),
-      orderBy('createdAt', 'desc')
+      where('paymentKeyId', '==', activePaymentKey.id)
     );
   }, [db, activePaymentKey]);
 
   const { data: transactions, loading: txLoading, error: txError } = useCollection<any>(txQuery);
+
+  // Urutkan transaksi secara manual di sisi klien (descending berdasarkan createdAt)
+  const sortedTransactions = useMemo(() => {
+    if (!transactions) return [];
+    return [...transactions].sort((a, b) => {
+      const timeA = a.createdAt?.seconds || 0;
+      const timeB = b.createdAt?.seconds || 0;
+      return timeB - timeA;
+    });
+  }, [transactions]);
 
   // Polling status top-up
   useEffect(() => {
@@ -99,7 +108,7 @@ export default function WalletView() {
       // 3. Update State Lokal
       setActivePaymentKey({
         ...activePaymentKey,
-        balance: activePaymentKey.balance + amount
+        balance: (activePaymentKey.balance || 0) + amount
       });
 
       toast({ 
@@ -259,14 +268,17 @@ export default function WalletView() {
             <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded-lg flex items-center gap-1">
               <Mail size={10} /> {activePaymentKey.email}
             </span>
-            <Button variant="ghost" className="text-xs font-bold text-destructive px-2 h-8 flex items-center gap-1" onClick={() => setActivePaymentKey(null)}>
+            <Button variant="ghost" className="text-xs font-bold text-destructive px-2 h-8 flex items-center gap-1" onClick={() => {
+              localStorage.removeItem('mono_payment_key');
+              setActivePaymentKey(null);
+            }}>
               <LogOut size={12} /> Logout
             </Button>
           </div>
         </div>
         <div className="text-right">
           <div className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Total Saldo</div>
-          <div className="text-4xl font-black text-primary">{formatRupiah(activePaymentKey.balance)}</div>
+          <div className="text-4xl font-black text-primary">{formatRupiah(activePaymentKey.balance || 0)}</div>
         </div>
       </div>
 
@@ -279,7 +291,7 @@ export default function WalletView() {
                   <span className="text-xs font-bold uppercase tracking-widest">2-Step Verification</span>
                 </div>
                 <Switch 
-                  checked={activePaymentKey.is2SVEnabled} 
+                  checked={activePaymentKey.is2SVEnabled || false} 
                   onCheckedChange={handleToggle2SV}
                   className="data-[state=checked]:bg-white"
                 />
@@ -350,12 +362,12 @@ export default function WalletView() {
                   <AlertCircle className="mx-auto text-red-500 mb-2" />
                   <p className="text-xs font-bold text-red-600">Gagal memuat transaksi. Silakan muat ulang halaman.</p>
                 </div>
-              ) : transactions?.length === 0 ? (
+              ) : sortedTransactions.length === 0 ? (
                 <div className="py-20 text-center border-2 border-dashed border-slate-50 rounded-[2rem]">
                   <p className="text-sm font-bold text-slate-300">Belum ada transaksi</p>
                 </div>
               ) : (
-                transactions?.map((tx: any) => (
+                sortedTransactions.map((tx: any) => (
                   <div key={tx.id} className="flex items-center justify-between p-4 rounded-2xl border border-slate-50 hover:border-slate-100 transition-colors">
                     <div className="flex items-center gap-4">
                       <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${tx.type === 'topup' ? 'bg-green-50 text-green-500' : 'bg-red-50 text-red-500'}`}>

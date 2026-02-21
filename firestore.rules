@@ -26,8 +26,9 @@ service cloud.firestore {
     }
 
     // Koleksi Transaksi Wallet: Akses publik agar user bisa melihat riwayat mereka sendiri via Key
+    // Membuka izin list secara eksplisit untuk menghindari error pada kueri filtered
     match /wallet_transactions/{txId} {
-      allow read, create: if true;
+      allow read, list, create: if true;
       allow update, delete: if isAdmin();
     }
 
@@ -61,6 +62,6 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
     
-    // Komentar pemicu redeploy: 2024-05-20_v2
+    // Pemicu Redeploy: 2024-05-20_v3_fix_wallet_list
   }
 }
