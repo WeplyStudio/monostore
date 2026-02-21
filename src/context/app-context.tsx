@@ -46,6 +46,8 @@ type AppContextType = {
   pointsToRedeem: number;
   setPointsToRedeem: (points: number) => void;
   pointsEarned: number;
+  usePoints: boolean;
+  setUsePoints: (use: boolean) => void;
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -61,7 +63,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [viewedProducts, setViewedProducts] = useState<Product[]>([]);
-  const [pointsToRedeem, setPointsToRedeem] = useState(0);
+  const [usePoints, setUsePoints] = useState(false);
   
   const { toast } = useToast();
   const db = useFirestore();
@@ -197,7 +199,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const resetCart = () => { 
     setCart([]); 
     setActiveVoucher(null); 
-    setPointsToRedeem(0);
+    setUsePoints(false);
   };
 
   const applyVoucher = (voucher: Voucher) => {
@@ -225,15 +227,21 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     return activeVoucher.type === 'percentage' ? (cartSubtotal * activeVoucher.value) / 100 : activeVoucher.value;
   }, [activeVoucher, cartSubtotal]);
 
-  // Points Logic: 1 Point = 1 IDR. Max redeem is the subtotal after other discounts.
-  const maxPossiblePointsToRedeem = Math.max(0, cartSubtotal - bundleDiscountTotal - discountTotal);
-  const effectivePointsRedeemed = Math.min(pointsToRedeem, maxPossiblePointsToRedeem, activePaymentKey?.points || 0);
+  // Points Logic: 1 Point = 1 IDR. 
+  // Limit: Maks pemotongan adalah 50% dari total biaya belanja setelah diskon lainnya.
+  const totalBeforePoints = Math.max(0, cartSubtotal - bundleDiscountTotal - discountTotal);
+  const maxRedeemablePointsByPolicy = Math.floor(totalBeforePoints * 0.5);
+  const userAvailablePoints = activePaymentKey?.points || 0;
+  
+  const effectivePointsRedeemed = usePoints 
+    ? Math.min(userAvailablePoints, maxRedeemablePointsByPolicy) 
+    : 0;
 
-  const cartTotal = Math.max(0, cartSubtotal - bundleDiscountTotal - discountTotal - effectivePointsRedeemed);
+  const cartTotal = Math.max(0, totalBeforePoints - effectivePointsRedeemed);
   const totalItems = cart.reduce((acc, i) => acc + i.quantity, 0);
 
   // Loyalty Logic: Every 550 spent = 1 Point. 
-  // If points are redeemed (pointsToRedeem > 0), then pointsEarned = 0.
+  // If points are redeemed (effectivePointsRedeemed > 0), then pointsEarned = 0.
   const pointsEarned = effectivePointsRedeemed > 0 ? 0 : Math.floor(cartTotal / 550);
 
   return (
@@ -245,7 +253,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       activeVoucher, applyVoucher, removeVoucher: () => setActiveVoucher(null),
       isInitialLoading, loadingProgress, settings, isDataLoading, activePaymentKey, setActivePaymentKey,
       fetchPaymentKey, generateNewPaymentKey, viewedProducts, addViewedProduct, sendVerificationCode,
-      pointsToRedeem: effectivePointsRedeemed, setPointsToRedeem, pointsEarned
+      pointsToRedeem: effectivePointsRedeemed, setPointsToRedeem: () => {}, // Deprecated in favor of usePoints
+      pointsEarned,
+      usePoints, setUsePoints
     }}>
       {children}
     </AppContext.Provider>

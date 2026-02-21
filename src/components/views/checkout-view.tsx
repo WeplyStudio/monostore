@@ -15,14 +15,14 @@ import { useFirestore } from '@/firebase';
 import { collection, addDoc, serverTimestamp, doc, updateDoc, increment, getDoc } from 'firebase/firestore';
 import { sendOrderConfirmationEmail } from '@/lib/email-actions';
 import { useRouter } from 'next/navigation';
-import { Slider } from '@/components/ui/slider';
+import { Switch } from '@/components/ui/switch';
 
 export default function CheckoutView() {
   const { 
     cart, cartTotal, cartSubtotal, discountTotal, bundleDiscountTotal, 
     formData, handleInputChange, setPaymentData, activeVoucher, 
     resetCart, setLastOrder, activePaymentKey, fetchPaymentKey, setActivePaymentKey,
-    pointsToRedeem, setPointsToRedeem, pointsEarned
+    pointsToRedeem, pointsEarned, usePoints, setUsePoints
   } = useApp();
   
   const router = useRouter();
@@ -263,7 +263,7 @@ export default function CheckoutView() {
               </div>
 
               <div className="space-y-6">
-                <div className={paymentMethod === 'wallet' ? 'animate-fadeIn' : 'hidden md:block opacity-50'}>
+                <div className={paymentMethod === 'wallet' || activePaymentKey ? 'animate-fadeIn' : 'hidden md:block opacity-50'}>
                   <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100">
                     <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-3">Akses Payment Key (Wajib untuk Poin)</label>
                     <div className="flex gap-2">
@@ -320,19 +320,28 @@ export default function CheckoutView() {
                         </div>
                         {activePaymentKey.points && activePaymentKey.points > 0 && (
                           <div className="flex flex-col items-end gap-2 relative z-10">
-                            <Slider 
-                              className="w-32" 
-                              max={Math.min(activePaymentKey.points, cartSubtotal)} 
-                              step={1} 
-                              value={[pointsToRedeem]} 
-                              onValueChange={(val) => setPointsToRedeem(val[0])} 
-                            />
-                            <div className="text-xs font-black text-yellow-700 bg-white border border-yellow-100 px-3 py-1 rounded-xl shadow-sm">
-                              -{formatRupiah(pointsToRedeem)}
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] font-bold text-yellow-600 uppercase">Tukarkan</span>
+                              <Switch 
+                                checked={usePoints}
+                                onCheckedChange={setUsePoints}
+                                className="data-[state=checked]:bg-yellow-500"
+                              />
                             </div>
+                            {usePoints && (
+                              <div className="text-[10px] font-black text-yellow-700 bg-white border border-yellow-100 px-3 py-1 rounded-xl shadow-sm animate-fadeIn">
+                                -{formatRupiah(pointsToRedeem)}
+                              </div>
+                            )}
                           </div>
                         )}
                       </div>
+                      {usePoints && (
+                        <div className="flex items-center gap-2 p-3 bg-blue-50 rounded-xl border border-blue-100">
+                          <Info size={14} className="text-blue-500" />
+                          <p className="text-[9px] text-blue-600 font-medium">Maksimal pemotongan poin adalah 50% dari total biaya belanja.</p>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
