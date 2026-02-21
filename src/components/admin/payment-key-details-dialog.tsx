@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -215,7 +216,7 @@ export function PaymentKeyDetailsDialog({ isOpen, onClose, paymentKey }: Payment
                       <span className="text-[10px] font-black text-orange-400 uppercase tracking-[0.2em]">OTP TERKIRIM (ADMIN VIEW)</span>
                     </div>
                     <span className="text-3xl font-black text-orange-600 tracking-[0.4em]">{lastSentOtp}</span>
-                    <p className="text-[8px] text-orange-400 font-bold uppercase mt-1">Sebutkan kode ini ke user untuk verifikasi instan</p>
+                    <p className="text-[8px] text-orange-400 font-bold uppercase mt-1">Cocokkan kode yang diberikan user dengan kode di atas</p>
                  </div>
                )}
 
