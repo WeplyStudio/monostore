@@ -36,10 +36,10 @@ export default function SiteHeader() {
           <Button
             onClick={() => router.push('/wallet')}
             variant="ghost"
-            className="hidden sm:flex items-center gap-2 rounded-xl bg-slate-50 hover:bg-slate-100 px-4 h-10 border border-slate-100"
+            className="flex items-center gap-2 rounded-xl bg-slate-50 hover:bg-slate-100 px-3 sm:px-4 h-10 border border-slate-100"
           >
-            <Wallet size={16} className="text-primary" />
-            <div className="text-left">
+            <Wallet size={20} className="text-primary" />
+            <div className="text-left hidden sm:block">
               <div className="text-[8px] font-black text-slate-400 uppercase leading-none">Wallet</div>
               <div className="text-[11px] font-black text-primary leading-none mt-0.5">
                 {activePaymentKey ? formatRupiah(activePaymentKey.balance).replace(",00", "") : "Buka Wallet"}
@@ -51,7 +51,7 @@ export default function SiteHeader() {
             onClick={() => setIsCartOpen(true)}
             variant="ghost"
             size="icon"
-            className="relative rounded-xl bg-slate-50 sm:bg-transparent"
+            className="relative rounded-xl bg-slate-50"
           >
             <ShoppingBag size={20} />
             {totalItems > 0 && (
