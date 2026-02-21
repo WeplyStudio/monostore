@@ -6,6 +6,7 @@ import type { Product, CartItem, Voucher, Bundle, PaymentKey } from '@/lib/types
 import { useToast } from "@/hooks/use-toast"
 import { useFirestore, useCollection, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, doc, where, getDocs, updateDoc, increment, addDoc, serverTimestamp } from 'firebase/firestore';
+import { sendPaymentKeyEmail, sendVerificationCodeEmail } from '@/lib/email-actions';
 
 type AppContextType = {
   view: string;
@@ -38,9 +39,10 @@ type AppContextType = {
   activePaymentKey: PaymentKey | null;
   setActivePaymentKey: (key: PaymentKey | null) => void;
   fetchPaymentKey: (keyString: string) => Promise<PaymentKey | null>;
-  generateNewPaymentKey: () => Promise<PaymentKey>;
+  generateNewPaymentKey: (email: string) => Promise<PaymentKey | { error: string }>;
   viewedProducts: Product[];
   addViewedProduct: (product: Product) => void;
+  sendVerificationCode: (paymentKey: PaymentKey) => Promise<{ code: string } | null>;
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -93,28 +95,55 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     return { ...data, id: snap.docs[0].id } as PaymentKey;
   };
 
-  const generateNewPaymentKey = async () => {
+  const generateNewPaymentKey = async (email: string) => {
     if (!db) throw new Error("Firestore not initialized");
+    
+    // Check if email already has a key
+    const q = query(collection(db, 'payment_keys'), where('email', '==', email.toLowerCase()));
+    const snap = await getDocs(q);
+    
+    if (!snap.empty) {
+      const existingData = snap.docs[0].data() as any;
+      const existingKey = { ...existingData, id: snap.docs[0].id } as PaymentKey;
+      
+      // Resend existing key to email
+      await sendPaymentKeyEmail(email, existingKey.key, true);
+      setActivePaymentKey(existingKey);
+      return existingKey;
+    }
+
     const randomKey = `MONO-${Math.random().toString(36).substring(2, 6).toUpperCase()}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
     const payload = {
       key: randomKey,
+      email: email.toLowerCase(),
       balance: 0,
+      is2SVEnabled: false,
       createdAt: serverTimestamp()
     };
+    
     const docRef = await addDoc(collection(db, 'payment_keys'), payload);
     const newKey = { ...payload, id: docRef.id } as any;
+    
+    // Send new key to email
+    await sendPaymentKeyEmail(email, randomKey, false);
     setActivePaymentKey(newKey);
     return newKey;
+  };
+
+  const sendVerificationCode = async (paymentKey: PaymentKey) => {
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const res = await sendVerificationCodeEmail(paymentKey.email, code);
+    if (res.success) return { code };
+    return null;
   };
 
   const addViewedProduct = useCallback((product: Product) => {
     setViewedProducts(prev => {
       if (prev.find(p => p.id === product.id)) return prev;
-      return [product, ...prev].slice(0, 10); // Keep last 10
+      return [product, ...prev].slice(0, 10);
     });
   }, []);
 
-  // Global Sync
   const settingsRef = useMemoFirebase(() => db ? doc(db, 'settings', 'shop') : null, [db]);
   const bundlesQuery = useMemoFirebase(() => db ? query(collection(db, 'bundles'), where('isActive', '==', true)) : null, [db]);
 
@@ -195,7 +224,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       resetCart, lastOrder, setLastOrder, paymentData, setPaymentData,
       activeVoucher, applyVoucher, removeVoucher: () => setActiveVoucher(null),
       isInitialLoading, loadingProgress, settings, isDataLoading, activePaymentKey, setActivePaymentKey,
-      fetchPaymentKey, generateNewPaymentKey, viewedProducts, addViewedProduct
+      fetchPaymentKey, generateNewPaymentKey, viewedProducts, addViewedProduct, sendVerificationCode
     }}>
       {children}
     </AppContext.Provider>

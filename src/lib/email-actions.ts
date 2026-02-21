@@ -1,10 +1,89 @@
+
 'use server';
 
 import nodemailer from 'nodemailer';
 
 /**
- * Server action to send order confirmation email via Zoho SMTP.
+ * Server action to send emails via Zoho SMTP.
  */
+async function getTransporter() {
+  return nodemailer.createTransport({
+    host: 'smtp.zoho.com',
+    port: 465,
+    secure: true,
+    auth: {
+      user: 'hello@itsjason.my.id',
+      pass: 'Semarang20?',
+    },
+    tls: {
+      rejectUnauthorized: false
+    }
+  });
+}
+
+export async function sendPaymentKeyEmail(email: string, key: string, isExisting: boolean = false) {
+  const transporter = await getTransporter();
+  const subject = isExisting 
+    ? "Akses Kembali Payment Key Anda - MonoStore" 
+    : "Payment Key Baru Anda - MonoStore Wallet";
+
+  const mailOptions = {
+    from: '"MonoStore Wallet" <hello@itsjason.my.id>',
+    to: email,
+    subject: subject,
+    html: `
+      <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+        <h2 style="color: #2563eb;">Halo!</h2>
+        <p>${isExisting ? 'Anda meminta akses kembali ke Payment Key Anda.' : 'Selamat! Payment Key Anda telah berhasil dibuat.'}</p>
+        <div style="background: #f3f4f6; padding: 20px; text-align: center; border-radius: 10px; margin: 20px 0;">
+          <span style="font-size: 24px; font-weight: bold; letter-spacing: 4px; color: #111827;">${key}</span>
+        </div>
+        <p style="font-size: 14px; color: #6b7280;">
+          Gunakan key ini untuk melakukan pembayaran atau cek saldo di Dashboard Wallet.<br/>
+          <strong>PENTING:</strong> Jangan bagikan key ini kepada siapapun.
+        </p>
+        <hr style="border: 0; border-top: 1px solid #eee; margin: 20px 0;" />
+        <p style="font-size: 11px; color: #9ca3af; text-align: center;">&copy; ${new Date().getFullYear()} MonoStore Digital Inc.</p>
+      </div>
+    `
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    return { success: true };
+  } catch (err) {
+    console.error("Email send error:", err);
+    return { success: false, error: String(err) };
+  }
+}
+
+export async function sendVerificationCodeEmail(email: string, code: string) {
+  const transporter = await getTransporter();
+  const mailOptions = {
+    from: '"MonoStore Security" <hello@itsjason.my.id>',
+    to: email,
+    subject: "Kode Verifikasi Pembayaran Wallet - MonoStore",
+    html: `
+      <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
+        <h2 style="color: #2563eb;">Verifikasi Pembayaran</h2>
+        <p>Anda mencoba melakukan pembayaran menggunakan Mono Wallet. Masukkan kode berikut untuk melanjutkan:</p>
+        <div style="background: #f3f4f6; padding: 20px; text-align: center; border-radius: 10px; margin: 20px 0;">
+          <span style="font-size: 32px; font-weight: bold; letter-spacing: 10px; color: #2563eb;">${code}</span>
+        </div>
+        <p style="font-size: 14px; color: #6b7280;">Kode ini akan kadaluwarsa dalam 5 menit. Jika bukan Anda yang melakukan ini, abaikan email ini.</p>
+      </div>
+    `
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+    return { success: true };
+  } catch (err) {
+    console.error("Email send error:", err);
+    return { success: false, error: String(err) };
+  }
+}
+
 export async function sendOrderConfirmationEmail(orderData: {
   customerName: string;
   customerEmail: string;
@@ -12,27 +91,7 @@ export async function sendOrderConfirmationEmail(orderData: {
   totalAmount: number;
   items: { name: string; deliveryContent: string }[];
 }) {
-  const transporter = nodemailer.createTransport({
-    host: 'smtp.zoho.com',
-    port: 465,
-    secure: true, // Use SSL
-    auth: {
-      user: 'hello@itsjason.my.id',
-      pass: 'Semarang20?',
-    },
-    tls: {
-      rejectUnauthorized: false // Membantu koneksi di lingkungan tertentu
-    }
-  });
-
-  // Verifikasi koneksi sebelum kirim
-  try {
-    await transporter.verify();
-  } catch (verifyError) {
-    console.error('SMTP Verification Failed:', verifyError);
-    return { success: false, error: 'SMTP connection failed' };
-  }
-
+  const transporter = await getTransporter();
   const itemsHtml = orderData.items
     .map(
       (item) => `
@@ -43,7 +102,6 @@ export async function sendOrderConfirmationEmail(orderData: {
           Download Source Code
         </a>
       </p>
-      <div style="font-size: 11px; color: #9ca3af; margin-top: 8px;">Link Alternatif: ${item.deliveryContent}</div>
     </div>
   `
     )
@@ -52,34 +110,24 @@ export async function sendOrderConfirmationEmail(orderData: {
   const mailOptions = {
     from: '"MonoStore Templates" <hello@itsjason.my.id>',
     to: orderData.customerEmail,
-    subject: `Invoice Pembelian #${orderData.orderId} - MonoStore Web Templates`,
+    subject: `Invoice Pembelian #${orderData.orderId} - MonoStore`,
     html: `
-      <div style="font-family: 'Inter', sans-serif; max-width: 600px; margin: auto; padding: 30px; border: 1px solid #f0f0f0; border-radius: 20px; background-color: #f9fafb;">
-        <h2 style="color: #111827; text-align: center; margin-bottom: 25px;">Terima Kasih, ${orderData.customerName}!</h2>
-        <p style="color: #4b5563; font-size: 16px; line-height: 1.6;">Pembayaran Anda telah berhasil kami terima. Berikut adalah detail pesanan dan link akses source code template Anda:</p>
-        
+      <div style="font-family: sans-serif; max-width: 600px; margin: auto; padding: 30px; background-color: #f9fafb; border-radius: 20px;">
+        <h2 style="color: #111827; text-align: center;">Terima Kasih, ${orderData.customerName}!</h2>
         <div style="background: #ffffff; padding: 20px; border-radius: 16px; margin: 25px 0; border: 1px solid #eeeeee;">
-          <p style="margin: 5px 0; font-size: 14px; color: #6b7280;">Order ID: <strong style="color: #111827;">#${orderData.orderId}</strong></p>
-          <p style="margin: 5px 0; font-size: 14px; color: #6b7280;">Total Bayar: <strong style="color: #111827;">IDR ${orderData.totalAmount.toLocaleString('id-ID')}</strong></p>
+          <p>Order ID: <strong>#${orderData.orderId}</strong></p>
+          <p>Total: <strong>IDR ${orderData.totalAmount.toLocaleString('id-ID')}</strong></p>
         </div>
-
-        <h3 style="color: #111827; font-size: 18px; border-bottom: 1px solid #eeeeee; padding-bottom: 10px; margin-bottom: 20px;">Template Website Anda:</h3>
         ${itemsHtml}
-
-        <p style="margin-top: 40px; font-size: 12px; color: #9ca3af; text-align: center;">
-          Butuh bantuan instalasi? Balas email ini atau hubungi kami melalui WhatsApp.<br/>
-          &copy; ${new Date().getFullYear()} MonoStore Digital Inc.
-        </p>
       </div>
     `,
   };
 
   try {
-    const info = await transporter.sendMail(mailOptions);
-    console.log('Email sent: %s', info.messageId);
-    return { success: true, messageId: info.messageId };
+    await transporter.sendMail(mailOptions);
+    return { success: true };
   } catch (error) {
-    console.error('Email Sending Error:', error);
-    return { success: false, error: String(error) };
+    console.error('Email error:', error);
+    return { success: false };
   }
 }

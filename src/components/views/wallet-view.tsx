@@ -1,37 +1,39 @@
 
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useApp } from '@/context/app-context';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, orderBy, doc, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, query, where, orderBy, doc, updateDoc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Switch } from '@/components/ui/switch';
 import { 
   Wallet, 
   Plus, 
   History, 
   Copy, 
-  CheckCircle2, 
   Loader2, 
   AlertCircle, 
   ArrowRight,
-  RefreshCw,
-  Search,
   Zap,
-  Ticket
+  ShieldCheck,
+  Mail,
+  Lock
 } from 'lucide-react';
 import { formatRupiah } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { createPakasirTransaction } from '@/lib/pakasir-actions';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export default function WalletView() {
-  const { activePaymentKey, setActivePaymentKey, fetchPaymentKey, generateNewPaymentKey, setView } = useApp();
+  const { activePaymentKey, setActivePaymentKey, fetchPaymentKey, generateNewPaymentKey } = useApp();
   const db = useFirestore();
   const { toast } = useToast();
   
   const [inputKey, setInputKey] = useState('');
+  const [inputEmail, setInputEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [topupAmount, setTopupAmount] = useState('50000');
   const [isTopupLoading, setIsTopupLoading] = useState(false);
@@ -67,14 +69,30 @@ export default function WalletView() {
   };
 
   const handleGenerateKey = async () => {
+    if (!inputEmail.trim() || !inputEmail.includes('@')) {
+      toast({ variant: "destructive", title: "Email Tidak Valid", description: "Harap masukkan email yang benar." });
+      return;
+    }
     setLoading(true);
     try {
-      const keyData = await generateNewPaymentKey();
-      toast({ title: "Key Baru Dibuat!", description: "Simpan kode ini dengan aman." });
+      await generateNewPaymentKey(inputEmail.trim());
+      toast({ title: "Berhasil!", description: "Cek email Anda untuk detail Payment Key." });
+      setInputEmail('');
     } catch (err) {
       toast({ variant: "destructive", title: "Error", description: "Gagal membuat key." });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleToggle2SV = async (enabled: boolean) => {
+    if (!db || !activePaymentKey) return;
+    try {
+      await updateDoc(doc(db, 'payment_keys', activePaymentKey.id), { is2SVEnabled: enabled });
+      setActivePaymentKey({ ...activePaymentKey, is2SVEnabled: enabled });
+      toast({ title: enabled ? "2SV Aktif" : "2SV Nonaktif", description: `Keamanan pembayaran telah diperbarui.` });
+    } catch (err) {
+      toast({ variant: "destructive", title: "Error", description: "Gagal memperbarui keamanan." });
     }
   };
 
@@ -87,11 +105,7 @@ export default function WalletView() {
     try {
       const result = await createPakasirTransaction(orderId, amount);
       if (result && result.payment) {
-        setTopupQR({
-          ...result.payment,
-          amount,
-          order_id: orderId
-        });
+        setTopupQR({ ...result.payment, amount, order_id: orderId });
       }
     } catch (err) {
       toast({ variant: "destructive", title: "Gagal", description: "Gagal membuat QRIS topup." });
@@ -114,12 +128,12 @@ export default function WalletView() {
               <Wallet size={32} />
             </div>
             <CardTitle className="text-2xl font-black font-headline">Mono Wallet</CardTitle>
-            <CardDescription className="text-white/70">Akses saldo anonim Anda tanpa login.</CardDescription>
+            <CardDescription className="text-white/70">Akses saldo aman dengan Payment Key.</CardDescription>
           </CardHeader>
           <CardContent className="p-10 space-y-8">
             <div className="space-y-4">
               <div className="space-y-2">
-                <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Masukkan Payment Key</label>
+                <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Akses Key Terdaftar</label>
                 <div className="flex gap-2">
                   <Input 
                     placeholder="MONO-XXXX-XXXX" 
@@ -135,19 +149,27 @@ export default function WalletView() {
 
               <div className="relative">
                 <div className="absolute inset-0 flex items-center"><span className="w-full border-t border-slate-100" /></div>
-                <div className="relative flex justify-center text-[10px] uppercase font-black text-slate-300"><span className="bg-white px-2">Atau</span></div>
+                <div className="relative flex justify-center text-[10px] uppercase font-black text-slate-300"><span className="bg-white px-2">Atau buat baru</span></div>
               </div>
 
-              <Button variant="outline" onClick={handleGenerateKey} disabled={loading} className="w-full h-14 rounded-2xl border-2 border-dashed border-slate-200 text-slate-500 font-bold hover:bg-slate-50">
-                Buat Payment Key Baru
-              </Button>
-            </div>
-
-            <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-2xl border border-blue-100">
-              <AlertCircle className="text-blue-500 shrink-0" size={18} />
-              <p className="text-[10px] text-blue-600 font-bold leading-relaxed">
-                SIMPAN KEY ANDA. Siapa pun yang memiliki key ini dapat menggunakan saldo di dalamnya.
-              </p>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Masukkan Email Anda</label>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                    <Input 
+                      placeholder="email@anda.com" 
+                      value={inputEmail} 
+                      onChange={e => setInputEmail(e.target.value)}
+                      className="h-12 pl-10 rounded-xl bg-slate-50 border-none"
+                    />
+                  </div>
+                  <Button onClick={handleGenerateKey} disabled={loading} className="h-12 rounded-xl px-4 font-bold">
+                    {loading ? <Loader2 className="animate-spin" /> : 'Buat Key'}
+                  </Button>
+                </div>
+                <p className="text-[9px] text-slate-400 italic">1 email hanya bisa memiliki 1 Payment Key.</p>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -162,11 +184,14 @@ export default function WalletView() {
           <h1 className="text-3xl font-black font-headline flex items-center gap-3">
             <Wallet size={32} className="text-primary" /> Wallet Dashboard
           </h1>
-          <div className="flex items-center gap-2 mt-2">
+          <div className="flex flex-wrap items-center gap-2 mt-2">
             <code className="bg-slate-100 px-3 py-1 rounded-lg font-black text-sm tracking-widest">{activePaymentKey.key}</code>
             <Button variant="ghost" size="icon" onClick={() => copyToClipboard(activePaymentKey.key)} className="h-8 w-8 rounded-lg">
               <Copy size={14} />
             </Button>
+            <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded-lg flex items-center gap-1">
+              <Mail size={10} /> {activePaymentKey.email}
+            </span>
             <Button variant="ghost" className="text-xs font-bold text-destructive px-2 h-8" onClick={() => setActivePaymentKey(null)}>Logout</Button>
           </div>
         </div>
@@ -178,6 +203,23 @@ export default function WalletView() {
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
         <div className="lg:col-span-4 space-y-6">
+          <Card className="rounded-[2rem] border-none shadow-sm bg-primary text-white p-6 space-y-4">
+             <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck size={20} />
+                  <span className="text-xs font-bold uppercase tracking-widest">2-Step Verification</span>
+                </div>
+                <Switch 
+                  checked={activePaymentKey.is2SVEnabled} 
+                  onCheckedChange={handleToggle2SV}
+                  className="data-[state=checked]:bg-white data-[state=checked]:text-primary"
+                />
+             </div>
+             <p className="text-[10px] text-white/70 leading-relaxed">
+               Jika aktif, sistem akan mengirimkan kode 6-digit ke email <strong>{activePaymentKey.email}</strong> setiap kali Anda melakukan pembayaran.
+             </p>
+          </Card>
+
           <Card className="rounded-[2.5rem] border-none shadow-sm bg-white p-8 space-y-6">
             <h3 className="text-lg font-black flex items-center gap-2"><Plus size={20} /> Top Up Saldo</h3>
             <div className="space-y-4">
@@ -185,15 +227,12 @@ export default function WalletView() {
                 <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Nominal (IDR)</label>
                 <Select value={topupAmount} onValueChange={setTopupAmount}>
                   <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold">
-                    <SelectValue placeholder="Pilih Nominal" />
+                    <SelectValue />
                   </SelectTrigger>
                   <SelectContent className="rounded-xl border-none shadow-xl">
-                    <SelectItem value="10000">{formatRupiah(10000)}</SelectItem>
-                    <SelectItem value="25000">{formatRupiah(25000)}</SelectItem>
-                    <SelectItem value="50000">{formatRupiah(50000)}</SelectItem>
-                    <SelectItem value="100000">{formatRupiah(100000)}</SelectItem>
-                    <SelectItem value="250000">{formatRupiah(250000)}</SelectItem>
-                    <SelectItem value="500000">{formatRupiah(500000)}</SelectItem>
+                    {[10000, 25000, 50000, 100000, 250000, 500000].map(amt => (
+                      <SelectItem key={amt} value={amt.toString()}>{formatRupiah(amt)}</SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -203,12 +242,12 @@ export default function WalletView() {
                   <div className="aspect-square w-full max-w-[180px] mx-auto bg-white p-3 rounded-xl border border-slate-100 shadow-inner">
                     <img src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(topupQR.payment_number)}`} alt="QRIS" className="w-full h-full object-contain" />
                   </div>
-                  <p className="text-[10px] font-bold text-slate-500">Scan QRIS untuk menyelesaikan top up {formatRupiah(topupQR.amount)}</p>
+                  <p className="text-[10px] font-bold text-slate-500">Scan QRIS untuk top up {formatRupiah(topupQR.amount)}</p>
                   <Button variant="outline" className="w-full text-xs font-bold" onClick={() => setTopupQR(null)}>Batal</Button>
                 </div>
               ) : (
-                <Button onClick={handleTopup} disabled={isTopupLoading} className="w-full h-12 rounded-xl font-black text-lg">
-                  {isTopupLoading ? <Loader2 className="animate-spin" /> : 'Isi Saldo Sekarang'}
+                <Button onClick={handleTopup} disabled={isTopupLoading} className="w-full h-12 rounded-xl font-black text-lg shadow-lg shadow-primary/20">
+                  {isTopupLoading ? <Loader2 className="animate-spin" /> : 'Isi Saldo'}
                 </Button>
               )}
             </div>
@@ -220,18 +259,16 @@ export default function WalletView() {
             <div className="flex items-center justify-between mb-8">
               <h3 className="text-lg font-black flex items-center gap-2"><History size={20} /> Riwayat Transaksi</h3>
             </div>
-            
             <div className="space-y-4">
               {txLoading ? (
                 <div className="py-20 text-center"><Loader2 className="animate-spin mx-auto text-slate-200" size={32} /></div>
               ) : transactions?.length === 0 ? (
                 <div className="py-20 text-center space-y-2 border-2 border-dashed border-slate-50 rounded-[2rem]">
                   <p className="text-sm font-bold text-slate-300">Belum ada transaksi</p>
-                  <p className="text-[10px] text-slate-300 uppercase tracking-widest">Saldo Anda akan tercatat di sini</p>
                 </div>
               ) : (
                 transactions?.map((tx: any) => (
-                  <div key={tx.id} className="flex items-center justify-between p-4 rounded-2xl hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-100">
+                  <div key={tx.id} className="flex items-center justify-between p-4 rounded-2xl border border-slate-50 hover:border-slate-100 transition-colors">
                     <div className="flex items-center gap-4">
                       <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${tx.type === 'topup' ? 'bg-green-50 text-green-500' : 'bg-red-50 text-red-500'}`}>
                         {tx.type === 'topup' ? <Plus size={18} /> : <Zap size={18} />}
@@ -256,5 +293,3 @@ export default function WalletView() {
     </div>
   );
 }
-
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';

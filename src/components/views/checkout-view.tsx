@@ -5,59 +5,36 @@ import React, { useState } from 'react';
 import { useApp } from '@/context/app-context';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ArrowLeft, Lock, ShieldCheck, Loader2, QrCode, Ticket, Tag, X, Layers, Wallet, Zap } from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { ArrowLeft, Lock, ShieldCheck, Loader2, QrCode, Wallet, Mail, CheckCircle2 } from 'lucide-react';
 import { formatRupiah, getPlaceholderImageDetails } from '@/lib/utils';
 import Image from 'next/image';
 import { useToast } from '@/hooks/use-toast';
 import { createPakasirTransaction } from '@/lib/pakasir-actions';
 import { useFirestore } from '@/firebase';
-import { collection, query, where, getDocs, addDoc, serverTimestamp, doc, updateDoc, increment, getDoc } from 'firebase/firestore';
-import { errorEmitter } from '@/firebase/error-emitter';
-import { FirestorePermissionError } from '@/firebase/errors';
+import { collection, addDoc, serverTimestamp, doc, updateDoc, increment, getDoc } from 'firebase/firestore';
 import { sendOrderConfirmationEmail } from '@/lib/email-actions';
 
 export default function CheckoutView() {
   const { 
     setView, cart, cartTotal, cartSubtotal, discountTotal, bundleDiscountTotal, 
-    totalItems, formData, handleInputChange, setPaymentData, activeVoucher, 
-    applyVoucher, removeVoucher, resetCart, setLastOrder, activePaymentKey, fetchPaymentKey, setActivePaymentKey
+    formData, handleInputChange, setPaymentData, activeVoucher, 
+    resetCart, setLastOrder, activePaymentKey, fetchPaymentKey, setActivePaymentKey, sendVerificationCode
   } = useApp();
   
   const [loading, setLoading] = useState(false);
-  const [voucherCode, setVoucherCode] = useState('');
-  const [checkingVoucher, setCheckingVoucher] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<'qris' | 'wallet'>('qris');
   const [walletKeyInput, setWalletKeyInput] = useState(activePaymentKey?.key || '');
   const [isVerifyingKey, setIsVerifyingKey] = useState(false);
   
+  // 2SV States
+  const [requires2SV, setRequires2SV] = useState(false);
+  const [verificationCodeInput, setVerificationCodeInput] = useState('');
+  const [serverCode, setServerCode] = useState<string | null>(null);
+  const [isSendingCode, setIsSendingCode] = useState(false);
+
   const { toast } = useToast();
   const db = useFirestore();
-
-  const handleApplyVoucher = async () => {
-    if (!voucherCode.trim() || !db) return;
-    setCheckingVoucher(true);
-    try {
-      const q = query(collection(db, 'vouchers'), where('code', '==', voucherCode.toUpperCase()), where('isActive', '==', true));
-      const snap = await getDocs(q);
-      
-      if (snap.empty) {
-        toast({ variant: "destructive", title: "Voucher Tidak Ditemukan", description: "Kode voucher tidak valid." });
-      } else {
-        const voucher = { ...snap.docs[0].data(), id: snap.docs[0].id } as any;
-        if (cartSubtotal < voucher.minPurchase) {
-          toast({ variant: "destructive", title: "Minimal Belanja Kurang", description: `Butuh min. ${formatRupiah(voucher.minPurchase)}` });
-        } else {
-          applyVoucher(voucher);
-          setVoucherCode('');
-        }
-      }
-    } catch (err) {
-      toast({ variant: "destructive", title: "Gagal", description: "Terjadi kesalahan." });
-    } finally {
-      setCheckingVoucher(false);
-    }
-  };
 
   const handleVerifyWallet = async () => {
     if (!walletKeyInput.trim()) return;
@@ -66,14 +43,36 @@ export default function CheckoutView() {
       const keyData = await fetchPaymentKey(walletKeyInput.trim());
       if (keyData) {
         setActivePaymentKey(keyData);
-        toast({ title: "Wallet Terdeteksi", description: `Saldo: ${formatRupiah(keyData.balance)}` });
+        if (keyData.is2SVEnabled) {
+          setRequires2SV(true);
+          toast({ title: "2-Step Verification Aktif", description: "Klik tombol 'Kirim Kode' untuk melanjutkan." });
+        } else {
+          setRequires2SV(false);
+          toast({ title: "Wallet Terhubung", description: `Saldo: ${formatRupiah(keyData.balance)}` });
+        }
       } else {
-        toast({ variant: "destructive", title: "Key Tidak Valid", description: "Cek kembali Payment Key Anda." });
+        toast({ variant: "destructive", title: "Key Tidak Valid", description: "Periksa kembali Payment Key Anda." });
       }
     } catch (err) {
-      toast({ variant: "destructive", title: "Gagal Verifikasi", description: "Error database." });
+      toast({ variant: "destructive", title: "Gagal Verifikasi", description: "Terjadi kesalahan." });
     } finally {
       setIsVerifyingKey(false);
+    }
+  };
+
+  const handleSendCode = async () => {
+    if (!activePaymentKey) return;
+    setIsSendingCode(true);
+    try {
+      const res = await sendVerificationCode(activePaymentKey);
+      if (res) {
+        setServerCode(res.code);
+        toast({ title: "Kode Terkirim", description: `Cek email ${activePaymentKey.email}` });
+      } else {
+        toast({ variant: "destructive", title: "Gagal", description: "Gagal mengirim email verifikasi." });
+      }
+    } finally {
+      setIsSendingCode(false);
     }
   };
 
@@ -86,28 +85,34 @@ export default function CheckoutView() {
     
     if (!db) return;
     setLoading(true);
-    const orderId = "INV" + Date.now().toString().slice(-10);
 
     // PAY VIA WALLET
     if (paymentMethod === 'wallet') {
       if (!activePaymentKey) {
-        toast({ variant: "destructive", title: "Wallet Belum Dimasukkan", description: "Gunakan Payment Key Anda untuk membayar." });
+        toast({ variant: "destructive", title: "Wallet Belum Terhubung", description: "Gunakan Payment Key Anda." });
+        setLoading(false);
+        return;
+      }
+
+      if (requires2SV && verificationCodeInput !== serverCode) {
+        toast({ variant: "destructive", title: "Kode Salah", description: "Kode verifikasi 2SV tidak cocok." });
         setLoading(false);
         return;
       }
 
       if (activePaymentKey.balance < cartTotal) {
-        toast({ variant: "destructive", title: "Saldo Kurang", description: "Top up saldo Anda di menu Wallet." });
+        toast({ variant: "destructive", title: "Saldo Kurang", description: "Silakan top up di menu Wallet." });
         setLoading(false);
         return;
       }
 
       try {
-        // 1. Potong Saldo
+        const orderId = "INV" + Date.now().toString().slice(-10);
+        
+        // 1. Update Balance & Create Order
         const keyRef = doc(db, 'payment_keys', activePaymentKey.id);
         await updateDoc(keyRef, { balance: increment(-cartTotal) });
 
-        // 2. Buat Transaksi Wallet
         await addDoc(collection(db, 'wallet_transactions'), {
           paymentKeyId: activePaymentKey.id,
           amount: cartTotal,
@@ -116,7 +121,6 @@ export default function CheckoutView() {
           createdAt: serverTimestamp()
         });
 
-        // 3. Buat Order
         const orderRecord = {
           customerName: formData.name,
           customerEmail: formData.email,
@@ -139,27 +143,22 @@ export default function CheckoutView() {
 
         const docRef = await addDoc(collection(db, 'orders'), orderRecord);
         
-        // 4. Update Stok & Sold
         for (const item of cart) {
           const productRef = doc(db, 'products', item.id);
-          const snap = await getDoc(productRef);
-          if (snap.exists()) {
-            await updateDoc(productRef, { sold: increment(item.quantity), stock: increment(-item.quantity) });
-          }
+          await updateDoc(productRef, { sold: increment(item.quantity), stock: increment(-item.quantity) });
         }
 
-        // 5. Kirim Email
         await sendOrderConfirmationEmail({
           customerName: orderRecord.customerName,
           customerEmail: orderRecord.customerEmail,
-          orderId: orderRecord.order_id,
+          orderId: orderId,
           totalAmount: cartTotal,
           items: orderRecord.items.map(i => ({ name: i.name, deliveryContent: i.deliveryContent }))
         });
 
         setLastOrder({ ...orderRecord, id: docRef.id });
         resetCart();
-        toast({ title: "Pembayaran Berhasil!", description: "Saldo Wallet telah digunakan." });
+        toast({ title: "Pembayaran Berhasil!", description: "Template Anda sedang disiapkan." });
         setView('success');
       } catch (err) {
         toast({ variant: "destructive", title: "Gagal", description: "Terjadi kesalahan sistem." });
@@ -169,8 +168,9 @@ export default function CheckoutView() {
       return;
     }
 
-    // PAY VIA QRIS (PAKASIR)
+    // PAY VIA QRIS
     try {
+      const orderId = "INV" + Date.now().toString().slice(-10);
       const orderRecord = {
         customerName: formData.name,
         customerEmail: formData.email,
@@ -224,7 +224,7 @@ export default function CheckoutView() {
           <div className="lg:col-span-7 space-y-6">
             <Card className="rounded-[2rem] border-none shadow-sm bg-white p-8">
               <h3 className="text-xl font-black mb-6">Metode Pembayaran</h3>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-4 mb-8">
                 <button 
                   onClick={() => setPaymentMethod('qris')}
                   className={`p-6 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 ${paymentMethod === 'qris' ? 'border-primary bg-primary/5' : 'border-slate-50 hover:bg-slate-50'}`}
@@ -242,22 +242,54 @@ export default function CheckoutView() {
               </div>
 
               {paymentMethod === 'wallet' && (
-                <div className="mt-8 p-6 bg-slate-50 rounded-2xl border border-slate-100 animate-fadeIn">
-                  <div className="flex justify-between items-center mb-4">
-                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">Masukkan Payment Key</label>
-                    {activePaymentKey && <span className="text-[10px] font-black text-green-600 uppercase">Saldo: {formatRupiah(activePaymentKey.balance)}</span>}
+                <div className="space-y-6 animate-fadeIn">
+                  <div className="p-6 bg-slate-50 rounded-2xl border border-slate-100">
+                    <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest block mb-3">Akses Payment Key</label>
+                    <div className="flex gap-2">
+                      <Input 
+                        placeholder="MONO-XXXX-XXXX" 
+                        value={walletKeyInput} 
+                        onChange={e => setWalletKeyInput(e.target.value.toUpperCase())}
+                        className="h-12 rounded-xl bg-white border-none font-black tracking-widest text-center"
+                      />
+                      <Button onClick={handleVerifyWallet} disabled={isVerifyingKey} className="h-12 rounded-xl font-bold">
+                        {isVerifyingKey ? <Loader2 className="animate-spin" /> : 'Hubungkan'}
+                      </Button>
+                    </div>
                   </div>
-                  <div className="flex gap-2">
-                    <Input 
-                      placeholder="MONO-XXXX-XXXX" 
-                      value={walletKeyInput} 
-                      onChange={e => setWalletKeyInput(e.target.value.toUpperCase())}
-                      className="h-12 rounded-xl bg-white border-none font-black tracking-widest text-center"
-                    />
-                    <Button onClick={handleVerifyWallet} disabled={isVerifyingKey} className="h-12 rounded-xl font-bold">
-                      {isVerifyingKey ? <Loader2 className="animate-spin" /> : 'Verifikasi'}
-                    </Button>
-                  </div>
+
+                  {requires2SV && activePaymentKey && (
+                    <div className="p-6 bg-blue-50 rounded-2xl border border-blue-100 space-y-4">
+                      <div className="flex items-center gap-2">
+                        <Lock size={16} className="text-blue-600" />
+                        <span className="text-xs font-bold text-blue-600 uppercase tracking-widest">2-Step Verification</span>
+                      </div>
+                      <p className="text-[10px] text-blue-500 font-medium">Masukkan kode verifikasi yang dikirim ke <strong>{activePaymentKey.email}</strong></p>
+                      <div className="flex gap-2">
+                        <Input 
+                          placeholder="Kode 6-Digit" 
+                          value={verificationCodeInput} 
+                          onChange={e => setVerificationCodeInput(e.target.value)}
+                          className="h-12 rounded-xl bg-white border-none text-center font-black tracking-[10px]"
+                          maxLength={6}
+                        />
+                        <Button 
+                          onClick={handleSendCode} 
+                          disabled={isSendingCode} 
+                          variant="secondary"
+                          className="h-12 rounded-xl font-bold"
+                        >
+                          {isSendingCode ? <Loader2 className="animate-spin" /> : 'Kirim Kode'}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {activePaymentKey && !requires2SV && (
+                    <div className="flex items-center gap-2 p-3 bg-green-50 text-green-600 rounded-xl text-[10px] font-bold uppercase tracking-widest">
+                      <CheckCircle2 size={14} /> Wallet Terhubung: {formatRupiah(activePaymentKey.balance)}
+                    </div>
+                  )}
                 </div>
               )}
             </Card>

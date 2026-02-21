@@ -33,10 +33,12 @@
       "properties": {
         "id": { "type": "string" },
         "key": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
         "balance": { "type": "number" },
+        "is2SVEnabled": { "type": "boolean" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["key", "balance"]
+      "required": ["key", "email", "balance"]
     },
     "WalletTransaction": {
       "title": "WalletTransaction",

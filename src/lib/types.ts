@@ -24,7 +24,9 @@ export type Product = {
 export type PaymentKey = {
   id: string;
   key: string;
+  email: string;
   balance: number;
+  is2SVEnabled?: boolean;
   createdAt: any;
 };
 
