@@ -1,7 +1,6 @@
-
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useFirestore } from '@/firebase';
 import { collection, addDoc, updateDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { 
@@ -25,11 +24,16 @@ import {
 import { CATEGORIES } from '@/lib/data';
 import { uploadToImgBB } from '@/lib/imgbb';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Upload, X, Link as LinkIcon, Package, Zap, Tag, Info, ListChecks, Sparkles } from 'lucide-react';
+import { 
+  Loader2, Upload, X, Link as LinkIcon, Package, Zap, Tag, Info, ListChecks, Sparkles,
+  Bold, Italic, Quote, Code, ListOrdered, List, Minus, Undo2, Redo2, HelpCircle,
+  Image as LucideImageIcon
+} from 'lucide-react';
 import Image from 'next/image';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
 import { generateProductDescription } from '@/ai/flows/product-description-flow';
+import { cn } from '@/lib/utils';
 
 interface ProductDialogProps {
   isOpen: boolean;
@@ -44,6 +48,7 @@ export function ProductDialog({ isOpen, onClose, product }: ProductDialogProps) 
   const [isAiGenerating, setIsAiGenerating] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>('');
+  const descriptionRef = useRef<HTMLTextAreaElement>(null);
   
   const [formData, setFormData] = useState({
     name: '',
@@ -91,6 +96,70 @@ export function ProductDialog({ isOpen, onClose, product }: ProductDialogProps) 
       setImageFile(file);
       setImagePreview(URL.createObjectURL(file));
     }
+  };
+
+  const handleToolbarAction = (action: string) => {
+    const textarea = descriptionRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selectedText = textarea.value.substring(start, end);
+    const beforeText = textarea.value.substring(0, start);
+    const afterText = textarea.value.substring(end);
+
+    let replacement = '';
+    let cursorOffset = 0;
+
+    switch (action) {
+      case 'bold':
+        replacement = `*${selectedText || 'Teks Tebal'}*`;
+        cursorOffset = selectedText ? 0 : 1;
+        break;
+      case 'italic':
+        replacement = `_${selectedText || 'Teks Miring'}_`;
+        cursorOffset = selectedText ? 0 : 1;
+        break;
+      case 'heading':
+        replacement = `<b>${selectedText || 'Judul Section'}<b>`;
+        cursorOffset = selectedText ? 0 : 3;
+        break;
+      case 'link':
+        replacement = `[${selectedText || 'Teks Link'}](https://...)`;
+        cursorOffset = selectedText ? 0 : 1;
+        break;
+      case 'quote':
+        replacement = `\n> ${selectedText || 'Kutipan'}\n`;
+        break;
+      case 'list-ul':
+        replacement = `\n- ${selectedText || 'Item Daftar'}\n`;
+        break;
+      case 'list-ol':
+        replacement = `\n1. ${selectedText || 'Item Daftar'}\n`;
+        break;
+      case 'code':
+        replacement = `\`${selectedText || 'kode'}\``;
+        break;
+      case 'line':
+        replacement = `\n---\n`;
+        break;
+      case 'undo':
+      case 'redo':
+        return;
+    }
+
+    const newValue = beforeText + replacement + afterText;
+    setFormData({ ...formData, description: newValue });
+
+    setTimeout(() => {
+      textarea.focus();
+      if (selectedText) {
+        textarea.setSelectionRange(start, start + replacement.length);
+      } else {
+        const pos = start + replacement.length - cursorOffset;
+        textarea.setSelectionRange(pos, pos);
+      }
+    }, 0);
   };
 
   const handleAiGenerate = async () => {
@@ -246,7 +315,35 @@ export function ProductDialog({ isOpen, onClose, product }: ProductDialogProps) 
                     AI GENERATE
                   </Button>
                 </div>
-                <Textarea rows={6} value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} required className="rounded-xl bg-slate-50 border-none mb-2" />
+                
+                <div className="border border-slate-200 rounded-xl overflow-hidden bg-white">
+                  <div className="flex items-center flex-wrap gap-0.5 p-1.5 border-b bg-slate-50/50">
+                    <ToolbarButton onClick={() => handleToolbarAction('bold')} icon={<Bold size={14} />} title="Bold" />
+                    <ToolbarButton onClick={() => handleToolbarAction('italic')} icon={<Italic size={14} />} title="Italic" />
+                    <ToolbarButton onClick={() => handleToolbarAction('link')} icon={<LinkIcon size={14} />} title="Link" />
+                    <ToolbarButton onClick={() => handleToolbarAction('quote')} icon={<Quote size={14} />} title="Quote" />
+                    <ToolbarButton onClick={() => handleToolbarAction('image')} icon={<LucideImageIcon size={14} />} title="Image" />
+                    <ToolbarButton onClick={() => handleToolbarAction('code')} icon={<Code size={14} />} title="Code" />
+                    <div className="w-px h-4 bg-slate-200 mx-1" />
+                    <ToolbarButton onClick={() => handleToolbarAction('heading')} icon={<span className="font-bold text-[10px]">Tt</span>} title="Heading" />
+                    <ToolbarButton onClick={() => handleToolbarAction('list-ol')} icon={<ListOrdered size={14} />} title="Ordered List" />
+                    <ToolbarButton onClick={() => handleToolbarAction('list-ul')} icon={<List size={14} />} title="Unordered List" />
+                    <ToolbarButton onClick={() => handleToolbarAction('line')} icon={<Minus size={14} />} title="Separator" />
+                    <div className="w-px h-4 bg-slate-200 mx-1" />
+                    <ToolbarButton onClick={() => handleToolbarAction('undo')} icon={<Undo2 size={14} />} title="Undo" />
+                    <ToolbarButton onClick={() => handleToolbarAction('redo')} icon={<Redo2 size={14} />} title="Redo" />
+                    <div className="flex-1" />
+                    <ToolbarButton onClick={() => {}} icon={<HelpCircle size={14} />} title="Help" className="text-slate-300" />
+                  </div>
+                  <Textarea 
+                    ref={descriptionRef}
+                    rows={8} 
+                    value={formData.description} 
+                    onChange={e => setFormData({...formData, description: e.target.value})} 
+                    required 
+                    className="border-none rounded-none focus-visible:ring-0 min-h-[200px] bg-white text-sm" 
+                  />
+                </div>
               </div>
 
               <div className="space-y-1.5">
@@ -259,5 +356,20 @@ export function ProductDialog({ isOpen, onClose, product }: ProductDialogProps) 
         </form>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function ToolbarButton({ onClick, icon, title, className = "" }: any) {
+  return (
+    <Button 
+      type="button" 
+      variant="ghost" 
+      size="icon" 
+      onClick={onClick} 
+      title={title}
+      className={cn("h-7 w-7 hover:bg-white hover:shadow-sm rounded-md", className)}
+    >
+      {icon}
+    </Button>
   );
 }

@@ -28,10 +28,6 @@ export function formatCompactNumber(number: number) {
 
 /**
  * Parses custom markdown-like formatting for product descriptions.
- * *text* -> bold
- * _text_ -> italic
- * *_text_* -> bold italic
- * <b>text<b> -> large title text
  */
 export function parseDescriptionToHtml(text: string) {
   if (!text) return "";
@@ -52,13 +48,22 @@ export function parseDescriptionToHtml(text: string) {
     .replace(/\*(.*?)\*/g, '<strong>$1</strong>')
     // Italic: _text_
     .replace(/\_(.*?)\_/g, '<em>$1</em>')
+    // Quotes: > text
+    .replace(/^&gt; (.*$)/gim, '<blockquote class="border-l-4 border-slate-200 pl-4 py-1 italic my-4 text-slate-500">$1</blockquote>')
+    // Unordered list: - text
+    .replace(/^\s*[-*]\s+(.*)$/gim, '<li class="ml-4 list-disc text-sm text-slate-600">$1</li>')
+    // Ordered list: 1. text
+    .replace(/^\s*\d\.\s+(.*)$/gim, '<li class="ml-4 list-decimal text-sm text-slate-600">$1</li>')
+    // Links: [text](url)
+    .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" target="_blank" class="text-primary underline font-medium">$1</a>')
+    // Horizontal line: ---
+    .replace(/^---$/gim, '<hr class="my-6 border-slate-100" />')
     // Line breaks
     .replace(/\n/g, '<br/>');
 }
 
 /**
  * Strips custom markdown-like formatting for product descriptions.
- * Used for short previews in cards to keep font weight normal.
  */
 export function stripDescriptionFormatting(text: string) {
   if (!text) return "";
@@ -72,6 +77,12 @@ export function stripDescriptionFormatting(text: string) {
     .replace(/\*(.*?)\*/g, '$1')
     // Strip Italic: _text_
     .replace(/\_(.*?)\_/g, '$1')
+    // Strip other markdown
+    .replace(/^> (.*$)/gim, '$1')
+    .replace(/^\s*[-*]\s+(.*)$/gim, '$1')
+    .replace(/^\s*\d\.\s+(.*)$/gim, '$1')
+    .replace(/\[(.*?)\]\(.*?\)/g, '$1')
+    .replace(/^---$/gim, '')
     // Replace line breaks with space for preview
     .replace(/\n/g, ' ');
 }
