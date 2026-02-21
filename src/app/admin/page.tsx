@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
@@ -54,7 +53,8 @@ import {
   ExternalLink,
   Wallet,
   Eye,
-  ShieldCheck
+  ShieldCheck,
+  Calendar
 } from 'lucide-react';
 import { ProductDialog } from '@/components/admin/product-dialog';
 import { BannerDialog } from '@/components/admin/banner-dialog';
@@ -83,7 +83,7 @@ import {
 
 const ADMIN_EMAIL = 'matchboxdevelopment@gmail.com';
 
-type AdminSection = 'analytics' | 'products' | 'payment-keys' | 'flash-sale' | 'bundles' | 'vouchers' | 'banners' | 'orders' | 'settings';
+type AdminSection = 'analytics' | 'products' | 'payment-keys' | 'bundles' | 'vouchers' | 'banners' | 'orders' | 'settings';
 
 export default function AdminPage() {
   const { user, loading: authLoading } = useUser();
@@ -434,6 +434,95 @@ export default function AdminPage() {
                           </TableCell>
                         </TableRow>
                       ))}
+                    </TableBody>
+                  </Table>
+                </Card>
+              </div>
+            )}
+
+            {activeSection === 'banners' && (
+              <div className="space-y-6 animate-fadeIn">
+                <div className="flex justify-between items-center">
+                  <h2 className="text-2xl font-bold">Promo Banners</h2>
+                  <Button onClick={() => setIsBannerDialogOpen(true)} className="rounded-xl font-bold h-11 shadow-lg shadow-primary/20"><Plus size={20} className="mr-2" /> Tambah Banner</Button>
+                </div>
+                <Card className="rounded-[2.5rem] overflow-hidden border-none shadow-sm bg-white">
+                  <Table>
+                    <TableHeader className="bg-slate-50"><TableRow><TableHead>GAMBAR</TableHead><TableHead>JUDUL</TableHead><TableHead>URUTAN</TableHead><TableHead className="text-right">AKSI</TableHead></TableRow></TableHeader>
+                    <TableBody>
+                      {bannersLoading ? <TableRow><TableCell colSpan={4} className="text-center h-20"><Loader2 className="animate-spin mx-auto" /></TableCell></TableRow> :
+                        banners?.map((b: any) => (
+                          <TableRow key={b.id}>
+                            <TableCell><div className="relative w-20 h-10 rounded-lg overflow-hidden border border-slate-100"><Image src={b.image} alt="" fill className="object-cover" /></div></TableCell>
+                            <TableCell className="font-bold">{b.title || '-'}</TableCell>
+                            <TableCell><Badge variant="outline">{b.order}</Badge></TableCell>
+                            <TableCell className="text-right">
+                              <Button variant="ghost" size="icon" className="rounded-xl mr-1" onClick={() => { setEditingBanner(b); setIsBannerDialogOpen(true); }}><Pencil size={16} /></Button>
+                              <Button variant="ghost" size="icon" className="text-destructive rounded-xl" onClick={() => handleDelete(b.id, 'banners')}><Trash2 size={16} /></Button>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      }
+                    </TableBody>
+                  </Table>
+                </Card>
+              </div>
+            )}
+
+            {activeSection === 'vouchers' && (
+              <div className="space-y-6 animate-fadeIn">
+                <div className="flex justify-between items-center">
+                  <h2 className="text-2xl font-bold">Vouchers</h2>
+                  <Button onClick={() => setIsVoucherDialogOpen(true)} className="rounded-xl font-bold h-11 shadow-lg shadow-primary/20"><Plus size={20} className="mr-2" /> Tambah Voucher</Button>
+                </div>
+                <Card className="rounded-[2.5rem] overflow-hidden border-none shadow-sm bg-white">
+                  <Table>
+                    <TableHeader className="bg-slate-50"><TableRow><TableHead>KODE</TableHead><TableHead>POTONGAN</TableHead><TableHead>EXPIRED</TableHead><TableHead>STATUS</TableHead><TableHead className="text-right">AKSI</TableHead></TableRow></TableHeader>
+                    <TableBody>
+                      {vouchersLoading ? <TableRow><TableCell colSpan={5} className="text-center h-20"><Loader2 className="animate-spin mx-auto" /></TableCell></TableRow> :
+                        vouchers?.map((v: any) => (
+                          <TableRow key={v.id}>
+                            <TableCell><code className="font-black text-primary bg-slate-50 px-2 py-1 rounded">{v.code}</code></TableCell>
+                            <TableCell className="font-bold">{v.type === 'percentage' ? `${v.value}%` : formatRupiah(v.value)}</TableCell>
+                            <TableCell className="text-xs font-medium text-slate-400">{v.expiryDate ? new Date(v.expiryDate).toLocaleDateString('id-ID') : 'Lifetime'}</TableCell>
+                            <TableCell><Badge variant={v.isActive ? 'default' : 'secondary'} className="rounded-lg">{v.isActive ? 'AKTIF' : 'OFF'}</Badge></TableCell>
+                            <TableCell className="text-right">
+                              <Button variant="ghost" size="icon" className="rounded-xl mr-1" onClick={() => { setEditingVoucher(v); setIsVoucherDialogOpen(true); }}><Pencil size={16} /></Button>
+                              <Button variant="ghost" size="icon" className="text-destructive rounded-xl" onClick={() => handleDelete(v.id, 'vouchers')}><Trash2 size={16} /></Button>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      }
+                    </TableBody>
+                  </Table>
+                </Card>
+              </div>
+            )}
+
+            {activeSection === 'bundles' && (
+              <div className="space-y-6 animate-fadeIn">
+                <div className="flex justify-between items-center">
+                  <h2 className="text-2xl font-bold">Bundling Produk</h2>
+                  <Button onClick={() => setIsBundleDialogOpen(true)} className="rounded-xl font-bold h-11 shadow-lg shadow-primary/20"><Plus size={20} className="mr-2" /> Tambah Bundle</Button>
+                </div>
+                <Card className="rounded-[2.5rem] overflow-hidden border-none shadow-sm bg-white">
+                  <Table>
+                    <TableHeader className="bg-slate-50"><TableRow><TableHead>NAMA BUNDLE</TableHead><TableHead>DISKON</TableHead><TableHead>PRODUK</TableHead><TableHead>STATUS</TableHead><TableHead className="text-right">AKSI</TableHead></TableRow></TableHeader>
+                    <TableBody>
+                      {bundlesLoading ? <TableRow><TableCell colSpan={5} className="text-center h-20"><Loader2 className="animate-spin mx-auto" /></TableCell></TableRow> :
+                        bundles?.map((b: any) => (
+                          <TableRow key={b.id}>
+                            <TableCell className="font-bold">{b.name}</TableCell>
+                            <TableCell className="text-green-600 font-black">{b.discountPercentage}%</TableCell>
+                            <TableCell><Badge variant="outline" className="rounded-lg">{b.productIds?.length || 0} Items</Badge></TableCell>
+                            <TableCell><Badge variant={b.isActive ? 'default' : 'secondary'} className="rounded-lg">{b.isActive ? 'AKTIF' : 'OFF'}</Badge></TableCell>
+                            <TableCell className="text-right">
+                              <Button variant="ghost" size="icon" className="rounded-xl mr-1" onClick={() => { setEditingBundle(b); setIsBundleDialogOpen(true); }}><Pencil size={16} /></Button>
+                              <Button variant="ghost" size="icon" className="text-destructive rounded-xl" onClick={() => handleDelete(b.id, 'bundles')}><Trash2 size={16} /></Button>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      }
                     </TableBody>
                   </Table>
                 </Card>
